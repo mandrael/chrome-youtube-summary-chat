@@ -456,6 +456,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
                 t={t}
                 showCost={settings?.showCost ?? false}
                 onSeek={transcript?.hasTimestamps ? onSeek : undefined}
+                onDownload={() => download(`antwort-${videoId}-${i}.md`, m.content)}
               />
             ))}
 
@@ -649,11 +650,13 @@ function MessageBubble({
   t,
   showCost,
   onSeek,
+  onDownload,
 }: {
   message: ChatMessage;
   t: T;
   showCost: boolean;
   onSeek?: (s: number) => void;
+  onDownload: () => void;
 }) {
   const [copied, setCopied] = React.useState(false);
 
@@ -674,20 +677,31 @@ function MessageBubble({
       )}
 
       <div className="mt-1 flex items-center gap-2">
-        {message.content && (
-          <Button
-            size="iconSm"
-            variant="ghost"
-            className="opacity-0 group-hover:opacity-100"
-            title={copied ? t("copied") : t("copy")}
-            onClick={() => {
-              void navigator.clipboard.writeText(message.content);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
-            }}
-          >
-            <Copy />
-          </Button>
+        {message.content && !message.error && (
+          <>
+            <Button
+              size="iconSm"
+              variant="ghost"
+              className="opacity-0 group-hover:opacity-100"
+              title={copied ? t("copied") : t("copy")}
+              onClick={() => {
+                void navigator.clipboard.writeText(message.content);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              }}
+            >
+              <Copy />
+            </Button>
+            <Button
+              size="iconSm"
+              variant="ghost"
+              className="opacity-0 group-hover:opacity-100"
+              title={t("exportMd")}
+              onClick={onDownload}
+            >
+              <Download />
+            </Button>
+          </>
         )}
         {showCost && message.usage && (
           <span className="text-[11px] text-muted-foreground">

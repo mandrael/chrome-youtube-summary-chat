@@ -11,25 +11,31 @@
  * nicht) und die Options-Page in einem normalen Dokument.
  */
 @layer base {
+  /*
+   * Farbwelt aus DiktaGo übernommen: warme, gebrochene Töne statt Reinweiss und
+   * Reinschwarz. Das Dunkel ist bewusst kein #000 – ein warmes #1A1613 als Basis mit
+   * abgesetzten Karten darüber ermüdet die Augen weniger und hebt sich zugleich sichtbar
+   * von YouTubes eigenem Grau ab. Akzent ist YouTube-Rot statt DiktaGos Clay.
+   */
   :host,
   :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    --background: #faf7f2;        /* Fenster-Basis */
+    --foreground: #141413;        /* Überschriften */
+    --card: #ffffff;              /* erhöhte Flächen, Textfelder */
+    --card-foreground: #2e2a24;   /* Fliesstext */
+    --primary: #c4302b;           /* YouTube-Rot, abgedunkelt für Weiss darauf */
+    --primary-foreground: #ffffff;
+    --secondary: #ede4d3;         /* Hover-Füllung */
+    --secondary-foreground: #2e2a24;
+    --muted: #f0ece4;
+    --muted-foreground: #6b6155;  /* Labels, sekundär */
+    --accent: #ede4d3;
+    --accent-foreground: #2e2a24;
+    --destructive: #a04e32;
+    --destructive-foreground: #ffffff;
+    --border: #ddd4c2;
+    --input: #ddd4c2;
+    --ring: #c4302b;
     --radius: 0.625rem;
   }
 
@@ -41,24 +47,54 @@
   :host(.dark),
   .dark,
   :root.dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 12%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --background: #1a1613;
+    --foreground: #f4eee3;
+    --card: #221e18;
+    --card-foreground: #e4dccd;
+    --primary: #ff4438;           /* auf dunklem Grund heller als das Marken-Rot */
+    --primary-foreground: #ffffff;
+    --secondary: #2a251e;
+    --secondary-foreground: #e4dccd;
+    --muted: #2a251e;
+    --muted-foreground: #a89e8d;
+    --accent: #332d24;
+    --accent-foreground: #f4eee3;
+    --destructive: #e68b6b;
+    --destructive-foreground: #1a1613;
+    --border: #383229;
+    --input: #383229;
+    --ring: #ff4438;
   }
+}
+
+/*
+ * YouTube setzt `html { font-size: 10px }` – gemessen, nicht vermutet. Tailwind rechnet
+ * in `rem`, und `rem` bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM.
+ * Ohne diesen Block landet die Sidebar bei 62,5 % ihrer Grösse: `text-sm` wären 8,75 px
+ * statt 14. Deshalb stehen Schriftgrössen, Abstände und Radien hier in Pixeln.
+ * Für die Options-Page (Wurzel 16 px) ändert das nichts – die Werte sind dieselben.
+ */
+@theme {
+  --spacing: 4px;
+
+  --text-xs: 12px;
+  --text-xs--line-height: 17px;
+  --text-sm: 14px;
+  --text-sm--line-height: 21px;
+  --text-base: 16px;
+  --text-base--line-height: 25px;
+  --text-lg: 18px;
+  --text-lg--line-height: 28px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
 }
 
 @theme inline {

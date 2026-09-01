@@ -27,7 +27,8 @@ import {
   saveConversation,
 } from "@/lib/storage";
 import { transcriptToText } from "@/lib/timestamps";
-import { loadTrack, loadTranscript, NoCaptionsError } from "@/lib/transcript";
+import { NoCaptionsError } from "@/lib/transcript";
+import { loadTrackViaTab, loadTranscriptViaTab } from "@/lib/transcript-bridge";
 import {
   availability as localAvailability,
   baseLang,
@@ -51,11 +52,24 @@ type Tab = "chat" | "transcript" | "history";
 export interface SidebarProps {
   videoId: string;
   videoTitle: string;
+  /** Tab mit der YouTube-Seite – dort holt das Content-Script das Transkript. */
+  tabId: number;
   /** Setzt die Wiedergabeposition im Player der Seite. */
   onSeek: (seconds: number) => void;
+  /** In Chromes Seitenleiste gibt es nichts einzuklappen – dort schliesst man das Panel. */
+  collapsible?: boolean;
+  /** Seitenleiste: volle Höhe statt an YouTubes Spalte gebundene 75 vh. */
+  fullHeight?: boolean;
 }
 
-export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
+export function Sidebar({
+  videoId,
+  videoTitle,
+  tabId,
+  onSeek,
+  collapsible = true,
+  fullHeight = false,
+}: SidebarProps) {
   const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [collapsed, setCollapsed] = React.useState(false);
   const [tab, setTab] = React.useState<Tab>("chat");
@@ -75,9 +89,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
   // Vorab geprüft, damit der Klick-Handler ohne vorheriges await auskommt: die
   // Translator-API verlangt für den Modell-Download eine Nutzergeste.
   const [localTranslateOk, setLocalTranslateOk] = React.useState(false);
-  // Im Hintergrundtab wartet der Panel-Weg auf Sichtbarkeit. Ohne diesen Hinweis sieht
-  // das aus wie ein Hänger – gemessen: über drei Minuten "wird geladen" ohne Erklärung.
-  const [hidden, setHidden] = React.useState(document.visibilityState !== "visible");
+
 
   const stopRef = React.useRef<(() => void) | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -104,12 +116,6 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
     listModels()
       .then(setModels)
       .catch(() => {});
-  }, []);
-
-  React.useEffect(() => {
-    const onVis = () => setHidden(document.visibilityState !== "visible");
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
   React.useEffect(() => {
@@ -140,11 +146,11 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
       if (!cancelled) setMessages(conv?.messages ?? []);
 
       try {
-        const res = await loadTranscript(videoId, settings.captionLang);
+        const res = await loadTranscriptViaTab(tabId, settings.captionLang);
         if (cancelled) return;
         setTranscript(res.transcript);
         setTracks(res.tracks);
-        setActiveTrack(res.active);
+        setActiveTrack(res.active ?? null);
         setLoadState("ready");
       } catch (e) {
         if (cancelled) return;
@@ -359,10 +365,10 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
     setLoadState("loading");
     setLoadError("");
     try {
-      const res = await loadTranscript(videoId, settings.captionLang);
+      const res = await loadTranscriptViaTab(tabId, settings.captionLang);
       setTranscript(res.transcript);
       setTracks(res.tracks);
-      setActiveTrack(res.active);
+      setActiveTrack(res.active ?? null);
       setLoadState("ready");
     } catch (e) {
       if (e instanceof NoCaptionsError) {
@@ -379,13 +385,9 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
   async function switchTrack(track: CaptionTrack) {
     setLoadState("loading");
     try {
-      const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
-      const res = isPanelTrack(track)
-        ? await switchPanelTrack(track)
-        : await loadTrack(track);
-      if (!res) throw new Error("Die Spur liess sich nicht laden.");
+      const res = await loadTrackViaTab(tabId, track);
       setTranscript(res.transcript);
-      setActiveTrack(res.active);
+      setActiveTrack(res.active ?? track);
       setLoadState("ready");
     } catch (e) {
       setLoadError(String((e as Error)?.message ?? e));
@@ -411,7 +413,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
 
   /* ---- Darstellung ---- */
 
-  if (collapsed) {
+  if (collapsed && collapsible) {
     return (
       <div className="mb-3 rounded-xl border border-border bg-card text-card-foreground">
         <button
@@ -430,15 +432,24 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
   }
 
   return (
-    <div className="mb-3 flex max-h-[75vh] flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden">
+    <div
+      className={cn(
+        "flex flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden",
+        fullHeight ? "h-full" : "mb-3 max-h-[75vh]",
+      )}
+    >
       <Header
         t={t}
         tab={tab}
         setTab={setTab}
-        onCollapse={() => {
-          setCollapsed(true);
-          void collapsedItem.setValue(true);
-        }}
+        onCollapse={
+          collapsible
+            ? () => {
+                setCollapsed(true);
+                void collapsedItem.setValue(true);
+              }
+            : undefined
+        }
       />
 
       {tab === "chat" && (
@@ -468,7 +479,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
             {loadState === "loading" && (
               <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
-                {hidden ? t("waitingVisible") : t("loadingTranscript")}
+                {t("loadingTranscript")}
               </p>
             )}
 
@@ -632,7 +643,7 @@ function Header({
   t: T;
   tab: Tab;
   setTab: (t: Tab) => void;
-  onCollapse: () => void;
+  onCollapse?: () => void;
 }) {
   const tabs: Array<[Tab, string]> = [
     ["chat", t("tabChat")],
@@ -658,9 +669,11 @@ function Header({
         <Button size="iconSm" variant="ghost" title="Einstellungen" onClick={() => void chrome.runtime.sendMessage({ type: "openOptions" })}>
           <Settings />
         </Button>
-        <Button size="iconSm" variant="ghost" title={t("collapse")} onClick={onCollapse}>
-          <ChevronUp />
-        </Button>
+        {onCollapse && (
+          <Button size="iconSm" variant="ghost" title={t("collapse")} onClick={onCollapse}>
+            <ChevronUp />
+          </Button>
+        )}
       </div>
     </div>
   );

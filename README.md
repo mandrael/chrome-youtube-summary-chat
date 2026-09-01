@@ -32,6 +32,19 @@ den `full`-Build – sonst würde ein Test bestehen, der überhaupt nichts misst
 
 ---
 
+## Bedienung
+
+Die Oberfläche liegt in **Chromes Seitenleiste**, nicht in der YouTube-Seite. Das Symbol
+in der Werkzeugleiste:
+
+- **auf einer YouTube-Seite** → blendet die Seitenleiste ein oder aus
+- **überall sonst** → öffnet die Einstellungen
+
+Die Breite zieht man am Rand der Seitenleiste selbst. Sie bleibt beim Wechsel zwischen
+Videos stehen und folgt YouTubes Hell/Dunkel-Einstellung.
+
+---
+
 ## Installation
 
 ### Voraussetzungen
@@ -60,6 +73,7 @@ pnpm run build:store
 1. `chrome://extensions` öffnen
 2. Entwicklermodus einschalten
 3. „Entpackte Erweiterung laden“ → **`build-full`** (der Ordner mit der `manifest.json`)
+4. Symbol anheften, dann auf einer YouTube-Videoseite anklicken
 
 Der `full`-Build bringt einen öffentlichen Schlüssel im Manifest mit und hat deshalb
 immer dieselbe Extension-ID: **`abblpkhijcggklokijkhfbkgeljmimpm`**. Ohne den würde Chrome

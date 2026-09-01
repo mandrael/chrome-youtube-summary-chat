@@ -94,6 +94,28 @@ wird aber nur angeboten, wenn der Browser-Weg scheitert.
 im DOM liegen zwei Panels (`PAmodern_transcript_view`,
 `engagement-panel-searchable-transcript`), beide `HIDDEN` und leer.
 
+**Die Oberfläche liegt in Chromes Seitenleiste**, nicht mehr in YouTubes rechter Spalte.
+Drei Gründe, alle gemessen:
+
+- Die Spalte ist rund 400 px breit, mehr gibt sie nicht her.
+- Tastendrücke im Chat erreichten YouTubes globale Kürzel – die **Leertaste pausierte das
+  Video beim Tippen**. Ein eigenes Dokument sieht diese Tasten nicht.
+- YouTube setzt **`html { font-size: 10px }`**. Tailwind rechnet in `rem`, und `rem`
+  bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM. Die eingebettete Sidebar
+  lief damit auf 62,5 % ihrer Grösse: `text-sm` waren 8,75 px statt 14. Deshalb stehen
+  Schriftgrössen, Abstände und Radien im `@theme`-Block in **Pixeln**.
+
+**Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
+einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von
+einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
+per Message an. Für den DOM-Rückfall gilt dasselbe, er braucht ohnehin einen DOM.
+
+**Das Symbol in der Werkzeugleiste** schaltet auf YouTube die Seitenleiste um und öffnet
+überall sonst die Einstellungen. Chrome kann eine offene Seitenleiste nicht per API
+schliessen; das schafft nur `openPanelOnActionClick`. Deshalb wird die Seitenleiste pro
+Tab freigegeben oder gesperrt – ist sie gesperrt, bekommt die Extension den Klick über
+`chrome.action.onClicked` und öffnet die Einstellungen.
+
 **Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
 Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
 still gekappt. Deshalb `pendingSeek` plus `durationchange`/`loadedmetadata`.
@@ -111,6 +133,28 @@ or 'downloadable'."* Jedes `await` vor `Translator.create()` verbraucht die Gest
 Klicks – auch ein dynamischer Import. Deshalb ist `translate()` in der Sidebar synchron
 und `create()` der erste `await` überhaupt. Gemessen: 286 Zeitstempel, 22.507 Zeichen,
 rund drei Minuten, davon 160 s Modell-Download.
+
+**Die Oberfläche liegt in Chromes Seitenleiste**, nicht mehr in YouTubes rechter Spalte.
+Drei Gründe, alle gemessen:
+
+- Die Spalte ist rund 400 px breit, mehr gibt sie nicht her.
+- Tastendrücke im Chat erreichten YouTubes globale Kürzel – die **Leertaste pausierte das
+  Video beim Tippen**. Ein eigenes Dokument sieht diese Tasten nicht.
+- YouTube setzt **`html { font-size: 10px }`**. Tailwind rechnet in `rem`, und `rem`
+  bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM. Die eingebettete Sidebar
+  lief damit auf 62,5 % ihrer Grösse: `text-sm` waren 8,75 px statt 14. Deshalb stehen
+  Schriftgrössen, Abstände und Radien im `@theme`-Block in **Pixeln**.
+
+**Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
+einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von
+einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
+per Message an. Für den DOM-Rückfall gilt dasselbe, er braucht ohnehin einen DOM.
+
+**Das Symbol in der Werkzeugleiste** schaltet auf YouTube die Seitenleiste um und öffnet
+überall sonst die Einstellungen. Chrome kann eine offene Seitenleiste nicht per API
+schliessen; das schafft nur `openPanelOnActionClick`. Deshalb wird die Seitenleiste pro
+Tab freigegeben oder gesperrt – ist sie gesperrt, bekommt die Extension den Klick über
+`chrome.action.onClicked` und öffnet die Einstellungen.
 
 **Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
 Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
@@ -157,11 +201,12 @@ Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
 
 ```
 build-full/           gebaute Erweiterung zum Laden (GitHub-Build)
+icon-source/          Icon-Quelle (Python/PIL) und die gerenderten Grössen
 build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
-  entrypoints/        content.tsx · background.ts · options/
-  components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
-  lib/                openrouter · transcript · fallback · translate-local · prompts …
+  entrypoints/        sidepanel/ · content.tsx · background.ts · options/
+  components/         PanelApp, Sidebar, Markdown, TranscriptView, HistoryView, ui/
+  lib/                openrouter · transcript · transcript-bridge · fallback · translate-local …
   scripts/            selfcheck.ts · verify-store-bundle.sh
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```

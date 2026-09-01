@@ -1,109 +1,88 @@
 import { defineContentScript } from "wxt/utils/define-content-script";
-import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
-import type { ContentScriptContext } from "wxt/utils/content-script-context";
-import ReactDOM from "react-dom/client";
-import { Sidebar } from "@/components/Sidebar";
-import { videoIdFromUrl } from "@/lib/transcript";
-import "@/assets/tailwind.css";
+import { loadTrack, loadTranscript, NoCaptionsError, videoIdFromUrl } from "@/lib/transcript";
 
 /**
- * Hängt die Sidebar als erstes Kind der rechten Spalte ein, also oberhalb der
- * Empfehlungen. Shorts werden bewusst nicht bedient – dort gibt es die Spalte nicht
- * und der Anwendungsfall auch nicht.
+ * Das Content-Script hat keine eigene Oberfläche mehr – die liegt in Chromes
+ * Seitenleiste. Hier bleibt nur, was zwingend in der Seite passieren muss:
+ *
+ *   - die aktuelle Video-ID und den Titel melden,
+ *   - jede SPA-Navigation an das Panel weitergeben,
+ *   - das Transkript holen (der Player-Aufruf beantwortet nur Anfragen von einer
+ *     YouTube-Seite; aus der Seitenleiste kommt HTML statt JSON zurück),
+ *   - im Player an eine Stelle springen.
+ *
+ * Der Umzug in die Seitenleiste löst nebenbei zwei Ärgernisse der eingebetteten
+ * Variante: die Breite war an YouTubes rechte Spalte gebunden (rund 400 px), und
+ * Tastendrücke im Chat erreichten YouTubes globale Tastaturkürzel – die Leertaste
+ * pausierte das Video beim Tippen. Ein eigenes Dokument sieht diese Tasten nicht.
  */
 export default defineContentScript({
   matches: ["*://www.youtube.com/*", "*://m.youtube.com/*"],
-  cssInjectionMode: "ui",
   runAt: "document_idle",
 
-  async main(ctx) {
-    let ui: Awaited<ReturnType<typeof mount>> | null = null;
-    let mountedVideoId: string | null = null;
-    // Beide Navigationssignale können für dasselbe Video kurz hintereinander feuern.
-    // Ohne diesen Zähler startet der zweite Aufruf einen zweiten Mount, während der
-    // erste noch auf den Anker wartet – und die Sidebar erscheint doppelt.
-    let generation = 0;
-
-    async function sync() {
-      const videoId = videoIdFromUrl(location.href);
-      if (videoId && videoId === mountedVideoId && ui) return;
-
-      const gen = ++generation;
-      ui?.remove();
-      ui = null;
-      mountedVideoId = videoId;
-
-      // Weg von der Watch-Seite (oder auf Shorts): abgeräumt ist schon, fertig.
-      if (!videoId) return;
-
-      const anchor = await waitFor("#secondary-inner", ctx, 10_000);
-      if (!anchor || gen !== generation) return;
-      if (videoIdFromUrl(location.href) !== videoId) return; // inzwischen weitergeklickt
-
-      // Reste eines toten Content-Scripts (etwa nach einem Extension-Reload) räumt
-      // dessen eigenes onRemove nicht mehr weg.
-      for (const alt of anchor.querySelectorAll("yt-summary-chat")) alt.remove();
-
-      const next = await mount(ctx, videoId);
-      if (gen !== generation) {
-        next.remove();
-        return;
+  main(ctx) {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      switch (msg?.type) {
+        case "video":
+          sendResponse({ videoId: videoIdFromUrl(location.href), title: currentTitle() });
+          return true;
+        case "theme":
+          sendResponse(document.documentElement.hasAttribute("dark"));
+          return true;
+        case "seek":
+          seek(msg.sekunden);
+          sendResponse(true);
+          return true;
+        case "loadTranscript":
+          void holen(() => loadTranscript(videoIdFromUrl(location.href) ?? "", msg.captionLang))
+            .then(sendResponse);
+          return true;
+        case "loadTrack":
+          void holen(async () => {
+            // Panel-Spuren kennen keine URL – sie werden im DOM umgeschaltet.
+            const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
+            const r = isPanelTrack(msg.track)
+              ? await switchPanelTrack(msg.track)
+              : await loadTrack(msg.track);
+            if (!r) throw new Error("Die Spur liess sich nicht laden.");
+            return { transcript: r.transcript, tracks: [], active: r.active };
+          }).then(sendResponse);
+          return true;
       }
-      ui = next;
-      ui.mount();
-    }
-
-    void sync();
+      return false;
+    });
 
     // YouTube navigiert ohne Reload. Beide Signale: WXTs Location-Change als Grundlage,
     // YouTubes eigenes Event als schnellere Ergänzung.
-    ctx.addEventListener(window, "wxt:locationchange", () => void sync());
-    ctx.addEventListener(window, "yt-navigate-finish" as any, () => void sync());
+    const melden = () => {
+      chrome.runtime.sendMessage({ type: "videoChanged" }).catch(() => {
+        /* Panel ist zu – niemand hört zu, das ist kein Fehler */
+      });
+    };
+    ctx.addEventListener(window, "wxt:locationchange", melden);
+    ctx.addEventListener(window, "yt-navigate-finish" as any, melden);
+
+    // YouTubes Theme-Wechsel weitergeben, damit die Seitenleiste mitzieht.
+    const themeObserver = new MutationObserver(melden);
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["dark"],
+    });
+    ctx.onInvalidated(() => themeObserver.disconnect());
   },
 });
 
-async function mount(ctx: ContentScriptContext, videoId: string) {
-  return createShadowRootUi(ctx, {
-    name: "yt-summary-chat",
-    position: "inline",
-    anchor: "#secondary-inner",
-    append: "first",
-
-    onMount(container, shadow) {
-      // YouTubes Dark-Mode hängt am Attribut `dark` des <html>-Elements, nicht an
-      // prefers-color-scheme. Der Zustand wird in den Shadow-Root gespiegelt.
-      const applyTheme = () => {
-        container.classList.toggle(
-          "dark",
-          document.documentElement.hasAttribute("dark"),
-        );
-      };
-      applyTheme();
-      const themeObserver = new MutationObserver(applyTheme);
-      themeObserver.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["dark"],
-      });
-
-      const host = (shadow.host as HTMLElement) ?? null;
-      if (host) host.style.display = "block";
-
-      const root = ReactDOM.createRoot(container);
-      root.render(
-        <Sidebar
-          videoId={videoId}
-          videoTitle={currentTitle()}
-          onSeek={seek}
-        />,
-      );
-      return { root, themeObserver };
-    },
-
-    onRemove(mounted) {
-      mounted?.themeObserver.disconnect();
-      mounted?.root.unmount();
-    },
-  });
+/** Vereinheitlicht Erfolg und Fehler, damit beides über den Message-Kanal passt. */
+async function holen(
+  fn: () => Promise<{ transcript: unknown; tracks?: unknown; active?: unknown }>,
+): Promise<Record<string, unknown>> {
+  try {
+    const r = await fn();
+    return { ok: true, transcript: r.transcript, tracks: r.tracks ?? [], active: r.active };
+  } catch (e) {
+    if (e instanceof NoCaptionsError) return { ok: false, noCaptions: true };
+    return { ok: false, error: String((e as Error)?.message ?? e) };
+  }
 }
 
 function currentTitle(): string {
@@ -162,45 +141,5 @@ function seek(seconds: number): void {
   pendingSeek = null;
   void video.play().catch(() => {
     /* Autoplay-Sperre: die Position stimmt trotzdem */
-  });
-}
-
-/**
- * Wartet auf ein Element. YouTube baut die rechte Spalte erst nach dem ersten Rendern
- * auf, ein einmaliges querySelector beim Start greift deshalb regelmässig ins Leere.
- */
-function waitFor(
-  selector: string,
-  ctx: ContentScriptContext,
-  timeoutMs: number,
-): Promise<Element | null> {
-  const existing = document.querySelector(selector);
-  if (existing) return Promise.resolve(existing);
-
-  return new Promise((resolve) => {
-    const observer = new MutationObserver(() => {
-      const el = document.querySelector(selector);
-      if (!el) return;
-      cleanup();
-      resolve(el);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    const timer = setTimeout(() => {
-      cleanup();
-      resolve(null);
-    }, timeoutMs);
-
-    // Verlässt der Nutzer die Seite, bevor das Element auftaucht, endet auch das Warten.
-    const onInvalidated = () => {
-      cleanup();
-      resolve(null);
-    };
-    ctx.onInvalidated(onInvalidated);
-
-    function cleanup() {
-      observer.disconnect();
-      clearTimeout(timer);
-    }
   });
 }

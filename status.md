@@ -3,9 +3,51 @@
 ## Offene To-Dos (oberstes zuerst)
 
 1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-   `native-host/install-windows.ps1` (Registry-Schlüssel) und die winget-Pfade sind
-   ungetestet.
-2. Optional: Store-Build einreichen. Er funktioniert jetzt vollständig.
+2. Optional: Store-Build einreichen.
+
+## Stand 02.09.2026 – Umzug in Chromes Seitenleiste, Farben, Icon
+
+### Warum die eingebettete Sidebar weg ist
+
+Drei Mängel, die alle an der Einbettung hingen:
+
+- **Zu schmal.** YouTubes rechte Spalte gibt rund 400 px her, mehr nicht.
+- **Die Leertaste pausierte das Video beim Tippen** – YouTubes globale Tastaturkürzel
+  erreichten den Chat. Ein eigenes Dokument sieht diese Tasten nicht mehr.
+- **Alles war 37,5 % zu klein.** YouTube setzt `html { font-size: 10px }` (gemessen).
+  Tailwind rechnet in `rem`, und `rem` bezieht sich auf die Dokumentwurzel – auch im
+  Shadow DOM. `text-sm` waren damit 8,75 px statt 14. Behoben durch Pixelwerte im
+  `@theme`-Block; das gilt jetzt für beide Oberflächen.
+
+### Was der Umzug gekostet hat
+
+Der Player-Aufruf für die Untertitel gibt aus einer Extension-Seite heraus **HTML statt
+JSON** zurück – YouTube beantwortet ihn nur von einer eigenen Seite aus. Das Transkript
+holt deshalb weiterhin das Content-Script; die Seitenleiste fragt über
+`lib/transcript-bridge.ts` per Message an. Das Content-Script hat keine eigene
+Oberfläche mehr.
+
+### Symbol in der Werkzeugleiste
+
+Auf YouTube schaltet der Klick die Seitenleiste um, überall sonst öffnet er die
+Einstellungen. Chrome kann eine offene Seitenleiste nicht per API schliessen – nur
+`openPanelOnActionClick` schafft das. Deshalb wird sie pro Tab freigegeben oder gesperrt;
+ist sie gesperrt, bekommt die Extension den Klick über `chrome.action.onClicked`.
+
+### Farben und Icon
+
+Die Farbwelt kommt aus DiktaGo: warme, gebrochene Töne statt Reinweiss und Reinschwarz,
+Basis im Dunkeln `#1A1613`. Akzent ist YouTube-Rot (`#C4302B` hell, `#FF4438` dunkel) –
+auch die Zeitstempel, die vorher YouTube-blau waren.
+
+Das Icon liegt als Python-Quelle in `icon-source/` und wird in 16/32/48/128/256 gerendert:
+YouTube-rotes Rechteck mit Farbverlauf, drei Transkriptzeilen, Play-Scheibe. Die Grössen
+entsprechen denen der Translate-Extension.
+
+### Verifiziert
+
+Seitenleiste neben einem YouTube-Tab: **286 Transkriptzeilen, Spur „English"** korrekt
+vorausgewählt, Zeitstempel in der Akzentfarbe, Schrift 14 px. Alle vier Prüfungen grün.
 
 ## Stand 01.09.2026 (spät) – der Untertitel-Weg im Browser funktioniert
 

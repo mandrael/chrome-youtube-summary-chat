@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="rot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF4438"/>
+      <stop offset="1" stop-color="#C4302B"/>
+    </linearGradient>
+  </defs>
+  <!-- Traeger: YouTubes abgerundetes Rechteck, quadratisch beschnitten -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#rot)"/>
+  <!-- Transkriptzeilen, ungleich lang wie echter Text -->
+  <g fill="#fff" opacity=".95">
+    <rect x="52" y="76"  width="118" height="18" rx="9"/>
+    <rect x="52" y="115" width="152" height="18" rx="9"/>
+    <rect x="52" y="154" width="86"  height="18" rx="9"/>
+  </g>
+  <!-- Play-Dreieck als Marke, in einer weissen Scheibe unten rechts -->
+  <circle cx="186" cy="186" r="40" fill="#fff"/>
+  <path d="M175 168 l34 18 -34 18 z" fill="#C4302B"/>
+</svg>

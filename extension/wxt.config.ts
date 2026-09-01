@@ -45,12 +45,26 @@ export default defineConfig({
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
     version: "0.1.0",
     permissions: isFull(env.mode)
-      ? ["storage", "nativeMessaging"]
-      : ["storage"],
+      ? ["storage", "sidePanel", "nativeMessaging"]
+      : ["storage", "sidePanel"],
     host_permissions: ["*://*.youtube.com/*", "https://openrouter.ai/*"],
     options_ui: {
       page: "options.html",
       open_in_tab: true,
+    },
+    // Die Oberfläche liegt in Chromes Seitenleiste, nicht mehr in YouTubes rechter
+    // Spalte: dort war sie an deren ~400 px gebunden. Die Seitenleiste zieht der
+    // Nutzer selbst breit und sie überlebt die Navigation innerhalb von YouTube.
+    side_panel: { default_path: "sidepanel.html" },
+    action: {
+      default_title: "YouTube Summary Chat",
+    },
+    icons: {
+      16: "icon/16.png",
+      32: "icon/32.png",
+      48: "icon/48.png",
+      128: "icon/128.png",
+      256: "icon/256.png",
     },
     // Chrome-Übersetzung (Translator API, ab Chrome 138) läuft im Content-Script.
     minimum_chrome_version: "138",

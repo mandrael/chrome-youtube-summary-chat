@@ -55,6 +55,8 @@ const de = {
     "Chrome-Übersetzung für dieses Sprachpaar nicht verfügbar.",
   localTranslateDownloading: "Sprachmodell wird geladen",
   retry: "Erneut versuchen",
+  panelNoVideo:
+    "Kein YouTube-Video im aktiven Tab. Öffne ein Video – die Seitenleiste folgt automatisch.",
 } as const;
 
 type Keys = keyof typeof de;
@@ -109,6 +111,8 @@ const en: Record<Keys, string> = {
     "Chrome translation is not available for this language pair.",
   localTranslateDownloading: "Downloading language model",
   retry: "Retry",
+  panelNoVideo:
+    "No YouTube video in the active tab. Open one – the side panel follows automatically.",
 };
 
 const dict = { de, en };

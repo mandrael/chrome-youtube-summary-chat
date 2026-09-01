@@ -98,7 +98,7 @@ export function Markdown({ children, onSeek, className }: MarkdownProps) {
               <button
                 type="button"
                 onClick={() => onSeek(seconds)}
-                className="text-[color:var(--color-blue-500,#3ea6ff)] hover:underline font-medium cursor-pointer"
+                className="text-primary hover:underline font-medium cursor-pointer"
                 title="Zu dieser Stelle springen"
               >
                 {c}

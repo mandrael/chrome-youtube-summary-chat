@@ -18,6 +18,8 @@ interface ChatPortRequest {
 }
 
 export default defineBackground(() => {
+  richteSeitenleisteEin();
+
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "chat") return handleChatPort(port);
     if (port.name === "fallback" && __FALLBACK__) return handleFallbackPort(port);
@@ -156,5 +158,54 @@ function handleFallbackPort(port: chrome.runtime.Port) {
         }
       }
     })();
+  });
+}
+
+/**
+ * Verhalten des Symbols in der Werkzeugleiste:
+ *
+ *   - auf einer YouTube-Seite  → Klick blendet die Seitenleiste ein oder aus
+ *   - überall sonst            → Klick öffnet die Einstellungen
+ *
+ * Chrome kann eine geöffnete Seitenleiste nicht per API schliessen; das schafft nur
+ * `openPanelOnActionClick`, weil Chrome den Klick dann selbst als Umschalter behandelt.
+ * Deshalb wird die Seitenleiste pro Tab freigegeben oder gesperrt: ist sie gesperrt,
+ * bekommt die Extension den Klick über `onClicked` und öffnet die Einstellungen.
+ */
+function richteSeitenleisteEin(): void {
+  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+
+  const istYouTube = (url: string | undefined) =>
+    !!url && /^https?:\/\/(www|m)\.youtube\.com\//.test(url);
+
+  const anpassen = async (tabId: number, url: string | undefined) => {
+    try {
+      await chrome.sidePanel.setOptions(
+        istYouTube(url)
+          ? { tabId, path: "sidepanel.html", enabled: true }
+          : { tabId, enabled: false },
+      );
+    } catch {
+      /* Tab schon zu */
+    }
+  };
+
+  chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
+    if (info.status === "loading" || info.url) void anpassen(tabId, tab.url);
+  });
+  chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab) void anpassen(tabId, tab.url);
+  });
+
+  // Beim Start der Extension die bereits offenen Tabs nachziehen.
+  void chrome.tabs.query({}).then((tabs) => {
+    for (const tab of tabs) if (tab.id != null) void anpassen(tab.id, tab.url);
+  });
+
+  // Feuert nur, wenn die Seitenleiste für diesen Tab gesperrt ist – also ausserhalb
+  // von YouTube.
+  chrome.action.onClicked.addListener(() => {
+    void chrome.runtime.openOptionsPage();
   });
 }

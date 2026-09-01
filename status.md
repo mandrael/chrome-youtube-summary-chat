@@ -5,54 +5,55 @@
 1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
    `native-host/install-windows.ps1` (Registry-Schlüssel) und die winget-Pfade sind
    ungetestet.
-2. Alles andere ist erledigt. Zum Store-Build siehe unten – entschieden, aber bewusst
-   nicht umgesetzt.
+2. Optional: Store-Build einreichen. Er funktioniert jetzt vollständig.
 
-## Entscheidung 01.09.2026: Store-Build wird nicht eingereicht
+## Stand 01.09.2026 (spät) – der Untertitel-Weg im Browser funktioniert
 
-Michael hat Weg **A** gewählt: nur den GitHub-Build pflegen. **Vorerst wird nichts
-umgesetzt** – kein Code entfernt, keine Build-Skripte geändert. Der Store-Build bleibt
-baubar und geprüft, er wird nur nicht ausgeliefert.
+**Michaels Einwand war berechtigt und hat die Sache gelöst:** yt-dlp ist für Untertitel
+nicht nötig, es war nur für Audio gedacht. Solange der Browser-Weg nicht lief, war der
+Auftrag nicht erfüllt – auch wenn die Extension über den Umweg funktionierte.
 
-**Grund:** Ohne lokalen Helfer kommt er an kein Transkript – gemessen, anonym wie
-angemeldet. Er wäre eine Attrappe.
+### Was gefehlt hat
 
-### Was zu tun wäre, wenn A umgesetzt wird
+Die `baseUrl` aus dem HTML ist unbrauchbar (HTTP 200, leerer Body). Brauchbar ist nur die
+**signierte** URL aus einer visionOS-Player-Antwort. Dafür braucht der Request vier Dinge,
+und mir fehlten drei davon:
 
-Nichts löschen. Nur diese drei Punkte:
+1. `playbackContext.contentPlaybackContext.signatureTimestamp` aus YouTubes `base.js`
+2. Header `X-Goog-Visitor-Id` mit dem `visitorData` der Seite
+3. `userAgent` **im Kontext-Objekt** (Safari-String)
+4. kein `key=`-Parameter an der URL
 
-1. Im README den Store-Build von „zweite Auslieferungsvariante" auf „gebaut und geprüft,
-   aber nicht ausgeliefert" umstellen. Der Tree-Shaking-Nachweis bleibt wertvoll: er
-   belegt, dass der Fallback-Code sauber trennbar ist.
-2. `pnpm run build:store` und `scripts/verify-store-bundle.sh` **behalten**. Sie kosten
-   nichts und sind sofort wieder brauchbar, falls sich die Lage ändert.
-3. `__FALLBACK__` und die `if (__FALLBACK__)`-Zweige bleiben unangetastet.
+**Abgelesen, nicht geraten:** `yt-dlp --print-traffic` zeigt den exakten Request. Das war
+der Schritt, der nach zwei falschen Hypothesen weitergeholfen hat.
 
-### Woran man merkt, dass sich die Lage geändert hat
+### Gemessen
 
-Diesen Einzeiler in der Konsole einer YouTube-Videoseite ausführen. Kommt eine Länge
-grösser null zurück, liefert YouTube die Untertitel wieder an den Browser aus – dann ist
-der Store-Build ohne jede Änderung wieder tragfähig:
+| | |
+|---|---|
+| Player-Antwort | `playabilityStatus: OK`, 31 Spuren, signierte URL |
+| Untertitel-JSON | 46.010 Zeichen, mit **und ohne** Cookies |
+| Sidebar `full`-Build | 286 Zeilen, kein Helfer-Knopf |
+| Sidebar `store`-Build | **286 Zeilen, ohne nativeMessaging** |
+| Spurauswahl | `defaultCaptionTrackIndex` = 6 = Englisch (ohne das: Arabisch) |
 
-```js
-(async () => {
-  const h = await (await fetch(location.href)).text();
-  const u = h.match(/"baseUrl":"(https:\/\/[^"]*timedtext[^"]*)"/)?.[1]?.replace(/\\u0026/g, "&");
-  const b = u ? await (await fetch(u + "&fmt=json3")).text() : null;
-  return { spurGefunden: !!u, laenge: b?.length ?? null };
-})()
-```
+### Zwei Hypothesen, die ich selbst widerlegt habe
 
-Stand 01.09.2026: `{ spurGefunden: true, laenge: 0 }` – die Spur ist da, der Inhalt nicht.
+- **Die fehlende Anmeldung.** Angemeldet gemessen: `playabilityStatus` wird `OK`, der
+  Abruf bleibt trotzdem leer.
+- **Der Proof-of-Origin-Token.** `yt-dlp` läuft mit `PO Token Providers: none` – es
+  braucht ihn gar nicht.
 
-### Wenn stattdessen doch Weg B (Token nachbauen) kommen soll
+### Folgen
 
-Der fehlende Baustein ist der Proof-of-Origin-Token für `/api/timedtext`. Er wird von
-YouTubes BotGuard-Skript erzeugt; `yt-dlp` löst das über einen externen Provider
-(`bgutil-ytdlp-pot-provider`). Im Browser hiesse das: YouTubes eigenes BotGuard-Skript in
-der Seite ausführen und den Token abgreifen. Aufwendig, bricht bei jeder YouTube-Änderung,
-und ob es unter den Store-Richtlinien durchgeht, ist offen. Ungemessen – zuerst prüfen,
-ob der Token wirklich die Ursache ist.
+- **Entscheidung A (Store-Build fallenlassen) ist hinfällig.** Der Store-Build liefert
+  jetzt dasselbe Transkript wie der full-Build, ohne Helfer, ohne `nativeMessaging`.
+  Der Tree-Shaking-Test läuft weiter durch.
+- **yt-dlp ist wieder das, was der Auftrag vorsah:** der Weg zur Tonspur. Die Host-Route
+  `"subtitles"` bleibt als Notnagel, falls YouTube den Browser-Weg wieder zumacht.
+- **Der Native Host war auf Michaels Rechner nie installiert** – deshalb lief die
+  Extension bei ihm nicht. Jetzt registriert, und der Installer deckt neben Chrome auch
+  **Vivaldi**, Brave und Edge ab.
 
 ## Stand 01.09.2026 (abends) – die Anmeldung war nicht die Ursache
 

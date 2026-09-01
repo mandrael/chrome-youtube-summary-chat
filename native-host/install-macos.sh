@@ -39,6 +39,9 @@ TARGETS=(
   "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
   "$HOME/Library/Application Support/Google/Chrome Beta/NativeMessagingHosts"
   "$HOME/Library/Application Support/Chromium/NativeMessagingHosts"
+  "$HOME/Library/Application Support/Vivaldi/NativeMessagingHosts"
+  "$HOME/Library/Application Support/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+  "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
 )
 
 WROTE=0

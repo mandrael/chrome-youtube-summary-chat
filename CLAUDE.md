@@ -54,48 +54,56 @@ erneut geraten werden:
 - Das komprimierte Format zählt: fünf Minuten sind als WAV 9,6 MB und als Opus 0,9 MB.
   Der Endpunkt nimmt `format: "ogg"`.
 
-**Zum Untertitel-Weg im Browser – gemessen, anonym und angemeldet:**
+**Der Untertitel-Weg im Browser – gelöst, und wie:**
 
-| | anonym | **angemeldet** |
-|---|---|---|
-| `playabilityStatus` (visionOS-Client) | `LOGIN_REQUIRED` | **`OK`** |
-| Spurliste | kommt an | kommt an, 31 Spuren |
-| `baseUrl` abrufen (roh, `fmt=json3`, `fmt=srv3`, `&c=WEB`) | HTTP 200, **Body leer** | HTTP 200, **Body leer** |
-| Panel im DOM, programmatischer Klick | 0 Segmente | 0 Segmente |
-| Panel im DOM, **echter Nutzerklick** | – | **0 Segmente** |
-| `POST /youtubei/v1/get_transcript` | HTTP 400 „Precondition check failed." | – |
+Die `baseUrl` aus dem HTML der Watch-Seite ist **unbrauchbar**: HTTP 200 mit leerem Body,
+anonym wie angemeldet, bei `roh`, `fmt=json3`, `fmt=srv3`, `fmt=json3&c=WEB`. Brauchbar
+ist nur die **signierte** URL aus einer Player-Antwort des visionOS-Clients – sie trägt
+`signature=`, `expire=`, `sparams=`, `key=yt8`.
 
-**Die Anmeldung ist nicht die Ursache.** Das war die naheliegende Vermutung und sie ist
-widerlegt: angemeldet gibt YouTube das Video frei (`OK`) und liefert die Spurliste, der
-Abruf bleibt trotzdem leer. Auch ein echter Klick auf „Transkript anzeigen" öffnet nichts;
-im DOM liegen inzwischen zwei Transkript-Panels (`PAmodern_transcript_view` und
-`engagement-panel-searchable-transcript`), beide bleiben `HIDDEN` und ohne Inhalt.
+Damit YouTube diese Antwort herausgibt, müssen **vier** Dinge stimmen. Fehlt eines,
+kommt `playabilityStatus: LOGIN_REQUIRED` („Melde dich an, damit wir sehen, dass du kein
+Bot bist") – auch beim angemeldeten Nutzer:
 
-**Nicht gemessen, aber die wahrscheinliche Ursache:** YouTube verlangt für
-`/api/timedtext` einen Proof-of-Origin-Token. `yt-dlp` erzeugt ihn, ein `fetch` aus der
-Seite heraus nicht. Wer daran weiterarbeitet, misst zuerst das – nicht noch einmal die
-Anmeldung.
+1. **`playbackContext.contentPlaybackContext.signatureTimestamp`** aus YouTubes
+   `base.js` (`jsUrl` steht im HTML, darin `signatureTimestamp:20684`). Das war der
+   eigentlich fehlende Baustein.
+2. Header **`X-Goog-Visitor-Id`** mit dem `visitorData` aus dem HTML.
+3. **`userAgent` im Kontext-Objekt** – ein Safari-String. Der echte `User-Agent`-Header
+   ist für JavaScript gesperrt, wird aber auch nicht gebraucht.
+4. **Kein `key=`-Parameter** an der URL, nur `?prettyPrint=false`.
 
-**Der Ausweg, gemessen:** `yt-dlp` kommt durch. Host-Route `"subtitles"` holt die
-vorhandene Spur mit `--write-subs --write-auto-subs --sub-format json3 --skip-download`:
-**286 Segmente, 18.430 Zeichen**, kostenlos, mit YouTubes Zeitstempeln. In der Sidebar
-steht sie vor dem Audio-Fallback – billig vor teuer.
+Abgelesen an `yt-dlp --print-traffic`, nicht geraten. Gemessen 01.09.2026: 31 Spuren,
+signierte URL, **46.010 Zeichen** Untertitel-JSON, **mit und ohne Cookies** – also auch
+für nicht angemeldete Nutzer.
 
-**Folge für den `store`-Build:** Er hat keinen Helfer und kommt damit an kein Transkript –
-auch nicht beim angemeldeten Nutzer. Das ist ein offenes Loch, kein Randfall. Solange es
-besteht, ist der Store-Build nicht einreichbar.
+**Die Spurauswahl braucht `defaultCaptionTrackIndex`.** Bei 31 Community-Spuren liefert
+„erste Spur" Arabisch statt Englisch. YouTubes eigene Vorauswahl steht in
+`audioTracks[0].defaultCaptionTrackIndex` (im Test: 6 = Englisch).
+
+**Was daran nicht die Ursache war**, jeweils gemessen und ausgeschlossen: die fehlende
+Anmeldung, der Proof-of-Origin-Token (yt-dlp läuft mit `PO Token Providers: none`), der
+`User-Agent`-Header, der Cookie-Banner.
+
+**yt-dlp ist damit nur noch für Audio zuständig** – so, wie es der Auftrag vorsah. Die
+Host-Route `"subtitles"` bleibt als Notnagel bestehen, falls YouTube wieder dichtmacht,
+wird aber nur angeboten, wenn der Browser-Weg scheitert.
+
+**Der DOM-Panel-Weg funktioniert nicht** und ist nur noch zweiter Rückfall: der Klick auf
+„Transkript anzeigen" öffnet weder programmatisch noch mit echtem Nutzerklick etwas, und
+im DOM liegen zwei Panels (`PAmodern_transcript_view`,
+`engagement-panel-searchable-transcript`), beide `HIDDEN` und leer.
 
 **Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
 Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
 still gekappt. Deshalb `pendingSeek` plus `durationchange`/`loadedmetadata`.
 
-Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
+Zwei DOM-Fallen aus der Panel-Zeit, im Code abgesichert:
 
-- YouTube hält **zwei identische Segmentlisten**, eine unsichtbar. Ein Selektor über das
-  Dokument verdoppelt das Transkript still. Nur die sichtbare Liste lesen, zusätzlich
-  nach Zeit und Text deduplizieren.
-- Im **Hintergrundtab** lädt das Panel nie (zehn Anläufe über 141 s: null Segmente).
-  Deshalb wartet der Code auf `visibilityState === "visible"`.
+- YouTube hält **zwei identische Segmentlisten**, eine unsichtbar. Nur die sichtbare
+  lesen, zusätzlich nach Zeit und Text deduplizieren.
+- Im **Hintergrundtab** lädt das Panel nie. Der Code wartet auf
+  `visibilityState === "visible"` und sagt das in der UI.
 
 **Die Translator API verlangt eine Nutzergeste**, solange das Sprachmodell noch nicht
 geladen ist: *„NotAllowedError: Requires a user gesture when availability is 'downloading'
@@ -137,6 +145,11 @@ Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
   Ein frisches Profil ohne jeden Banner-Klick zeigte denselben Fehler.
 - **Die fehlende Anmeldung als Ursache**: ebenfalls selbst vermutet, am 01.09.2026 in
   einer angemeldeten Sitzung widerlegt. Nicht erneut prüfen.
+- **Der Proof-of-Origin-Token als Ursache**: vermutet und widerlegt – `yt-dlp` holt die
+  Untertitel mit `PO Token Providers: none`.
+- **yt-dlp als Untertitel-Route**: war die Notlösung, solange die Ursache unklar war. Der
+  Browser-Weg funktioniert; yt-dlp ist wieder das, was es sein sollte – der Weg zur
+  Tonspur.
 
 ---
 

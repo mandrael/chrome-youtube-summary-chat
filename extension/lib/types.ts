@@ -25,6 +25,12 @@ export interface CaptionTrack {
   url: string;
   /** Automatisch erzeugte Spur (ASR) statt vom Kanal hochgeladen. */
   auto: boolean;
+  /**
+   * YouTubes eigene Vorauswahl (`defaultCaptionTrackIndex`). Bei Videos mit vielen
+   * Community-Spuren ist das die Originalsprache – ohne diese Angabe landet man
+   * schnell bei der alphabetisch ersten, im Test Arabisch statt Englisch.
+   */
+  standard?: boolean;
 }
 
 export interface ChatMessage {

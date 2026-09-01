@@ -12,16 +12,9 @@ kein Proxy, keine Telemetrie.
 
 ## Zwei Builds aus einer Codebase
 
-**Ausgeliefert wird derzeit nur `full`.** Der Store-Build ist gebaut und geprüft, aber
-nicht eingereicht: ohne lokalen Helfer kommt er an kein Transkript (siehe
-[Transkript-Quellen](#transkript-quellen)). Er bleibt im Repo, damit er sofort wieder
-brauchbar ist, falls YouTube die Untertitel wieder an den Browser ausliefert – wie man das
-prüft, steht in [status.md](status.md).
-
 | | `full` (GitHub, unpacked) | `store` (Chrome Web Store) |
 |---|---|---|
-| Untertitel-Transkript aus der Seite | gebaut, liefert derzeit nichts | gebaut, liefert derzeit nichts |
-| Untertitel über yt-dlp | **ja, die tragende Route** | **nein** |
+| Untertitel-Transkript aus der Seite | ja | ja |
 | Audio-Fallback ohne Untertitel | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
 | Fallback-Code im Bundle | ja | **nein, nachgemessen** |
@@ -129,66 +122,53 @@ cd native-host && python3 selfcheck.py
 
 ## Transkript-Quellen
 
-### Der Untertitel-Weg im Browser – und warum er scheitert
+### Untertitel direkt von YouTube
 
-Am 01.09.2026 gemessen, einmal in einer anonymen und einmal in einer **angemeldeten**
-Chrome-Sitzung:
+Der Normalfall, in beiden Builds, ohne Zusatzsoftware und ohne Kosten. Er war nicht
+selbstverständlich: die `baseUrl` aus dem HTML der Watch-Seite ist unbrauchbar – sie
+beantwortet jeden Abruf mit **HTTP 200 und leerem Body**, anonym wie angemeldet, in allen
+Formatvarianten.
 
-| Weg | anonym | angemeldet |
-|---|---|---|
-| `playabilityStatus` des Videos | `LOGIN_REQUIRED` | **`OK`** |
-| Untertitelspuren in der Seite | vorhanden | vorhanden, 31 Stück |
-| `baseUrl` abrufen – roh, `fmt=json3`, `fmt=srv3`, `&c=WEB` | HTTP 200, **Body leer** | HTTP 200, **Body leer** |
-| Transkript-Panel, programmatischer Klick | 0 Segmente | 0 Segmente |
-| Transkript-Panel, **echter Nutzerklick** | – | **0 Segmente** |
-| `POST /youtubei/v1/get_transcript` | HTTP 400 „Precondition check failed." | – |
+Brauchbar ist nur die **signierte** URL aus einer Player-Antwort des visionOS-Clients.
+Damit YouTube die herausgibt, müssen vier Dinge stimmen – fehlt eines, kommt
+`playabilityStatus: LOGIN_REQUIRED` („Melde dich an, damit wir sehen, dass du kein Bot
+bist"), selbst beim angemeldeten Nutzer:
 
-**Die Anmeldung ist nicht die Ursache** – die naheliegende Vermutung, gemessen und
-widerlegt. Angemeldet gibt YouTube das Video frei und liefert die Spurliste; der Abruf der
-Untertitel bleibt trotzdem leer. Auch ein echter Klick auf „Transkript anzeigen" öffnet
-nichts: im DOM liegen zwei Transkript-Panels (`PAmodern_transcript_view` und
-`engagement-panel-searchable-transcript`), beide bleiben verborgen und leer.
+1. `signatureTimestamp` aus YouTubes `base.js`
+2. Header `X-Goog-Visitor-Id` mit dem `visitorData` der Seite
+3. `userAgent` **im Kontext-Objekt** (ein Safari-String)
+4. kein `key=`-Parameter an der URL
 
-**Wahrscheinlich, aber nicht gemessen:** YouTube verlangt für `/api/timedtext` einen
-Proof-of-Origin-Token, den `yt-dlp` erzeugt und ein `fetch` aus der Seite heraus nicht.
+Am 01.09.2026 gemessen: 31 Spuren, signierte URL, **46.010 Zeichen** Untertitel-JSON,
+**mit und ohne Cookies**. In der Sidebar: 286 Zeilen mit anklickbaren Zeitstempeln.
 
-Der Browser-Weg ist trotzdem gebaut und läuft als erster Versuch – erst der direkte
-Abruf, dann das Panel. Scheitert beides, nennt die Fehlermeldung **beide Gründe im
-Klartext** statt nur „ging nicht", daneben steht ein „Erneut versuchen", und im
-`full`-Build folgen die beiden Knöpfe für den lokalen Helfer. Bis zur Meldung vergehen
-rund 26 Sekunden.
+Bei Videos mit vielen Community-Untertiteln entscheidet YouTubes eigene Vorauswahl
+(`defaultCaptionTrackIndex`), welche Spur „Auto" bedeutet – ohne sie landet man bei der
+alphabetisch ersten, im Test Arabisch statt Englisch.
 
-Zwei Fallstricke, die dabei aufgefallen und behoben sind:
+Welche Spur genommen wird, steuert die Einstellung „Untertitelsprache"; alle vorhandenen
+Spuren stehen im Transkript-Tab zur Wahl. Auf `/shorts/`-Seiten hängt sich die Sidebar
+gar nicht erst ein.
 
-- YouTube hält **zwei identische Segmentlisten** im DOM, eine sichtbar, eine nicht. Ein
-  Selektor über das ganze Dokument verdoppelt das Transkript still – doppelte Kosten,
-  durcheinandergeratene Zeitstempel. Gelesen wird nur die sichtbare Liste, zusätzlich
-  wird nach Zeit und Text dedupliziert.
-- In einem **Hintergrundtab** lädt YouTube den Panelinhalt nicht (zehn Anläufe über 141
-  Sekunden: null Segmente). Der Code wartet, bis der Tab sichtbar ist, und sagt das in
-  der Sidebar auch – sonst sähe das Warten wie ein Hänger aus.
+### Wenn das nicht reicht
 
-Welche Spur genommen wird, steuert die Einstellung „Untertitelsprache"; die tatsächlich
-vorhandenen Spuren stehen im Transkript-Tab der Sidebar zur Wahl.
+Zwei Rückfälle, in dieser Reihenfolge, beide nur im `full`-Build und nur auf Klick:
 
-Auf `/shorts/`-Seiten hängt sich die Sidebar gar nicht erst ein.
+**YouTubes Transkript-Panel im DOM.** Läuft automatisch als zweiter Versuch. Im Test hat
+er nie geliefert – der Klick auf „Transkript anzeigen" öffnet weder programmatisch noch
+mit echtem Nutzerklick etwas. Er bleibt drin, weil er nichts kostet. Zwei Fallstricke sind
+darin abgesichert: YouTube hält zwei identische Segmentlisten im DOM (eine unsichtbar, ein
+Selektor über das Dokument verdoppelt das Transkript still), und im Hintergrundtab lädt
+das Panel nie – der Code wartet auf einen sichtbaren Tab und sagt das auch.
 
-### Untertitel über den lokalen Helfer (nur `full`, nur auf Klick)
-
-Der Weg, der im Test tatsächlich funktioniert hat. `yt-dlp` kommt an YouTubes Sperre
-vorbei, weil es dieselbe visionOS-Player-API mit eigener Signatur anspricht. Der Host holt
-auf Klick nur die **vorhandene Untertitelspur** – kein Audio, keine Transkription, keine
-Kosten:
+**Untertitel über yt-dlp.** Kostenlos, mit YouTubes Zeitstempeln, ohne Audio-Download:
 
 ```
 yt-dlp --write-subs --write-auto-subs --sub-langs <Sprache> --sub-format json3 --skip-download
 ```
 
-Gemessen an einem 19-Minuten-Video: **286 Segmente, 18.430 Zeichen**, mit YouTubes eigenen
-Zeitstempeln, Quelle in der Sidebar als `YouTube-Untertitel (en, via yt-dlp)` ausgewiesen.
-
-Diese Route steht in der Sidebar **vor** dem Audio-Fallback: billig vor teuer. Beide
-starten ausschliesslich auf Klick, nie von selbst.
+Gemessen: 286 Segmente, 18.430 Zeichen. Der Notnagel für den Fall, dass YouTube den
+Browser-Weg wieder zumacht.
 
 ### Audio-Fallback (nur `full`, nur auf Klick)
 
@@ -292,12 +272,8 @@ automatische Downloads.
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
 
-- **Der `store`-Build kommt derzeit an kein Transkript.** Das ist kein ungeprüfter Punkt,
-  sondern ein gemessenes Loch: der Untertitel-Weg im Browser liefert nichts, weder anonym
-  noch angemeldet (Tabelle oben), und ohne lokalen Helfer gibt es keine zweite Route.
-  Solange das so ist, ist der Store-Build nicht einreichbar. Der `full`-Build ist davon
-  nicht betroffen – dort trägt die yt-dlp-Route.
-- **Der Proof-of-Origin-Token** als vermutete Ursache ist nicht nachgewiesen.
+- **Der DOM-Panel-Weg.** Gebaut, aber er hat in keinem Test geliefert. Er schadet nicht,
+  trägt aber auch nichts.
 - **Windows.** `install-windows.ps1` folgt Chromes dokumentiertem Verfahren, ist aber
   mangels Windows-Rechner nie ausgeführt worden. Die lokale Route Parakeet MLX ist dort
   ohnehin nicht verfügbar (Apple Silicon).
@@ -309,7 +285,8 @@ Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 | Prüfung | Beleg |
 |---|---|
 | Beide Builds, Tree-Shaking-Nachweis | `verify-store-bundle.sh` bestanden, inkl. Gegenprobe |
-| Untertitel über den lokalen Helfer | 286 Segmente, 18.430 Zeichen |
+| Untertitel direkt von YouTube, `full` und `store` | 286 Zeilen, 46.010 Zeichen JSON |
+| Untertitel über den lokalen Helfer (Rückfall) | 286 Segmente, 18.430 Zeichen |
 | Chat gegen OpenRouter aus der Sidebar | 4.278 Zeichen deutsche Antwort, 34 Zeitstempel, $0.00533 |
 | Chrome-Übersetzung | 286 Zeitstempel, 22.507 Zeichen, kostenlos |
 | Zeitstempel-Klick | `[05:01]` geklickt, Video danach bei 302 s |

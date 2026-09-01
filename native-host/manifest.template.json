@@ -1,0 +1,7 @@
+{
+  "name": "at.gasperl.youtube_summary_chat",
+  "description": "Audio-Fallback fuer YouTube Summary Chat: laedt die Tonspur und transkribiert sie.",
+  "path": "__HOST_PATH__",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://__EXTENSION_ID__/"]
+}

@@ -1,0 +1,21 @@
+node_modules/
+.output/
+.wxt/
+*.zip
+
+# Native-Messaging-Wrapper werden von den Installern erzeugt und enthalten
+# maschinenspezifische Pfade.
+native-host/run-host.sh
+native-host/run-host.bat
+native-host/at.gasperl.youtube_summary_chat.json
+
+# Nie ins Repo: Schluessel, Zugangsdaten, lokale Umgebung.
+*.pem
+.env
+.env.*
+!.env.example
+
+.DS_Store
+
+__pycache__/
+*.pyc

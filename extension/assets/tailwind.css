@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+/* Damit Tailwind auch die Dateien ausserhalb des Standard-Scans findet. */
+@source "../entrypoints";
+@source "../components";
+@source "../lib";
+
+/*
+ * Die Variablen stehen auf :host UND :root, weil dieselben Komponenten in zwei
+ * Kontexten laufen: die Sidebar im Shadow DOM eines Content-Scripts (dort greift :root
+ * nicht) und die Options-Page in einem normalen Dokument.
+ */
+@layer base {
+  :host,
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --radius: 0.625rem;
+  }
+
+  /*
+   * YouTube setzt sein Dark-Theme über das Attribut `dark` am <html>-Element, nicht über
+   * prefers-color-scheme. Die Sidebar folgt deshalb dem Host-Attribut, das per
+   * :host-context bzw. per gespiegelter Klasse am Shadow-Wurzelelement ankommt.
+   */
+  :host(.dark),
+  .dark,
+  :root.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.985 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
+
+/* Markdown-Ausgabe. Tailwind Typography wäre ein weiteres Paket für ein Dutzend Regeln. */
+@layer components {
+  .md-body {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .md-body > * + * {
+    margin-top: 0.6em;
+  }
+  .md-body h1,
+  .md-body h2,
+  .md-body h3,
+  .md-body h4 {
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 1.1em;
+  }
+  .md-body h1 {
+    font-size: 1.25em;
+  }
+  .md-body h2 {
+    font-size: 1.1em;
+  }
+  .md-body h3 {
+    font-size: 1em;
+  }
+  .md-body ul,
+  .md-body ol {
+    padding-left: 1.25em;
+  }
+  .md-body ul {
+    list-style: disc;
+  }
+  .md-body ol {
+    list-style: decimal;
+  }
+  .md-body li + li {
+    margin-top: 0.25em;
+  }
+  .md-body a {
+    text-decoration: underline;
+  }
+  .md-body code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    background: var(--muted);
+    padding: 0.1em 0.3em;
+    border-radius: var(--radius-sm);
+  }
+  .md-body pre {
+    background: var(--muted);
+    padding: 0.75em;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+  }
+  .md-body pre code {
+    background: none;
+    padding: 0;
+  }
+  .md-body blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 0.75em;
+    color: var(--muted-foreground);
+  }
+  .md-body table {
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+  }
+  .md-body th,
+  .md-body td {
+    border: 1px solid var(--border);
+    padding: 0.3em 0.5em;
+    text-align: left;
+  }
+}

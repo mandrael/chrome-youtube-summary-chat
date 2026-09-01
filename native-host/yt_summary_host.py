@@ -137,6 +137,86 @@ class HostError(Exception):
 
 
 # --------------------------------------------------------------------------
+# Untertitel per yt-dlp
+# --------------------------------------------------------------------------
+
+def fetch_subtitles(video_id: str, language: str | None, workdir: Path) -> dict[str, Any]:
+    """Holt die Untertitelspur mit yt-dlp statt aus der Seite.
+
+    Warum es diesen Weg gibt: eine nicht angemeldete Browser-Sitzung bekommt von
+    YouTube keine Player-Daten mehr - der Server antwortet im Wortlaut mit
+    "LOGIN_REQUIRED / Melde dich an, damit wir sehen, dass du kein Bot bist".
+    Damit laufen alle browser-seitigen Wege ins Leere: der direkte timedtext-Abruf
+    liefert HTTP 200 mit leerem Body, get_transcript einen HTTP 400, und YouTubes
+    eigenes Transkript-Panel bleibt beim Klick leer.
+
+    yt-dlp probiert dagegen mehrere InnerTube-Clients durch und kommt durch. Real
+    gemessen am 01.09.2026: 286 Segmente mit Zeitstempeln fuer ein Video, bei dem
+    im Browser kein einziger Weg etwas lieferte.
+
+    Das ist ausserdem der billigste Weg ueberhaupt - keine Transkriptionskosten,
+    kein Audio-Download, und die Zeitstempel stammen direkt von YouTube.
+    """
+    ytdlp = require("yt-dlp")
+    progress("download", "Untertitel werden geholt …")
+
+    # Nur EINE Sprache anfordern. Wer alle Spuren zieht, laeuft in HTTP 429.
+    langs = language if language and language != "auto" else "en.*,de.*"
+
+    res = run([
+        ytdlp, "--write-subs", "--write-auto-subs",
+        "--sub-langs", langs, "--sub-format", "json3",
+        "--skip-download", "--no-playlist", "--no-warnings",
+        "-o", str(workdir / "sub"),
+        f"https://www.youtube.com/watch?v={video_id}",
+    ])
+
+    files = sorted(workdir.glob("sub*.json3"))
+    if not files:
+        # yt-dlp meldet den Grund oft nur auf stderr; der gehoert in die Fehlermeldung.
+        detail = (res.stderr or res.stdout or "").strip()[-400:]
+        raise HostError(
+            "Fuer dieses Video liefert auch yt-dlp keine Untertitel."
+            + (f"\n{detail}" if detail else "")
+        )
+
+    # Bevorzugt die manuell erstellte Spur: ihr Dateiname traegt kein "-orig"
+    # und keine Uebersetzungs-Endung.
+    chosen = min(files, key=lambda f: (".orig." in f.name, len(f.name)))
+    segments = parse_json3(chosen.read_text(encoding="utf-8"))
+    if not segments:
+        raise HostError("Die Untertiteldatei war leer.")
+
+    return {
+        "segments": segments,
+        "text": " ".join(s["text"] for s in segments),
+        "route": f"YouTube-Untertitel ({chosen.name.replace('sub.', '').replace('.json3', '')}, via yt-dlp)",
+    }
+
+
+def parse_json3(body: str) -> list[dict[str, Any]]:
+    """YouTubes json3-Format. Dieselbe Logik wie in der Extension, hier fuer den Host."""
+    data = json.loads(body)
+    out: list[dict[str, Any]] = []
+    for ev in data.get("events") or []:
+        start = ev.get("tStartMs")
+        segs = ev.get("segs")
+        if start is None or not segs:
+            continue
+        text = " ".join("".join(s.get("utf8", "") for s in segs).split()).strip()
+        # Reine Positionierungs-Events ohne Text kommen regelmaessig vor.
+        if not text:
+            continue
+        dur = ev.get("dDurationMs") or 0
+        out.append({
+            "start": start / 1000,
+            "end": (start + dur) / 1000,
+            "text": text,
+        })
+    return out
+
+
+# --------------------------------------------------------------------------
 # Audio holen
 # --------------------------------------------------------------------------
 
@@ -353,7 +433,7 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
         raise HostError(f"Ungueltige Video-ID: {video_id!r}")
 
     route = str(msg.get("route", "parakeet-mlx"))
-    if route not in STT_MODELS and route != "parakeet-mlx":
+    if route not in STT_MODELS and route not in ("parakeet-mlx", "subtitles"):
         raise HostError(f"Unbekannte Route: {route}")
 
     api_key = msg.get("apiKey") or ""
@@ -363,6 +443,14 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
     with tempfile.TemporaryDirectory(prefix="yt-summary-") as tmp:
         workdir = Path(tmp)
         progress("start", "Vorbereitung …")
+
+        # Untertitel zuerst: kostenlos, kein Audio-Download, Zeitstempel von YouTube.
+        if route == "subtitles":
+            result = fetch_subtitles(video_id, msg.get("language"), workdir)
+            progress("done", "Fertig", 100)
+            send({"type": "result", **result})
+            return
+
         source = download_audio(video_id, workdir)
 
         if route == "parakeet-mlx":

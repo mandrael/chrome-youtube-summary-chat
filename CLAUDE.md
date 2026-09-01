@@ -54,16 +54,39 @@ erneut geraten werden:
 - Das komprimierte Format zählt: fünf Minuten sind als WAV 9,6 MB und als Opus 0,9 MB.
   Der Endpunkt nimmt `format: "ogg"`.
 
-**Zum Untertitel-Weg – in einer nicht angemeldeten Sitzung liefert kein Weg etwas:**
+**Zum Untertitel-Weg im Browser – die Ursache ist gefunden:**
+
+`POST /youtubei/v1/player` mit dem visionOS-Client (clientName `VISIONOS`, clientVersion
+`1.02`, deviceModel `RealityDevice17,1`, `X-Youtube-Client-Name: 101`) antwortet
+`playabilityStatus: LOGIN_REQUIRED`, Grund im Wortlaut: **„Melde dich an, damit wir sehen,
+dass du kein Bot bist"** – mit und ohne Sitzungsdaten. YouTube verweigert das Video, nicht
+die Untertitel. Alle drei Browser-Wege scheitern daran:
 
 - Direkter Abruf der `baseUrl`: **HTTP 200 mit leerem Body**, bei `roh`, `fmt=json3`,
   `fmt=srv3`, `fmt=json3&c=WEB`, mit und ohne Consent. Die Spurliste kommt weiterhin an.
 - `POST /youtubei/v1/get_transcript` mit vollständigen Headern: **HTTP 400, „Precondition
   check failed."**
-- Klick auf „Transkript anzeigen“ aus Skript: expandiert das Panel, löst aber **keinen
-  Netzwerk-Request** aus. Zwei zufällige Erfolge liessen sich nicht reproduzieren.
-- **Offen und ungemessen: die angemeldete Sitzung.** Das ist der Regelfall und der
-  wahrscheinlichste Grund. Vor jeder weiteren Arbeit an diesem Weg zuerst dort messen.
+- Klick auf „Transkript anzeigen" aus Skript: expandiert das Panel, löst aber **keinen
+  Netzwerk-Request** aus.
+
+**Der Ausweg, gemessen:** `yt-dlp` kommt durch. Host-Route `"subtitles"` holt die
+vorhandene Spur mit `--write-subs --write-auto-subs --sub-format json3 --skip-download`:
+**286 Segmente, 18.430 Zeichen**, kostenlos, mit YouTubes Zeitstempeln. In der Sidebar
+steht sie vor dem Audio-Fallback – billig vor teuer.
+
+**Offen und ungemessen bleibt die angemeldete Sitzung.** Nicht mehr blockierend, aber
+falls jemand daran weiterarbeitet: zuerst dort messen, nicht wieder im Anonymfall.
+
+**Die Translator API verlangt eine Nutzergeste**, solange das Sprachmodell noch nicht
+geladen ist: *„NotAllowedError: Requires a user gesture when availability is 'downloading'
+or 'downloadable'."* Jedes `await` vor `Translator.create()` verbraucht die Geste des
+Klicks – auch ein dynamischer Import. Deshalb ist `translate()` in der Sidebar synchron
+und `create()` der erste `await` überhaupt. Gemessen: 286 Zeitstempel, 22.507 Zeichen,
+rund drei Minuten, davon 160 s Modell-Download.
+
+**Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
+Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
+still gekappt. Deshalb `pendingSeek` plus `durationchange`/`loadedmetadata`.
 
 Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
 
@@ -85,6 +108,13 @@ Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
 - **`ytInitialPlayerResponse` aus dem globalen Objekt lesen**: bei SPA-Navigation nicht
   zuverlässig auf dem Stand der sichtbaren Video-ID. Stattdessen ein frischer
   same-origin-Abruf der Watch-Seite mit explizitem `?v=`.
+- **Eine Kopie des echten Chrome-Profils**, um angemeldet zu testen: die Sitzungsdatei auf
+  Platte ist nur so aktuell wie das letzte saubere Beenden von Chrome (im Test neun Tage
+  alt), und ihre Entschlüsselung braucht einen Schlüsselbund-Eintrag, den ein Chrome mit
+  fremdem `--user-data-dir` nicht bekommt. Ergebnis: `angemeldet: false`. Nicht noch
+  einmal versuchen – der Weg führt über einen Debug-Port am laufenden Chrome.
+- **Der Cookie-Banner als Ursache** des leeren Panels: selbst vermutet, selbst widerlegt.
+  Ein frisches Profil ohne jeden Banner-Klick zeigte denselben Fehler.
 
 ---
 

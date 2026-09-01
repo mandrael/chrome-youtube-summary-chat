@@ -28,9 +28,16 @@ import {
 } from "@/lib/storage";
 import { transcriptToText } from "@/lib/timestamps";
 import { loadTrack, loadTranscript, NoCaptionsError } from "@/lib/transcript";
+import {
+  availability as localAvailability,
+  baseLang,
+  isSupported as localTranslateSupported,
+  translateTranscript,
+} from "@/lib/translate-local";
 import type {
   CaptionTrack,
   ChatMessage,
+  HelperJob,
   ModelInfo,
   Settings as AppSettings,
   Transcript,
@@ -65,6 +72,9 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
   const [streaming, setStreaming] = React.useState(false);
   const [fallbackState, setFallbackState] = React.useState<string | null>(null);
   const [models, setModels] = React.useState<ModelInfo[]>(FALLBACK_MODELS);
+  // Vorab geprüft, damit der Klick-Handler ohne vorheriges await auskommt: die
+  // Translator-API verlangt für den Modell-Download eine Nutzergeste.
+  const [localTranslateOk, setLocalTranslateOk] = React.useState(false);
 
   const stopRef = React.useRef<(() => void) | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -92,6 +102,16 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
       .then(setModels)
       .catch(() => {});
   }, []);
+
+  React.useEffect(() => {
+    if (!settings?.preferLocalTranslate || !transcript || !localTranslateSupported()) {
+      setLocalTranslateOk(false);
+      return;
+    }
+    const source = baseLang(transcript.lang) || "en";
+    const target = languageToCode(settings.translationTarget);
+    void localAvailability(source, target).then((a) => setLocalTranslateOk(a !== "unavailable"));
+  }, [settings?.preferLocalTranslate, settings?.translationTarget, transcript]);
 
   /* ---- Transkript laden, bei jedem Videowechsel neu ---- */
 
@@ -245,24 +265,20 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
 
   /* ---- Übersetzung ---- */
 
-  async function translate() {
+  function translate() {
     if (!settings || !transcript) return;
 
     if (settings.preferLocalTranslate) {
-      const { availability, baseLang, translateTranscript } = await import(
-        "@/lib/translate-local"
-      );
-      const target = languageToCode(settings.translationTarget);
-      const source = baseLang(transcript.lang) || "en";
-
-      const av = await availability(source, target);
-      if (av === "unavailable") {
+      if (!localTranslateOk) {
         setMessages((m) => [
           ...m,
           { role: "assistant", content: t("localTranslateUnavailable"), error: true },
         ]);
         return;
       }
+
+      const source = baseLang(transcript.lang) || "en";
+      const target = languageToCode(settings.translationTarget);
 
       setStreaming(true);
       setTab("chat");
@@ -272,41 +288,31 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
         { role: "assistant", content: `${t("localTranslateDownloading")} …` },
       ]);
 
-      try {
-        const translated = await translateTranscript(transcript, {
-          source,
-          target,
-          onProgress: (done, total) =>
-            setMessages((m) => {
-              const copy = [...m];
-              const last = copy.at(-1);
-              if (last?.role === "assistant") {
-                last.content = `${t("presetTranslate")} … ${done}/${total}`;
-              }
-              return copy;
-            }),
-        });
+      const setLast = (content: string, error = false) =>
         setMessages((m) => {
           const copy = [...m];
           const last = copy.at(-1);
           if (last?.role === "assistant") {
-            last.content = transcriptToText(translated);
+            last.content = content;
+            last.error = error;
           }
           return copy;
         });
-      } catch (e) {
-        setMessages((m) => {
-          const copy = [...m];
-          const last = copy.at(-1);
-          if (last?.role === "assistant") {
-            last.content = String((e as Error)?.message ?? e);
-            last.error = true;
-          }
-          return copy;
-        });
-      } finally {
-        setStreaming(false);
-      }
+
+      // Kein await vor diesem Aufruf: die Nutzergeste des Klicks muss bis zu
+      // Translator.create() durchhalten, sonst NotAllowedError.
+      translateTranscript(transcript, {
+        source,
+        target,
+        // Der Modell-Download blockiert create() – gemessen 160 s. Ohne diese Anzeige
+        // sieht die Sidebar in der Zeit aus, als hinge sie.
+        onDownload: (loaded) =>
+          setLast(`${t("localTranslateDownloading")} … ${Math.round(loaded * 100)} %`),
+        onProgress: (done, total) => setLast(`${t("presetTranslate")} … ${done}/${total}`),
+      })
+        .then((translated) => setLast(transcriptToText(translated)))
+        .catch((e) => setLast(String((e as Error)?.message ?? e), true))
+        .finally(() => setStreaming(false));
       return;
     }
 
@@ -318,10 +324,10 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
 
   /* ---- Audio-Fallback (nur Build "full") ---- */
 
-  function runFallbackJob() {
+  function runFallbackJob(kind: HelperJob) {
     if (!__FALLBACK__) return;
     setFallbackState(t("fallbackRunning"));
-    const job = startFallback(videoId, (p) =>
+    const job = startFallback(videoId, kind, (p) =>
       setFallbackState(`${p.message}${p.percent != null ? ` (${p.percent}%)` : ""}`),
     );
     job.promise
@@ -442,7 +448,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("chapters")}>
                 {t("presetChapters")}
               </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => void translate()}>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => translate()}>
                 {t("presetTranslate")}
                 {settings?.preferLocalTranslate ? " ⌂" : ""}
               </Button>
@@ -458,11 +464,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
             )}
 
             {loadState === "no-captions" && (
-              <NoCaptions
-                t={t}
-                busy={fallbackState}
-                onStart={runFallbackJob}
-              />
+              <NoCaptions t={t} busy={fallbackState} onStart={runFallbackJob} />
             )}
 
             {loadState === "error" && (
@@ -470,9 +472,17 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
                 <p className="mb-2 text-sm text-destructive whitespace-pre-wrap">
                   {loadError}
                 </p>
-                <Button size="sm" variant="outline" onClick={() => reloadTranscript()}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mb-3"
+                  onClick={() => void reloadTranscript()}
+                >
                   {t("retry")}
                 </Button>
+                {/* Der Helfer kommt auch dann an die Untertitel, wenn die Seite
+                    selbst nichts liefert – deshalb hier dieselben Knöpfe. */}
+                <NoCaptions t={t} busy={fallbackState} onStart={runFallbackJob} />
               </div>
             )}
 
@@ -654,26 +664,36 @@ function NoCaptions({
 }: {
   t: T;
   busy: string | null;
-  onStart: () => void;
+  onStart: (job: HelperJob) => void;
 }) {
   // Im Store-Build endet es hier: klare Meldung, kein Platzhalter, keine erfundene Ausgabe.
   if (!__FALLBACK__) {
     return <p className="py-4 text-sm text-destructive">{t("noCaptionsStore")}</p>;
   }
+
+  if (busy) {
+    return (
+      <p className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
+        {busy}
+      </p>
+    );
+  }
+
+  // Zwei Wege, billig zuerst. Beide starten ausschliesslich auf Klick, nie automatisch.
   return (
-    <div className="py-4 text-sm">
-      <p className="mb-2 text-destructive">{t("noCaptionsFull")}</p>
-      {busy ? (
-        <p className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          {busy}
-        </p>
-      ) : (
-        // Nie automatisch – der Download startet ausschliesslich auf diesen Klick.
-        <Button size="sm" onClick={onStart}>
-          {t("startFallback")}
-        </Button>
-      )}
+    <div className="text-sm">
+      <p className="mb-3 text-destructive">{t("noCaptionsFull")}</p>
+
+      <Button size="sm" className="mb-1" onClick={() => onStart("subtitles")}>
+        {t("startSubtitles")}
+      </Button>
+      <p className="mb-4 text-xs text-muted-foreground">{t("subtitlesHint")}</p>
+
+      <Button size="sm" variant="outline" className="mb-1" onClick={() => onStart("audio")}>
+        {t("startFallback")}
+      </Button>
+      <p className="text-xs text-muted-foreground">{t("audioHint")}</p>
     </div>
   );
 }

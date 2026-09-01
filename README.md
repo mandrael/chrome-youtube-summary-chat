@@ -122,26 +122,29 @@ cd native-host && python3 selfcheck.py
 
 ## Transkript-Quellen
 
-### Der Untertitel-Weg – Stand der Messung
+### Der Untertitel-Weg im Browser – und warum er scheitert
 
-**Das ist der offene Punkt dieses Projekts.** Am 01.09.2026 in einer *nicht angemeldeten*
-Chrome-Sitzung gemessen, drei Wege, alle erfolglos:
+Am 01.09.2026 in einer *nicht angemeldeten* Chrome-Sitzung gemessen, drei Wege, alle
+erfolglos:
 
 | Weg | Ergebnis |
 |---|---|
 | `baseUrl` aus `ytInitialPlayerResponse` direkt abrufen | HTTP 200, **Body leer** – bei `roh`, `fmt=json3`, `fmt=srv3` und `fmt=json3&c=WEB`, mit und ohne gesetzten Consent |
-| YouTubes Transkript-Panel im DOM auslesen | Der programmatische Klick expandiert das Panel (`visibility=…EXPANDED`), löst aber **keinen einzigen Netzwerk-Request** aus. Zweimal kam es doch zustande, nicht reproduzierbar. |
-| InnerTube `POST /youtubei/v1/get_transcript` mit vollständigen Headern (Client-Version, Visitor-ID, `params` aus `getTranscriptEndpoint`) | HTTP 400, *„Precondition check failed."* |
+| YouTubes Transkript-Panel im DOM auslesen | Der programmatische Klick expandiert das Panel (`visibility=…EXPANDED`), löst aber **keinen einzigen Netzwerk-Request** aus |
+| InnerTube `POST /youtubei/v1/get_transcript` mit vollständigen Headern | HTTP 400, *„Precondition check failed."* |
 
-Die Spurliste selbst kommt weiterhin an – nur der Inhalt nicht.
+**Die gemeinsame Ursache ist gefunden.** `POST /youtubei/v1/player` mit dem
+visionOS-Client (clientName `VISIONOS`, clientVersion `1.02`, deviceModel
+`RealityDevice17,1`, `X-Youtube-Client-Name: 101`) antwortet
+`playabilityStatus: LOGIN_REQUIRED` mit dem Grund im Wortlaut: *„Melde dich an, damit wir
+sehen, dass du kein Bot bist."* YouTube verweigert nicht die Untertitel, sondern das
+Video – und das nimmt jedem Untertitel-Weg im Browser die Grundlage.
 
-**Nicht gemessen und deshalb offen: eine angemeldete Sitzung.** Das ist der Regelfall im
-Alltag und der wahrscheinlichste Grund für das Verhalten. Bis das geprüft ist, gilt der
-Untertitel-Weg als **implementiert, aber unbestätigt**.
-
-Beide Wege sind gebaut und laufen nacheinander: erst der direkte Abruf, dann das Panel.
-Scheitert beides, nennt die Fehlermeldung **beide Gründe im Klartext** statt nur „ging
-nicht", und daneben steht ein „Erneut versuchen".
+Ob eine angemeldete Sitzung das aufhebt, ist **nicht gemessen** und bleibt offen. Der
+Untertitel-Weg im Browser ist gebaut und läuft als erster Versuch – erst der direkte
+Abruf, dann das Panel. Scheitert beides, nennt die Fehlermeldung **beide Gründe im
+Klartext** statt nur „ging nicht", daneben steht ein „Erneut versuchen", und im
+`full`-Build folgen die beiden Knöpfe für den lokalen Helfer.
 
 Zwei Fallstricke, die dabei aufgefallen und behoben sind:
 
@@ -150,14 +153,29 @@ Zwei Fallstricke, die dabei aufgefallen und behoben sind:
   durcheinandergeratene Zeitstempel. Gelesen wird nur die sichtbare Liste, zusätzlich
   wird nach Zeit und Text dedupliziert.
 - In einem **Hintergrundtab** lädt YouTube den Panelinhalt nicht (zehn Anläufe über 141
-  Sekunden: null Segmente). Ein per Mittelklick geöffnetes Video würde sonst mit „kein
-  Transkript" scheitern. Der Code wartet deshalb, bis der Tab sichtbar ist.
+  Sekunden: null Segmente). Der Code wartet deshalb, bis der Tab sichtbar ist.
 
 Welche Spur genommen wird, steuert die Einstellung „Untertitelsprache"; die tatsächlich
-vorhandenen Spuren stehen im Transkript-Tab der Sidebar zur Wahl (beim Panel-Weg alle,
-die YouTube im Fussmenü führt – im Test 31 Sprachen).
+vorhandenen Spuren stehen im Transkript-Tab der Sidebar zur Wahl.
 
 Auf `/shorts/`-Seiten hängt sich die Sidebar gar nicht erst ein.
+
+### Untertitel über den lokalen Helfer (nur `full`, nur auf Klick)
+
+Der Weg, der im Test tatsächlich funktioniert hat. `yt-dlp` kommt an YouTubes Sperre
+vorbei, weil es dieselbe visionOS-Player-API mit eigener Signatur anspricht. Der Host holt
+auf Klick nur die **vorhandene Untertitelspur** – kein Audio, keine Transkription, keine
+Kosten:
+
+```
+yt-dlp --write-subs --write-auto-subs --sub-langs <Sprache> --sub-format json3 --skip-download
+```
+
+Gemessen an einem 19-Minuten-Video: **286 Segmente, 18.430 Zeichen**, mit YouTubes eigenen
+Zeitstempeln, Quelle in der Sidebar als `YouTube-Untertitel (en, via yt-dlp)` ausgewiesen.
+
+Diese Route steht in der Sidebar **vor** dem Audio-Fallback: billig vor teuer. Beide
+starten ausschliesslich auf Klick, nie von selbst.
 
 ### Audio-Fallback (nur `full`, nur auf Klick)
 
@@ -226,6 +244,18 @@ Vorgabe. Die Option erscheint nur, wenn die API vorhanden und das Sprachpaar ver
 Der Aufruf läuft im Content-Script, nicht im Service Worker: die Translator API steht in
 Web Workers nicht zur Verfügung.
 
+**Eine Eigenheit, über die man stolpert:** solange das Sprachmodell noch nicht geladen ist,
+verlangt `Translator.create()` eine **Nutzergeste**, sonst kommt
+*„NotAllowedError: Requires a user gesture when availability is 'downloading' or
+'downloadable'."* Jedes `await` vor dem Aufruf verbraucht die Geste des Klicks. Der
+Übersetzen-Knopf ruft deshalb keinen dynamischen Import und keine Verfügbarkeitsprüfung
+mehr auf – die läuft vorab – und `create()` ist der erste `await` im Handler.
+
+Gemessen am selben 19-Minuten-Video: **286 Zeitstempel, 22.507 Zeichen** vollständige
+deutsche Fassung, rund drei Minuten, davon 160 Sekunden Modell-Download beim ersten Mal.
+Der Download-Fortschritt wird angezeigt, weil 160 Sekunden ohne Rückmeldung wie ein
+Hänger aussehen.
+
 ---
 
 ## Permissions und warum
@@ -249,24 +279,29 @@ automatische Downloads.
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
 
-- **Der Untertitel-Weg in einer angemeldeten Sitzung.** Der wichtigste offene Punkt, siehe
-  oben. In einer anonymen Sitzung liefert kein Weg ein Transkript.
+- **Der Untertitel-Weg im Browser in einer angemeldeten Sitzung.** In einer anonymen
+  Sitzung liefert er nichts, die Ursache ist oben belegt. Ob eine Anmeldung das aufhebt,
+  ist ungemessen. Praktisch aufgefangen durch die yt-dlp-Route des `full`-Builds –
+  **im `store`-Build bleibt dieser Punkt offen**, dort gibt es keinen Helfer.
 - **Windows.** `install-windows.ps1` folgt Chromes dokumentiertem Verfahren, ist aber
   mangels Windows-Rechner nie ausgeführt worden. Die lokale Route Parakeet MLX ist dort
   ohnehin nicht verfügbar (Apple Silicon).
-- **Der Chat gegen OpenRouter aus der Sidebar heraus.** Der Streaming-Weg ist gebaut,
-  konnte aber nicht ausgelöst werden, solange kein Transkript ankommt. Der Endpunkt selbst
-  ist über `/api/v1/key` und die STT-Aufrufe belegt.
-- **Die Chrome-Übersetzung.** Feature-Detection und zeilenweiser Ablauf sind gebaut, ein
-  Lauf gegen die echte Translator API steht aus.
 - **Der Chrome Web Store.** Der Store-Build wird gebaut und geprüft, aber nicht
   eingereicht.
 
-Verifiziert ist dagegen: beide Builds, der Tree-Shaking-Nachweis, alle drei STT-Routen
-end-to-end über den Native-Host, die Zeitstempel-Frage bei beiden Cloud-Modellen,
-`/api/v1/key`, das Einhängen der Sidebar in die rechte Spalte oberhalb der Empfehlungen
-samt Dark-Mode, die Options-Page mit live geladener Modellliste – sowie 12 Prüfungen der
-Extension-Logik und 6 des Hosts.
+Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
+
+| Prüfung | Beleg |
+|---|---|
+| Beide Builds, Tree-Shaking-Nachweis | `verify-store-bundle.sh` bestanden, inkl. Gegenprobe |
+| Untertitel über den lokalen Helfer | 286 Segmente, 18.430 Zeichen |
+| Chat gegen OpenRouter aus der Sidebar | 4.278 Zeichen deutsche Antwort, 34 Zeitstempel, $0.00533 |
+| Chrome-Übersetzung | 286 Zeitstempel, 22.507 Zeichen, kostenlos |
+| Zeitstempel-Klick | `[05:01]` geklickt, Video danach bei 302 s |
+| Alle drei STT-Routen end-to-end | siehe Tabelle oben |
+| `/api/v1/key`, Modellliste live | 375 Modelle in der Options-Page |
+| Sidebar-Platzierung, Dark-Mode, SPA-Wechsel | im Browser gesehen |
+| Extension-Logik / Host | 12 bzw. 6 Prüfungen |
 
 ```bash
 cd extension    && pnpm run check          # 12 Prüfungen

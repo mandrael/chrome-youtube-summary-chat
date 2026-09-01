@@ -33,7 +33,8 @@ interface HostResponse {
 
 export interface FallbackRequest {
   videoId: string;
-  route: SttRoute;
+  /** "subtitles" ist der billige Weg und wird zuerst angeboten. */
+  route: SttRoute | "subtitles";
   /** Nur für die beiden OpenRouter-Routen; der Host hält keinen eigenen Key. */
   apiKey?: string;
   language?: string;

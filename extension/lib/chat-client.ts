@@ -1,4 +1,4 @@
-import type { ChatMessage, ReasoningEffort, Transcript, Usage } from "./types";
+import type { ChatMessage, HelperJob, ReasoningEffort, Transcript, Usage } from "./types";
 import type { FallbackProgress } from "./fallback";
 
 /**
@@ -77,6 +77,7 @@ export function startChat(args: StreamArgs): StreamHandle {
 /** Nur im Build "full" aufgerufen. Siehe __FALLBACK__ in wxt.config.ts. */
 export function startFallback(
   videoId: string,
+  job: HelperJob,
   onProgress: (p: FallbackProgress) => void,
 ): { promise: Promise<Transcript>; cancel: () => void } {
   const port = chrome.runtime.connect({ name: "fallback" });
@@ -99,7 +100,7 @@ export function startFallback(
     });
   });
 
-  port.postMessage({ type: "start", videoId });
+  port.postMessage({ type: "start", videoId, job });
   return { promise, cancel: () => port.disconnect() };
 }
 

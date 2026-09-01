@@ -113,13 +113,53 @@ function currentTitle(): string {
   return el?.textContent?.trim() ?? document.title.replace(/ - YouTube$/, "");
 }
 
-/** Setzt die Wiedergabeposition des Players auf der Seite. */
-function seek(seconds: number): void {
-  const video = document.querySelector<HTMLVideoElement>(
+/**
+ * Setzt die Wiedergabeposition des Players auf der Seite.
+ *
+ * Während einer Werbeeinblendung zeigt dasselbe `<video>`-Element die Werbung: real
+ * gemessen ein `duration` von 19 Sekunden bei einem 18:29 langen Video. Ein Sprung auf
+ * 05:48 wird dann stumm auf das Werbeende gekappt und der Klick verpufft. Deshalb wird
+ * geprüft, ob der Sprung angekommen ist – und andernfalls vorgemerkt und nachgeholt,
+ * sobald das Hauptvideo geladen ist.
+ */
+let pendingSeek: number | null = null;
+
+function currentVideo(): HTMLVideoElement | null {
+  return document.querySelector<HTMLVideoElement>(
     "video.html5-main-video, #movie_player video, video",
   );
+}
+
+function applyPendingSeek(): void {
+  if (pendingSeek === null) return;
+  const video = currentVideo();
+  if (!video || document.getElementById("movie_player")?.classList.contains("ad-showing")) {
+    return;
+  }
+  const wanted = pendingSeek;
+  video.currentTime = wanted;
+  if (Math.abs(video.currentTime - wanted) <= 2) {
+    pendingSeek = null;
+    video.removeEventListener("durationchange", applyPendingSeek);
+    video.removeEventListener("loadedmetadata", applyPendingSeek);
+  }
+}
+
+function seek(seconds: number): void {
+  const video = currentVideo();
   if (!video) return;
+
   video.currentTime = seconds;
+
+  if (Math.abs(video.currentTime - seconds) > 2) {
+    // Nicht angekommen – vormerken und nachholen, sobald der Player umschaltet.
+    pendingSeek = seconds;
+    video.addEventListener("durationchange", applyPendingSeek);
+    video.addEventListener("loadedmetadata", applyPendingSeek);
+    return;
+  }
+
+  pendingSeek = null;
   void video.play().catch(() => {
     /* Autoplay-Sperre: die Position stimmt trotzdem */
   });

@@ -10,6 +10,13 @@ import { replaceCueTexts } from "./timestamps";
  *
  * Übersetzt wird pro Untertitelzeile. Dadurch bleibt der Zeitstempel strukturell
  * unangetastet – anders als beim Modellweg kann hier gar nichts verrutschen.
+ *
+ * Reihenfolge ist wichtig: solange das Sprachmodell noch nicht geladen ist, verlangt
+ * `Translator.create()` eine Nutzergeste. Real gemessen (01.09.2026):
+ * *„NotAllowedError: Requires a user gesture when availability is 'downloading' or
+ * 'downloadable'."* Jedes `await` vor dem Aufruf verbraucht die Geste des Klicks –
+ * deshalb ist `create()` in `translateTranscript` die erste Anweisung, und der Aufrufer
+ * darf davor nichts abwarten.
  */
 
 // Die API steht (noch) nicht in @types/chrome.

@@ -28,9 +28,14 @@ const de = {
   noCaptionsStore:
     "Für dieses Video sind keine Untertitel verfügbar. Ohne Untertitel kann dieser Build kein Transkript erzeugen.",
   noCaptionsFull:
-    "Für dieses Video sind keine Untertitel verfügbar. Der lokale Audio-Fallback kann die Tonspur herunterladen und transkribieren.",
-  startFallback: "Audio-Fallback starten",
-  fallbackRunning: "Audio wird verarbeitet …",
+    "Über die Seite kam kein Transkript. Der lokale Helfer hat zwei Wege:",
+  startFallback: "Tonspur transkribieren",
+  startSubtitles: "Untertitel über den lokalen Helfer holen",
+  subtitlesHint:
+    "Kostenlos und mit den Zeitstempeln von YouTube. Der Helfer holt die vorhandene Untertitelspur mit yt-dlp – das gelingt auch dann, wenn die Seite selbst keine liefert.",
+  audioHint:
+    "Nur nötig, wenn es wirklich keine Untertitel gibt. Lädt die Tonspur herunter und transkribiert sie – dauert länger und kostet je nach Route Geld.",
+  fallbackRunning: "Wird verarbeitet …",
   noKey:
     "Es ist kein OpenRouter-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
   openOptions: "Einstellungen öffnen",
@@ -76,10 +81,14 @@ const en: Record<Keys, string> = {
   noCaptions: "No captions are available for this video.",
   noCaptionsStore:
     "No captions are available for this video. Without captions this build cannot produce a transcript.",
-  noCaptionsFull:
-    "No captions are available for this video. The local audio fallback can download and transcribe the audio track.",
-  startFallback: "Start audio fallback",
-  fallbackRunning: "Processing audio …",
+  noCaptionsFull: "The page returned no transcript. The local helper has two ways:",
+  startFallback: "Transcribe audio track",
+  startSubtitles: "Fetch captions via the local helper",
+  subtitlesHint:
+    "Free, with YouTube's own timestamps. The helper fetches the existing caption track with yt-dlp – this works even when the page itself returns nothing.",
+  audioHint:
+    "Only needed when there really are no captions. Downloads the audio track and transcribes it – slower, and depending on the route it costs money.",
+  fallbackRunning: "Processing …",
   noKey: "No OpenRouter API key configured. Please add one in the settings.",
   openOptions: "Open settings",
   noTimestamps:

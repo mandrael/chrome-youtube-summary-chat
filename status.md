@@ -2,26 +2,87 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Untertitel-Weg in einer angemeldeten Chrome-Sitzung messen.** Der eine Punkt, an dem
-   das Produkt hängt. In einer anonymen Sitzung liefert kein Weg ein Transkript – Details
-   und Messwerte in [CLAUDE.md](CLAUDE.md) und im README. Vorgehen:
+1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+   `native-host/install-windows.ps1` (Registry-Schlüssel) und die winget-Pfade sind
+   ungetestet – hier stand kein Windows zur Verfügung.
+2. **Offene Frage an Michael:** Chrome mit Debug-Port neu starten, um den Untertitel-Weg
+   in einer *angemeldeten* Sitzung zu messen? Nicht mehr blockierend – der yt-dlp-Weg
+   löst das Problem – aber es würde zeigen, ob der Browser-Weg mit Anmeldung überhaupt
+   je funktioniert.
    ```bash
-   osascript -e 'quit app "Google Chrome"' && sleep 3 && \
-     open -na "Google Chrome" --args --remote-debugging-port=9222 --enable-unsafe-extension-debugging
+   osascript -e 'quit app "Google Chrome"' && sleep 3 && open -na "Google Chrome" --args --remote-debugging-port=9222 --enable-unsafe-extension-debugging
    ```
-   Dann die Extension über CDP `Extensions.loadUnpacked` laden (die Hilfsskripte lagen im
-   Scratchpad der Sitzung vom 01.09.2026) oder von Hand über `chrome://extensions`, ein
-   Video mit Untertiteln öffnen und sehen, ob die Sidebar ein Transkript bekommt.
-   Gescheiterte Alternative: eine Kopie des Profils. Die `Cookies`-Datei auf Platte ist
-   nur so aktuell wie das letzte saubere Beenden von Chrome (im Test: neun Tage alt), und
-   die Entschlüsselung braucht den Schlüsselbund-Eintrag „Chrome Safe Storage“, den ein
-   Chrome mit fremdem `--user-data-dir` nicht bekommt.
-2. **Chat gegen OpenRouter aus der Sidebar auslösen**, sobald ein Transkript ankommt.
-   Der Endpunkt selbst ist belegt (`/api/v1/key`, STT-Aufrufe), der Streaming-Weg in der
-   Sidebar noch nicht.
-3. **Chrome-Übersetzung** einmal real laufen lassen.
-4. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-5. Optional: Store-Build einreichen.
+3. Optional: Store-Build einreichen.
+
+## Stand 01.09.2026 (nachmittags) – Transkript-Blocker gelöst, Kette end-to-end belegt
+
+### Die Ursache: YouTube verlangt eine Anmeldung
+
+`POST /youtubei/v1/player` mit dem visionOS-Client (clientName `VISIONOS`, clientVersion
+`1.02`, deviceModel `RealityDevice17,1`, `X-Youtube-Client-Name: 101`) antwortet
+`playabilityStatus: LOGIN_REQUIRED`, Grund im Wortlaut: **„Melde dich an, damit wir sehen,
+dass du kein Bot bist"** – mit und ohne angemeldete Sitzung. Das ist die gemeinsame
+Ursache aller drei Fehlschläge im Browser:
+
+| Weg | Ergebnis |
+|---|---|
+| `baseUrl` aus `ytInitialPlayerResponse`, roh / `fmt=json3` / `fmt=srv3` / `&c=WEB` | HTTP 200, Body leer |
+| Panel-Klick im DOM | expandiert (`visibility=…EXPANDED`), kein einziger Netzwerk-Request |
+| `POST /youtubei/v1/get_transcript` mit vollen Headern | HTTP 400 „Precondition check failed." |
+
+### Die Lösung: eine dritte Route im lokalen Helfer
+
+`yt-dlp` kommt durch. Neue Host-Route `"subtitles"` (`fetch_subtitles()` in
+`native-host/yt_summary_host.py`) holt die vorhandene Untertitelspur per
+`--write-subs --write-auto-subs --sub-format json3 --skip-download`. Kostenlos, mit
+YouTubes eigenen Zeitstempeln, kein Audio-Download. In der Sidebar steht sie als
+**erster** Knopf – billig vor teuer –, der Audio-Fallback als zweiter. Beide nur auf Klick.
+
+### Vollständig verifizierte Kette (Testprofil, unangemeldet)
+
+Sidebar → „Untertitel über den lokalen Helfer holen" → Native Host → yt-dlp →
+**286 Segmente, 18.430 Zeichen**, `Quelle: YouTube-Untertitel (en, via yt-dlp)` →
+Chat-Tab → Preset „Kurz" → **4.278 Zeichen deutsche Antwort auf ein englisches Video,
+34 anklickbare Zeitstempel, „Token: 6941 / 1299 · Kosten: $0.00533"**.
+
+### Chrome-Übersetzung: real gelaufen
+
+**286 Zeitstempel, 22.507 Zeichen**, vollständige deutsche Fassung des Transkripts,
+ohne Netz zum Anbieter und ohne Kosten. Dauer rund drei Minuten, davon 160 s
+Modell-Download.
+
+Der Weg dahin war ein echter Fund: `Translator.create()` verlangt eine **Nutzergeste**,
+solange das Sprachmodell noch nicht geladen ist –
+*„NotAllowedError: Requires a user gesture when availability is 'downloading' or
+'downloadable'."* Jedes `await` vor dem Aufruf verbraucht die Geste des Klicks. Deshalb
+ist `translate()` in der Sidebar jetzt **synchron**: kein dynamischer Import, keine
+Verfügbarkeitsprüfung im Handler (die läuft vorab in einem Effect), und
+`Translator.create()` ist der erste `await` überhaupt. Der Download-Fortschritt wird
+angezeigt, weil 160 s ohne Rückmeldung wie ein Hänger aussehen.
+
+### Dritter Fehler aus dem Browsertest: Werbung kappt den Zeitsprung
+
+Ein Klick auf `[05:01]` sprang nicht. Ursache: das `<video>`-Element zeigte während der
+Werbung eine Dauer von 19 bzw. 111 s statt 1120 s, und `currentTime` wurde auf diese
+Länge gekappt. Behoben über `pendingSeek` plus `durationchange`/`loadedmetadata`.
+Verifiziert: `[05:01]` geklickt, nach 7 s stand das Video bei 302 s.
+
+### Geschärfte Store-Test-Kriterien
+
+`yt-dlp` und `ffmpeg` sind aus den harten Kriterien von `verify-store-bundle.sh`
+entfernt, mit Begründung im Skript: die Extension ruft beide nie selbst auf, nur der Host –
+im Bundle kämen sie ausschließlich als Wort in Hinweistexten vor. Hart geprüft werden
+`connectNative`, `sendNativeMessage`, der Host-Name und `audio/transcriptions`. Dazu die
+Prüfung, dass `runFallbackJob` eine leere Hülle ist. Gegenprobe gegen den full-Build
+läuft mit. Ergebnis: bestanden.
+
+### Gescheiterte Profilkopie
+
+Die vom Nutzer gewählte Variante – eine Kopie des echten Chrome-Profils – ging nicht:
+die Sitzungsdatei auf Platte war neun Tage alt (Chrome schreibt sie erst beim Beenden),
+und ihre Entschlüsselung braucht einen Schlüsselbund-Eintrag, den ein Chrome mit fremdem
+`--user-data-dir` nicht bekommt. Ergebnis: `angemeldet: false`. Die Kopie wurde
+vollständig gelöscht.
 
 ## Stand 01.09.2026 – Erstfassung
 

@@ -119,7 +119,7 @@ function handleFallbackPort(port: chrome.runtime.Port) {
   port.onDisconnect.addListener(() => cancel?.());
 
   port.onMessage.addListener((raw: unknown) => {
-    const req = raw as { type: string; videoId: string };
+    const req = raw as { type: string; videoId: string; job?: "subtitles" | "audio" };
     if (req.type !== "start") return;
 
     void (async () => {
@@ -130,10 +130,12 @@ function handleFallbackPort(port: chrome.runtime.Port) {
         const job = runFallback(
           {
             videoId: req.videoId,
-            route: settings.sttRoute,
-            apiKey: settings.sttRoute.startsWith("openrouter")
-              ? settings.apiKey
-              : undefined,
+            // Untertitel per yt-dlp brauchen weder Schluessel noch STT-Modell.
+            route: req.job === "subtitles" ? "subtitles" : settings.sttRoute,
+            apiKey:
+              req.job !== "subtitles" && settings.sttRoute.startsWith("openrouter")
+                ? settings.apiKey
+                : undefined,
             language: settings.captionLang === "auto" ? undefined : settings.captionLang,
           },
           (p) => port.postMessage({ type: "progress", ...p }),

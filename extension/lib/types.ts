@@ -80,6 +80,13 @@ export type SttRoute =
   | "openrouter-parakeet"
   | "parakeet-mlx";
 
+/**
+ * Wege des lokalen Helfers. "subtitles" holt die vorhandenen Untertitel per yt-dlp –
+ * kostenlos und mit den Zeitstempeln von YouTube. "audio" laedt die Tonspur und
+ * transkribiert sie ueber die eingestellte SttRoute.
+ */
+export type HelperJob = "subtitles" | "audio";
+
 export type UiLang = "de" | "en";
 export type AnswerLang = "auto" | "de" | "en";
 

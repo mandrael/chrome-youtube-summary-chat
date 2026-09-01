@@ -30,9 +30,13 @@ echo "  Permissions: $(python3 -c "import json,sys;print(json.load(open('$OUT/ma
 
 echo
 echo "== 2. Bundle: keine Fallback-Faehigkeit =="
-# Harte Kriterien. Das sind die Bezeichner, ohne die ein Audio-Fallback technisch
-# unmoeglich ist: die Native-Messaging-API, der Host-Name, die Werkzeuge.
-HARD='connectNative|sendNativeMessage|at\.gasperl\.youtube_summary_chat|yt-dlp|audio/transcriptions'
+# Harte Kriterien: die Bezeichner, ohne die der Fallback technisch unmoeglich ist.
+# Das sind die Native-Messaging-API, der Host-Name und der STT-Endpunkt.
+#
+# "yt-dlp" und "ffmpeg" stehen bewusst NICHT hier: die Extension ruft sie nie selbst
+# auf, das macht der Host. Im Bundle koennen sie nur als Wort in einem Hinweistext
+# vorkommen - dort waere ein Treffer kein Befund, sondern ein blinder Alarm.
+HARD='connectNative|sendNativeMessage|at\.gasperl\.youtube_summary_chat|audio/transcriptions'
 
 HITS=$(grep -rInE "$HARD" "$OUT" --include='*.js' --include='*.json' 2>/dev/null || true)
 if [ -n "$HITS" ]; then
@@ -47,7 +51,7 @@ echo
 echo "== 2b. Reste: Huellen duerfen bleiben, aber nur leer =="
 # Rolldown leert die Funktionskoerper, behaelt aber gelegentlich Namen und
 # UI-Texte. Ein Name ohne Koerper ist kein Code – ein Koerper waere einer.
-if grep -qE 'function runFallbackJob\(\) *\{ *\}' "$OUT/content-scripts/content.js"; then
+if grep -qE 'function runFallbackJob\([^)]*\) *\{ *\}' "$OUT/content-scripts/content.js"; then
   echo "  ok – runFallbackJob ist eine leere Huelle"
 elif grep -qE 'runFallbackJob' "$OUT/content-scripts/content.js"; then
   echo "  FEHLGESCHLAGEN – runFallbackJob hat einen Koerper:"
@@ -68,7 +72,7 @@ fi
 
 # Uebrig bleiben die i18n-Zeichenketten des Fallbacks. Das sind Texte, kein Code,
 # und sie werden bewusst nicht gesondert behandelt.
-LEFT=$(grep -coE 'startFallback|noCaptionsFull' "$OUT/content-scripts/content.js" || true)
+LEFT=$(grep -coE 'startFallback|startSubtitles|subtitlesHint|audioHint|noCaptionsFull' "$OUT/content-scripts/content.js" || true)
 echo "  Hinweis: $LEFT ungenutzte i18n-Zeichenketten des Fallbacks im Bundle (Text, kein Code)"
 
 # Gesucht ist die Implementierung, nicht der case-Label-String: der bleibt im

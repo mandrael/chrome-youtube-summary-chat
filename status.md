@@ -5,6 +5,32 @@
 1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 2. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts) – Tastatur, Schrift, Grössen
+
+### Tippen im Chat löste YouTube-Kürzel aus
+
+Der gravierendste der drei Punkte. Ursache: für einen Listener ausserhalb des Shadow DOM
+ist `event.target` nicht das `<textarea>`, sondern der Host – das Event wird beim
+Verlassen des Shadow-Baums umgeschrieben. YouTubes Prüfung „tippt jemand in ein Feld?"
+schlägt fehl, jeder Buchstabe wird zum Kürzel.
+
+Abgefangen am `window` in der **Capture**-Phase, **nativ registriert**: WXTs
+`ctx.addEventListener` reicht das Capture-Flag nicht durch, und ohne Capture kommt
+YouTubes document-Listener zuerst. Gemessen: vorher vier Treffer am `document` pro
+Anschlag, danach null – ausserhalb der Sidebar unverändert einer.
+
+### Serifenschrift
+
+WXTs Reset ist `all: initial !important` auf `:host`, das nimmt auch die Schriftfamilie.
+Auf `:host` selbst nicht überschreibbar, deshalb `:host > *` mit YouTubes Stack. Gemessen:
+vorher Times, jetzt Roboto.
+
+### Grössen
+
+Fliesstext 14 px, Sekundäres 13 px – an YouTube angeglichen; die Kleinstgrössen 10/11 px
+sind raus. Pixel statt `rem` bleibt richtig: `rem` hinge an YouTubes 10-px-Wurzel, Pixel
+folgen dem Browser-Zoom genauso.
+
 ## Stand 02.09.2026 (abends) – vier Korrekturen nach Michaels Test
 
 ### 1. Die eingebettete Sidebar war weg – mein Fehler

@@ -116,6 +116,24 @@ Transkript. Beides braucht einen anderen Weg: eine Zusammenfassung ist Markdown 
 strukturtragende Zeilenanfang (`## `, `- `, `[02:13] `) bleibt unangetastet – wirft man
 der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
 
+**YouTubes Tastaturkürzel greifen in den Chat**, wenn man nichts dagegen tut: für einen
+Listener ausserhalb des Shadow DOM ist `event.target` nicht das `<textarea>`, sondern der
+Host `<yt-summary-chat>` – das Event wird beim Verlassen des Shadow-Baums umgeschrieben.
+YouTubes Prüfung „tippt der Nutzer gerade in ein Feld?" schlägt fehl, und jeder Buchstabe
+wird zum Kürzel: Leer und „k" pausieren, „m" schaltet stumm, Ziffern springen.
+
+Abgefangen wird am **`window` in der Capture-Phase** – die früheste Station der
+Ereigniskette, früher als jeder Listener am `document`, unabhängig von der
+Registrierungsreihenfolge. Wichtig: **nativ registrieren**, nicht über
+`ctx.addEventListener` – der Wrapper reicht das Capture-Flag nicht durch, und ohne
+Capture kommt YouTube zuerst dran. Gemessen: vorher vier Tasten pro Anschlag am
+`document`, danach null; ausserhalb der Sidebar unverändert.
+
+**Die Schrift im Shadow DOM muss am Kind gesetzt werden.** WXTs Reset ist
+`all: initial !important` auf `:host` – auf `:host` selbst lässt sich das nicht
+überschreiben, und ohne Gegenregel fällt der Browser auf seine Serifenschrift zurück.
+Deshalb steht die Regel auf `:host > *`, mit YouTubes eigenem Stack (Roboto).
+
 **Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
 einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von
 einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
@@ -178,6 +196,24 @@ Transkript. Beides braucht einen anderen Weg: eine Zusammenfassung ist Markdown 
 Übersetzung geht deshalb jede Zeile einzeln durch `translateMarkdown`, und der
 strukturtragende Zeilenanfang (`## `, `- `, `[02:13] `) bleibt unangetastet – wirft man
 der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
+
+**YouTubes Tastaturkürzel greifen in den Chat**, wenn man nichts dagegen tut: für einen
+Listener ausserhalb des Shadow DOM ist `event.target` nicht das `<textarea>`, sondern der
+Host `<yt-summary-chat>` – das Event wird beim Verlassen des Shadow-Baums umgeschrieben.
+YouTubes Prüfung „tippt der Nutzer gerade in ein Feld?" schlägt fehl, und jeder Buchstabe
+wird zum Kürzel: Leer und „k" pausieren, „m" schaltet stumm, Ziffern springen.
+
+Abgefangen wird am **`window` in der Capture-Phase** – die früheste Station der
+Ereigniskette, früher als jeder Listener am `document`, unabhängig von der
+Registrierungsreihenfolge. Wichtig: **nativ registrieren**, nicht über
+`ctx.addEventListener` – der Wrapper reicht das Capture-Flag nicht durch, und ohne
+Capture kommt YouTube zuerst dran. Gemessen: vorher vier Tasten pro Anschlag am
+`document`, danach null; ausserhalb der Sidebar unverändert.
+
+**Die Schrift im Shadow DOM muss am Kind gesetzt werden.** WXTs Reset ist
+`all: initial !important` auf `:host` – auf `:host` selbst lässt sich das nicht
+überschreiben, und ohne Gegenregel fällt der Browser auf seine Serifenschrift zurück.
+Deshalb steht die Regel auf `:host > *`, mit YouTubes eigenem Stack (Roboto).
 
 **Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
 einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von

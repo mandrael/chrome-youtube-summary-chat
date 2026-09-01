@@ -128,9 +128,50 @@ export default defineContentScript({
       attributes: true,
       attributeFilter: ["dark"],
     });
+    schuetzeTastatur(ctx);
+
     ctx.onInvalidated(() => themeObserver.disconnect());
   },
 });
+
+/**
+ * Hält YouTubes Tastaturkürzel aus dem Chat heraus.
+ *
+ * Das Problem steckt im Shadow DOM: für einen Listener ausserhalb ist `event.target`
+ * nicht das `<textarea>`, sondern der Host `<yt-summary-chat>` – das Event wird beim
+ * Verlassen des Shadow-Baums umgeschrieben. YouTubes Prüfung „tippt der Nutzer gerade in
+ * ein Feld?" schlägt deshalb fehl, und jeder Buchstabe wird als Kürzel ausgeführt: Leer
+ * pausiert, „k" pausiert, „m" stummschaltet, Ziffern springen.
+ *
+ * Abgefangen wird am `window` in der **Capture**-Phase. Das ist die früheste Station der
+ * Ereigniskette – früher als jeder Listener am `document`, egal wer zuerst registriert
+ * hat. `stopPropagation()` allein genügt: die Taste soll ja im Feld ankommen, nur nicht
+ * bei YouTube.
+ */
+function schuetzeTastatur(ctx: ContentScriptContext): void {
+  const ausEingabefeld = (e: Event): boolean => {
+    const ziel = e.composedPath()[0] as HTMLElement | undefined;
+    if (!ziel || typeof ziel.matches !== "function") return false;
+    // Nur Eingaben aus der eigenen Sidebar abschirmen, nicht YouTubes eigene Felder.
+    if (!e.composedPath().some((n) => (n as HTMLElement)?.tagName === "YT-SUMMARY-CHAT")) {
+      return false;
+    }
+    return ziel.matches("input, textarea, select, [contenteditable]");
+  };
+
+  const handler = (e: Event) => {
+    if (ausEingabefeld(e)) e.stopPropagation();
+  };
+
+  // Bewusst nativ statt über ctx.addEventListener: der Wrapper reicht das
+  // Capture-Flag nicht durch, und ohne Capture am window kommt YouTubes
+  // document-Listener zuerst dran. Aufgeräumt wird über ctx.onInvalidated.
+  const typen = ["keydown", "keyup", "keypress"] as const;
+  for (const typ of typen) window.addEventListener(typ, handler, true);
+  ctx.onInvalidated(() => {
+    for (const typ of typen) window.removeEventListener(typ, handler, true);
+  });
+}
 
 /** Vereinheitlicht Erfolg und Fehler, damit beides über den Message-Kanal passt. */
 async function holen(

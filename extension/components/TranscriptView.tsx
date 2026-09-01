@@ -107,7 +107,7 @@ export function TranscriptView({
               <button
                 type="button"
                 onClick={() => onSeek(c.start)}
-                className="mr-1.5 font-mono text-xs text-primary hover:underline cursor-pointer"
+                className="mr-1.5 shrink-0 font-mono text-xs text-primary hover:underline cursor-pointer"
               >
                 [{formatTs(c.start, withHours)}]
               </button>

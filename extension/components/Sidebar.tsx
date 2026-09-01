@@ -837,7 +837,7 @@ function MessageBubble({
           </>
         )}
         {showCost && message.usage && (
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {t("tokens")}: {message.usage.prompt_tokens} / {message.usage.completion_tokens}
             {message.usage.cost != null && ` · ${t("cost")}: $${message.usage.cost.toFixed(5)}`}
           </span>

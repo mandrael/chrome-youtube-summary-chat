@@ -12,6 +12,20 @@
  */
 @layer base {
   /*
+   * WXTs Shadow-Root-Reset setzt `all: initial !important` auf `:host` – das nimmt auch
+   * die Schriftfamilie weg, und der Browser fällt auf seine Serifen-Standardschrift
+   * zurück. Wegen des `!important` lässt sich das auf `:host` selbst nicht überschreiben;
+   * die Regel muss deshalb am Kind ansetzen, von dem alles Weitere erbt.
+   * Gesetzt wird YouTubes eigener Stack, damit die Sidebar kein Fremdkörper ist.
+   */
+  :host > *,
+  :root {
+    font-family: "Roboto", "Arial", "Helvetica Neue", Helvetica, sans-serif;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
    * Farbwelt aus DiktaGo übernommen: warme, gebrochene Töne statt Reinweiss und
    * Reinschwarz. Das Dunkel ist bewusst kein #000 – ein warmes #1A1613 als Basis mit
    * abgesetzten Karten darüber ermüdet die Augen weniger und hebt sich zugleich sichtbar
@@ -77,12 +91,20 @@
 @theme {
   --spacing: 4px;
 
-  --text-xs: 12px;
-  --text-xs--line-height: 17px;
+  /*
+   * Absolute Werte statt `rem`: YouTube setzt `html { font-size: 10px }` (gemessen), und
+   * `rem` bezieht sich immer auf die Dokumentwurzel – auch im Shadow DOM. Mit `rem` liefe
+   * die eingebettete Sidebar auf 62,5 % ihrer Grösse. Pixel skalieren dagegen sauber mit
+   * dem Browser-Zoom und sehen in der Seite wie in der Seitenleiste gleich aus.
+   *
+   * Die Stufen orientieren sich an YouTube: Fliesstext 14 px, Sekundäres 13 px.
+   */
+  --text-xs: 13px;
+  --text-xs--line-height: 19px;
   --text-sm: 14px;
   --text-sm--line-height: 21px;
   --text-base: 16px;
-  --text-base--line-height: 25px;
+  --text-base--line-height: 24px;
   --text-lg: 18px;
   --text-lg--line-height: 28px;
   --text-xl: 20px;

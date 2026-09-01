@@ -474,15 +474,15 @@ function ModelRow({ m }: { m: ModelInfo }) {
         {m.name}
         {oneM && (
           <span
-            className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground"
+            className="rounded border border-border px-1 text-xs font-medium text-muted-foreground"
             title="Ganze Transkripte passen ungekürzt in den Kontext. Das liefert bessere Ergebnisse als Chunking."
           >
             1M
           </span>
         )}
       </span>
-      <span className="block font-mono text-[11px] text-muted-foreground">{m.id}</span>
-      <span className="block text-[11px] text-muted-foreground">
+      <span className="block font-mono text-xs text-muted-foreground">{m.id}</span>
+      <span className="block text-xs text-muted-foreground">
         {m.contextLength.toLocaleString("de-DE")} Token
         {m.pricePrompt != null &&
           ` · $${(m.pricePrompt * 1e6).toFixed(2)} / $${((m.priceCompletion ?? 0) * 1e6).toFixed(2)} pro Mio.`}
@@ -495,8 +495,8 @@ function SttRow({ name, slug, detail }: { name: string; slug: string; detail: st
   return (
     <span className="block">
       <span className="block">{name}</span>
-      <span className="block font-mono text-[11px] text-muted-foreground">{slug}</span>
-      <span className="block text-[11px] text-muted-foreground">{detail}</span>
+      <span className="block font-mono text-xs text-muted-foreground">{slug}</span>
+      <span className="block text-xs text-muted-foreground">{detail}</span>
     </span>
   );
 }

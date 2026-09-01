@@ -162,50 +162,18 @@ function handleFallbackPort(port: chrome.runtime.Port) {
 }
 
 /**
- * Verhalten des Symbols in der Werkzeugleiste:
+ * Verhalten des Symbols: ein Klick öffnet oder schliesst die Seitenleiste.
  *
- *   - auf einer YouTube-Seite  → Klick blendet die Seitenleiste ein oder aus
- *   - überall sonst            → Klick öffnet die Einstellungen
+ * Bewusst ohne tab-weises Freigeben und Sperren, obwohl das die naheliegende Art wäre,
+ * ausserhalb von YouTube die Einstellungen zu öffnen: **Vivaldi ignoriert `tabId` bei
+ * `setOptions()`** und führt genau ein globales Panel – ein Sperren „nur für diesen Tab"
+ * schaltet dort die Seitenleiste überall ab. Deshalb bleibt sie immer freigegeben; liegt
+ * kein YouTube-Video im aktiven Tab, sagt das Panel das selbst und bietet einen Knopf zu
+ * den Einstellungen an.
  *
- * Chrome kann eine geöffnete Seitenleiste nicht per API schliessen; das schafft nur
- * `openPanelOnActionClick`, weil Chrome den Klick dann selbst als Umschalter behandelt.
- * Deshalb wird die Seitenleiste pro Tab freigegeben oder gesperrt: ist sie gesperrt,
- * bekommt die Extension den Klick über `onClicked` und öffnet die Einstellungen.
+ * `side_panel.default_path` steht statisch im Manifest, weil `setOptions()` in Vivaldi
+ * bis Version 8.0 wirkungslos war.
  */
 function richteSeitenleisteEin(): void {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
-
-  const istYouTube = (url: string | undefined) =>
-    !!url && /^https?:\/\/(www|m)\.youtube\.com\//.test(url);
-
-  const anpassen = async (tabId: number, url: string | undefined) => {
-    try {
-      await chrome.sidePanel.setOptions(
-        istYouTube(url)
-          ? { tabId, path: "sidepanel.html", enabled: true }
-          : { tabId, enabled: false },
-      );
-    } catch {
-      /* Tab schon zu */
-    }
-  };
-
-  chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
-    if (info.status === "loading" || info.url) void anpassen(tabId, tab.url);
-  });
-  chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-    const tab = await chrome.tabs.get(tabId).catch(() => null);
-    if (tab) void anpassen(tabId, tab.url);
-  });
-
-  // Beim Start der Extension die bereits offenen Tabs nachziehen.
-  void chrome.tabs.query({}).then((tabs) => {
-    for (const tab of tabs) if (tab.id != null) void anpassen(tab.id, tab.url);
-  });
-
-  // Feuert nur, wenn die Seitenleiste für diesen Tab gesperrt ist – also ausserhalb
-  // von YouTube.
-  chrome.action.onClicked.addListener(() => {
-    void chrome.runtime.openOptionsPage();
-  });
 }

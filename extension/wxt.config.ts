@@ -58,6 +58,14 @@ export default defineConfig({
     side_panel: { default_path: "sidepanel.html" },
     action: {
       default_title: "YouTube Summary Chat",
+      // Ohne default_icon zeigt Vivaldi kein Symbol in der Werkzeugleiste, obwohl
+      // `icons` gesetzt ist – Chrome fällt dort auf `icons` zurück, Vivaldi nicht.
+      default_icon: {
+        16: "icon/16.png",
+        32: "icon/32.png",
+        48: "icon/48.png",
+        128: "icon/128.png",
+      },
     },
     icons: {
       16: "icon/16.png",

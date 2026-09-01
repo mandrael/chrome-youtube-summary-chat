@@ -110,11 +110,23 @@ einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet
 einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
 per Message an. Für den DOM-Rückfall gilt dasselbe, er braucht ohnehin einen DOM.
 
-**Das Symbol in der Werkzeugleiste** schaltet auf YouTube die Seitenleiste um und öffnet
-überall sonst die Einstellungen. Chrome kann eine offene Seitenleiste nicht per API
-schliessen; das schafft nur `openPanelOnActionClick`. Deshalb wird die Seitenleiste pro
-Tab freigegeben oder gesperrt – ist sie gesperrt, bekommt die Extension den Klick über
-`chrome.action.onClicked` und öffnet die Einstellungen.
+**Das Symbol schaltet die Seitenleiste um**, mehr nicht – über
+`setPanelBehavior({openPanelOnActionClick: true})`. Der naheliegende Weg, ausserhalb von
+YouTube stattdessen die Einstellungen zu öffnen, wäre tab-weises Freigeben und Sperren
+per `setOptions({tabId, enabled})`. Der ist verbaut: **Vivaldi ignoriert `tabId` und führt
+genau ein globales Panel**, ein Sperren „nur für diesen Tab" schaltet die Seitenleiste
+dort überall ab. Liegt kein YouTube-Video im aktiven Tab, sagt das Panel das selbst und
+bietet einen Knopf zu den Einstellungen an.
+
+**Vivaldi-Eigenheiten**, recherchiert am 02.09.2026:
+
+- Die Seitenleiste erscheint in **Vivaldis Panel-Leiste** (bei Standardeinstellung links),
+  nicht rechts neben der Seite. Die Seite ist eine Browser-Einstellung: `getLayout()`
+  meldet sie nur, `setOptions({side})` wird mit *„Unexpected property"* abgewiesen.
+- **`action.default_icon` ist Pflicht.** Chrome fällt ohne es auf `icons` zurück, Vivaldi
+  zeigt dann gar kein Symbol – und ohne Symbol kommt niemand an die Seitenleiste.
+- `side_panel.default_path` steht statisch im Manifest, weil `setOptions()` in Vivaldi bis
+  Version 8.0 wirkungslos war.
 
 **Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
 Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
@@ -150,11 +162,23 @@ einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet
 einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
 per Message an. Für den DOM-Rückfall gilt dasselbe, er braucht ohnehin einen DOM.
 
-**Das Symbol in der Werkzeugleiste** schaltet auf YouTube die Seitenleiste um und öffnet
-überall sonst die Einstellungen. Chrome kann eine offene Seitenleiste nicht per API
-schliessen; das schafft nur `openPanelOnActionClick`. Deshalb wird die Seitenleiste pro
-Tab freigegeben oder gesperrt – ist sie gesperrt, bekommt die Extension den Klick über
-`chrome.action.onClicked` und öffnet die Einstellungen.
+**Das Symbol schaltet die Seitenleiste um**, mehr nicht – über
+`setPanelBehavior({openPanelOnActionClick: true})`. Der naheliegende Weg, ausserhalb von
+YouTube stattdessen die Einstellungen zu öffnen, wäre tab-weises Freigeben und Sperren
+per `setOptions({tabId, enabled})`. Der ist verbaut: **Vivaldi ignoriert `tabId` und führt
+genau ein globales Panel**, ein Sperren „nur für diesen Tab" schaltet die Seitenleiste
+dort überall ab. Liegt kein YouTube-Video im aktiven Tab, sagt das Panel das selbst und
+bietet einen Knopf zu den Einstellungen an.
+
+**Vivaldi-Eigenheiten**, recherchiert am 02.09.2026:
+
+- Die Seitenleiste erscheint in **Vivaldis Panel-Leiste** (bei Standardeinstellung links),
+  nicht rechts neben der Seite. Die Seite ist eine Browser-Einstellung: `getLayout()`
+  meldet sie nur, `setOptions({side})` wird mit *„Unexpected property"* abgewiesen.
+- **`action.default_icon` ist Pflicht.** Chrome fällt ohne es auf `icons` zurück, Vivaldi
+  zeigt dann gar kein Symbol – und ohne Symbol kommt niemand an die Seitenleiste.
+- `side_panel.default_path` steht statisch im Manifest, weil `setOptions()` in Vivaldi bis
+  Version 8.0 wirkungslos war.
 
 **Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
 Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird

@@ -27,12 +27,23 @@ holt deshalb weiterhin das Content-Script; die Seitenleiste fragt über
 `lib/transcript-bridge.ts` per Message an. Das Content-Script hat keine eigene
 Oberfläche mehr.
 
-### Symbol in der Werkzeugleiste
+### Symbol und Vivaldi
 
-Auf YouTube schaltet der Klick die Seitenleiste um, überall sonst öffnet er die
-Einstellungen. Chrome kann eine offene Seitenleiste nicht per API schliessen – nur
-`openPanelOnActionClick` schafft das. Deshalb wird sie pro Tab freigegeben oder gesperrt;
-ist sie gesperrt, bekommt die Extension den Klick über `chrome.action.onClicked`.
+Der Klick schaltet die Seitenleiste um. Die erste Fassung gab sie pro Tab frei oder
+sperrte sie, um ausserhalb von YouTube die Einstellungen zu öffnen – das ist verworfen:
+**Vivaldi ignoriert `tabId` bei `setOptions()`** und führt ein globales Panel, ein Sperren
+„nur für diesen Tab" hätte die Seitenleiste dort überall abgeschaltet. Stattdessen sagt
+das Panel selbst, wenn kein YouTube-Video im aktiven Tab liegt, und bietet den Knopf zu
+den Einstellungen.
+
+Zwei weitere Vivaldi-Befunde:
+
+- **`action.default_icon` ist Pflicht.** Ohne es zeigt Vivaldi kein Symbol – und ohne
+  Symbol kommt niemand an die Seitenleiste. Das war die Ursache dafür, dass die
+  Seitenleiste bei Michael nie erschien.
+- Die Seitenleiste sitzt in Vivaldis **Panel-Leiste**, standardmäßig links. Die Seite ist
+  Nutzereinstellung: `getLayout()` liest sie, `setOptions({side})` wird abgewiesen
+  (*„Unexpected property"*).
 
 ### Farben und Icon
 

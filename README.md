@@ -34,14 +34,17 @@ den `full`-Build – sonst würde ein Test bestehen, der überhaupt nichts misst
 
 ## Bedienung
 
-Die Oberfläche liegt in **Chromes Seitenleiste**, nicht in der YouTube-Seite. Das Symbol
-in der Werkzeugleiste:
+Die Oberfläche liegt in der **Seitenleiste des Browsers**, nicht in der YouTube-Seite.
+Ein Klick auf das Symbol blendet sie ein oder aus. Die Breite zieht man an ihrem Rand;
+sie bleibt beim Wechsel zwischen Videos stehen und folgt YouTubes Hell/Dunkel-Einstellung.
 
-- **auf einer YouTube-Seite** → blendet die Seitenleiste ein oder aus
-- **überall sonst** → öffnet die Einstellungen
+Liegt im aktiven Tab kein YouTube-Video, sagt die Seitenleiste das und bietet einen Knopf
+zu den Einstellungen an.
 
-Die Breite zieht man am Rand der Seitenleiste selbst. Sie bleibt beim Wechsel zwischen
-Videos stehen und folgt YouTubes Hell/Dunkel-Einstellung.
+**In Vivaldi** erscheint sie in der **Panel-Leiste**, die standardmäßig links sitzt – nicht
+rechts neben der Seite. Auf die rechte Seite kommt sie über Rechtsklick auf die
+Panel-Leiste bzw. Einstellungen → Darstellung → Panel-Position. Die Extension kann das
+nicht vorgeben: `chrome.sidePanel` lässt die Seite nur auslesen, nicht setzen.
 
 ---
 

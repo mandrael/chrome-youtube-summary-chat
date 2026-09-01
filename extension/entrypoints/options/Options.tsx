@@ -459,7 +459,7 @@ function ModelRow({ m }: { m: ModelInfo }) {
         {m.name}
         {oneM && (
           <span
-            className="rounded bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
+            className="rounded border border-border px-1 text-[10px] font-medium text-muted-foreground"
             title="Ganze Transkripte passen ungekürzt in den Kontext. Das liefert bessere Ergebnisse als Chunking."
           >
             1M

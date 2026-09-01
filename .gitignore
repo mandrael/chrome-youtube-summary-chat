@@ -1,5 +1,7 @@
 node_modules/
-.output/
+.output
+build-full/
+build-store/
 .wxt/
 *.zip
 

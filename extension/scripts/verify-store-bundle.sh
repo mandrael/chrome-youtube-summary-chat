@@ -10,7 +10,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-OUT=".output/chrome-mv3-store"
+OUT="../build-store"
 FAIL=0
 
 if [ ! -d "$OUT" ]; then
@@ -88,7 +88,7 @@ fi
 
 echo
 echo "== 3. Gegenprobe: im full-Build muss der Code vorhanden sein =="
-FULL=".output/chrome-mv3-full"
+FULL="../build-full"
 if [ -d "$FULL" ]; then
   if grep -rqE "connectNative" "$FULL"; then
     echo "  ok – full-Build enthält connectNative (der Test greift also überhaupt)"

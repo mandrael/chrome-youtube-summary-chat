@@ -13,7 +13,10 @@ const isFull = (mode: string) => mode !== "store";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   srcDir: ".",
-  outDirTemplate: "{{browser}}-mv{{manifestVersion}}-{{mode}}",
+  // Die gebauten Ordner liegen sichtbar im Projekt, nicht in einem versteckten
+  // .output/ – wer die Erweiterung laden will, soll sie sehen.
+  outDir: "..",
+  outDirTemplate: "build-{{mode}}",
 
   vite: (env) => ({
     plugins: [tailwindcss()],

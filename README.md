@@ -46,7 +46,8 @@ pnpm install
 pnpm run build
 ```
 
-Das Ergebnis liegt in `extension/.output/chrome-mv3-full/`.
+Das Ergebnis liegt sichtbar im Projekt: **`build-full/`** (und `build-store/`), nicht in
+einem versteckten Ordner.
 
 Für die Store-Variante:
 
@@ -58,7 +59,7 @@ pnpm run build:store
 
 1. `chrome://extensions` öffnen
 2. Entwicklermodus einschalten
-3. „Entpackte Erweiterung laden“ → `extension/.output/chrome-mv3-full`
+3. „Entpackte Erweiterung laden“ → **`build-full`** (der Ordner mit der `manifest.json`)
 
 Der `full`-Build bringt einen öffentlichen Schlüssel im Manifest mit und hat deshalb
 immer dieselbe Extension-ID: **`abblpkhijcggklokijkhfbkgeljmimpm`**. Ohne den würde Chrome

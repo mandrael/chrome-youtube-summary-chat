@@ -156,7 +156,9 @@ Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
 ## Aufbau
 
 ```
-extension/            WXT-Projekt
+build-full/           gebaute Erweiterung zum Laden (GitHub-Build)
+build-store/          gebaute Erweiterung ohne Fallback
+extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
   entrypoints/        content.tsx · background.ts · options/
   components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
   lib/                openrouter · transcript · fallback · translate-local · prompts …

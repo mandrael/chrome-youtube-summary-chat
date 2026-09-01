@@ -19,30 +19,37 @@ export default defineContentScript({
   async main(ctx) {
     let ui: Awaited<ReturnType<typeof mount>> | null = null;
     let mountedVideoId: string | null = null;
+    // Beide Navigationssignale können für dasselbe Video kurz hintereinander feuern.
+    // Ohne diesen Zähler startet der zweite Aufruf einen zweiten Mount, während der
+    // erste noch auf den Anker wartet – und die Sidebar erscheint doppelt.
+    let generation = 0;
 
     async function sync() {
       const videoId = videoIdFromUrl(location.href);
+      if (videoId && videoId === mountedVideoId && ui) return;
 
-      // Weg von der Watch-Seite (oder auf Shorts): alles abräumen.
-      if (!videoId) {
-        ui?.remove();
-        ui = null;
-        mountedVideoId = null;
-        return;
-      }
-      if (videoId === mountedVideoId && ui) return;
-
-      // Videowechsel: erst der alte Zustand weg, dann neu aufbauen. Ohne das Abräumen
-      // liefe der Stream des vorigen Videos in die neue Sidebar weiter.
+      const gen = ++generation;
       ui?.remove();
       ui = null;
       mountedVideoId = videoId;
 
+      // Weg von der Watch-Seite (oder auf Shorts): abgeräumt ist schon, fertig.
+      if (!videoId) return;
+
       const anchor = await waitFor("#secondary-inner", ctx, 10_000);
-      if (!anchor) return;
+      if (!anchor || gen !== generation) return;
       if (videoIdFromUrl(location.href) !== videoId) return; // inzwischen weitergeklickt
 
-      ui = await mount(ctx, videoId);
+      // Reste eines toten Content-Scripts (etwa nach einem Extension-Reload) räumt
+      // dessen eigenes onRemove nicht mehr weg.
+      for (const alt of anchor.querySelectorAll("yt-summary-chat")) alt.remove();
+
+      const next = await mount(ctx, videoId);
+      if (gen !== generation) {
+        next.remove();
+        return;
+      }
+      ui = next;
       ui.mount();
     }
 

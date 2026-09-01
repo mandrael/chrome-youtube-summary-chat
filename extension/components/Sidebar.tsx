@@ -337,12 +337,38 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
       });
   }
 
+  /* ---- Erneut laden ---- */
+
+  async function reloadTranscript() {
+    if (!settings) return;
+    setLoadState("loading");
+    setLoadError("");
+    try {
+      const res = await loadTranscript(videoId, settings.captionLang);
+      setTranscript(res.transcript);
+      setTracks(res.tracks);
+      setActiveTrack(res.active);
+      setLoadState("ready");
+    } catch (e) {
+      if (e instanceof NoCaptionsError) {
+        setLoadState("no-captions");
+      } else {
+        setLoadError(String((e as Error)?.message ?? e));
+        setLoadState("error");
+      }
+    }
+  }
+
   /* ---- Spurwechsel ---- */
 
   async function switchTrack(track: CaptionTrack) {
     setLoadState("loading");
     try {
-      const res = await loadTrack(track);
+      const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
+      const res = isPanelTrack(track)
+        ? await switchPanelTrack(track)
+        : await loadTrack(track);
+      if (!res) throw new Error("Die Spur liess sich nicht laden.");
       setTranscript(res.transcript);
       setActiveTrack(res.active);
       setLoadState("ready");
@@ -440,7 +466,14 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
             )}
 
             {loadState === "error" && (
-              <p className="py-4 text-sm text-destructive whitespace-pre-wrap">{loadError}</p>
+              <div className="py-4">
+                <p className="mb-2 text-sm text-destructive whitespace-pre-wrap">
+                  {loadError}
+                </p>
+                <Button size="sm" variant="outline" onClick={() => reloadTranscript()}>
+                  {t("retry")}
+                </Button>
+              </div>
             )}
 
             {transcript && !transcript.hasTimestamps && (

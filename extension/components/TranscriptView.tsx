@@ -50,7 +50,9 @@ export function TranscriptView({
             {tracks.map((tr) => (
               <option key={tr.url} value={tr.url}>
                 {tr.name}
-                {tr.auto ? " (automatisch)" : ""}
+                {tr.auto && !/automatisch|auto-generated/i.test(tr.name)
+                  ? " (automatisch)"
+                  : ""}
               </option>
             ))}
           </select>

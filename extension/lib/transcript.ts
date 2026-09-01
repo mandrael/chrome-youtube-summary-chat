@@ -156,14 +156,40 @@ export interface LoadResult {
   active: CaptionTrack;
 }
 
+/**
+ * Zuerst der direkte Abruf, dann YouTubes eigenes Transkript-Panel.
+ *
+ * Der direkte Weg steht bewusst vorne, obwohl er am 01.09.2026 leer zurückkam: er ist
+ * unabhängig von YouTubes DOM und würde sofort wieder greifen. Der Panel-Weg ist der
+ * Rückfall, der heute tatsächlich trägt.
+ */
 export async function loadTranscript(
   videoId: string,
   captionLang: string,
 ): Promise<LoadResult> {
-  const tracks = await fetchCaptionTracks(videoId);
-  const track = pickTrack(tracks, captionLang);
-  if (!track) throw new NoCaptionsError();
-  return { ...(await loadTrack(track)), tracks };
+  let direkt: Error | null = null;
+  try {
+    const tracks = await fetchCaptionTracks(videoId);
+    const track = pickTrack(tracks, captionLang);
+    if (track) return { ...(await loadTrack(track)), tracks };
+    direkt = new NoCaptionsError();
+  } catch (e) {
+    direkt = e as Error;
+  }
+
+  const { readTranscriptPanel } = await import("./transcript-panel");
+  try {
+    return await readTranscriptPanel(captionLang);
+  } catch (panelFehler) {
+    // Beide Wege leer. Kein Platzhalter, kein Ersatztext – aber auch keine Meldung,
+    // die verschweigt, woran es lag.
+    if (direkt instanceof NoCaptionsError) throw new NoCaptionsError();
+    throw new Error(
+      `Transkript nicht verfügbar.\n` +
+        `Direkter Abruf: ${direkt?.message ?? "kein Ergebnis"}\n` +
+        `YouTube-Panel: ${(panelFehler as Error)?.message ?? panelFehler}`,
+    );
+  }
 }
 
 /** Laedt genau eine Spur – fuer den Spurwechsel in der Sidebar. */

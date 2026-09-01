@@ -54,6 +54,25 @@ erneut geraten werden:
 - Das komprimierte Format zählt: fünf Minuten sind als WAV 9,6 MB und als Opus 0,9 MB.
   Der Endpunkt nimmt `format: "ogg"`.
 
+**Zum Untertitel-Weg – in einer nicht angemeldeten Sitzung liefert kein Weg etwas:**
+
+- Direkter Abruf der `baseUrl`: **HTTP 200 mit leerem Body**, bei `roh`, `fmt=json3`,
+  `fmt=srv3`, `fmt=json3&c=WEB`, mit und ohne Consent. Die Spurliste kommt weiterhin an.
+- `POST /youtubei/v1/get_transcript` mit vollständigen Headern: **HTTP 400, „Precondition
+  check failed."**
+- Klick auf „Transkript anzeigen“ aus Skript: expandiert das Panel, löst aber **keinen
+  Netzwerk-Request** aus. Zwei zufällige Erfolge liessen sich nicht reproduzieren.
+- **Offen und ungemessen: die angemeldete Sitzung.** Das ist der Regelfall und der
+  wahrscheinlichste Grund. Vor jeder weiteren Arbeit an diesem Weg zuerst dort messen.
+
+Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
+
+- YouTube hält **zwei identische Segmentlisten**, eine unsichtbar. Ein Selektor über das
+  Dokument verdoppelt das Transkript still. Nur die sichtbare Liste lesen, zusätzlich
+  nach Zeit und Text deduplizieren.
+- Im **Hintergrundtab** lädt das Panel nie (zehn Anläufe über 141 s: null Segmente).
+  Deshalb wartet der Code auf `visibilityState === "visible"`.
+
 ## Gescheiterte und verworfene Ansätze
 
 - **Plasmo** als Bundler: letzte npm-Veröffentlichung `0.90.5` vom 17.05.2025, über 15

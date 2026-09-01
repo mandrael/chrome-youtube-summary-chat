@@ -14,6 +14,7 @@ import { formatTs, transcriptToText, tsToSeconds, TS_PATTERN } from "../lib/time
 import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
 import { toTranscript } from "../lib/fallback.ts";
+import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
 
 let checks = 0;
@@ -124,6 +125,18 @@ check("videoIdFromUrl schliesst Shorts aus", () => {
   assert.equal(videoIdFromUrl("https://www.youtube.com/shorts/abc12345678"), null);
   assert.equal(videoIdFromUrl("https://www.youtube.com/"), null);
   assert.equal(videoIdFromUrl("kaputt"), null);
+});
+
+console.log("transkript-panel");
+
+check("panelTimeToSeconds liest YouTubes Panel-Format", () => {
+  // Real gemessen: das Panel schreibt „0:00“ bis „18:29“, bei langen Videos „1:02:03“.
+  assert.equal(panelTimeToSeconds("0:00"), 0);
+  assert.equal(panelTimeToSeconds("18:29"), 1109);
+  assert.equal(panelTimeToSeconds(" 1:02:03 "), 3723);
+  assert.equal(panelTimeToSeconds("abc"), null);
+  assert.equal(panelTimeToSeconds("12"), null);
+  assert.equal(panelTimeToSeconds(""), null);
 });
 
 console.log("openrouter");

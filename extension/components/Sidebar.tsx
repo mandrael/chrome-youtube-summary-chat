@@ -75,6 +75,9 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
   // Vorab geprüft, damit der Klick-Handler ohne vorheriges await auskommt: die
   // Translator-API verlangt für den Modell-Download eine Nutzergeste.
   const [localTranslateOk, setLocalTranslateOk] = React.useState(false);
+  // Im Hintergrundtab wartet der Panel-Weg auf Sichtbarkeit. Ohne diesen Hinweis sieht
+  // das aus wie ein Hänger – gemessen: über drei Minuten "wird geladen" ohne Erklärung.
+  const [hidden, setHidden] = React.useState(document.visibilityState !== "visible");
 
   const stopRef = React.useRef<(() => void) | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -101,6 +104,12 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
     listModels()
       .then(setModels)
       .catch(() => {});
+  }, []);
+
+  React.useEffect(() => {
+    const onVis = () => setHidden(document.visibilityState !== "visible");
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
   React.useEffect(() => {
@@ -459,7 +468,7 @@ export function Sidebar({ videoId, videoTitle, onSeek }: SidebarProps) {
             {loadState === "loading" && (
               <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" />
-                {t("loadingTranscript")}
+                {hidden ? t("waitingVisible") : t("loadingTranscript")}
               </p>
             )}
 

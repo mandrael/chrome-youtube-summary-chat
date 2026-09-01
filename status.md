@@ -2,17 +2,39 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+1. **Entscheidung nötig: was passiert mit dem `store`-Build?** Er kommt an kein
+   Transkript – gemessen, anonym wie angemeldet. Ohne Helfer gibt es keine zweite Route.
+   Drei Wege: (a) Store-Build fallenlassen und nur den GitHub-Build pflegen,
+   (b) den Proof-of-Origin-Token nachbauen (aufwendig, spröde), (c) den Store-Build
+   ausliefern mit dem ehrlichen Hinweis, dass er nur auf Videos funktioniert, bei denen
+   YouTube die Untertitel doch herausgibt. Empfehlung: (a), bis (b) sich lohnt.
+2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
    `native-host/install-windows.ps1` (Registry-Schlüssel) und die winget-Pfade sind
    ungetestet – hier stand kein Windows zur Verfügung.
-2. **Offene Frage an Michael:** Chrome mit Debug-Port neu starten, um den Untertitel-Weg
-   in einer *angemeldeten* Sitzung zu messen? Nicht mehr blockierend – der yt-dlp-Weg
-   löst das Problem – aber es würde zeigen, ob der Browser-Weg mit Anmeldung überhaupt
-   je funktioniert.
-   ```bash
-   osascript -e 'quit app "Google Chrome"' && sleep 3 && open -na "Google Chrome" --args --remote-debugging-port=9222 --enable-unsafe-extension-debugging
-   ```
-3. Optional: Store-Build einreichen.
+
+## Stand 01.09.2026 (abends) – die Anmeldung war nicht die Ursache
+
+In einer **angemeldeten** Sitzung gemessen (Browser-Pane, Michaels Konto):
+
+| | anonym | angemeldet |
+|---|---|---|
+| `playabilityStatus` | `LOGIN_REQUIRED` | **`OK`** |
+| Spurliste | vorhanden | vorhanden, 31 Spuren |
+| `baseUrl` abrufen | HTTP 200, Body leer | **HTTP 200, Body leer** |
+| Panel, programmatischer Klick | 0 Segmente | 0 Segmente |
+| Panel, **echter Nutzerklick** | – | **0 Segmente** |
+
+Damit ist meine eigene Erklärung vom Nachmittag widerlegt: `LOGIN_REQUIRED` war ein
+Nebenschauplatz, nicht die Ursache. Im DOM liegen inzwischen zwei Transkript-Panels
+(`PAmodern_transcript_view`, `engagement-panel-searchable-transcript`), beide bleiben
+`HIDDEN` und leer.
+
+**Wahrscheinliche echte Ursache, ungemessen:** der Proof-of-Origin-Token für
+`/api/timedtext`, den `yt-dlp` erzeugt und ein `fetch` aus der Seite heraus nicht.
+
+**Folge:** Der `full`-Build ist unverändert tragfähig – die yt-dlp-Route ist die
+Hauptroute, nicht der Notnagel. Der `store`-Build hat ein echtes Loch und ist so nicht
+einreichbar. Siehe To-Do 1.
 
 ## Stand 01.09.2026 (nachmittags) – Transkript-Blocker gelöst, Kette end-to-end belegt
 

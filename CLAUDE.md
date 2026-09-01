@@ -54,28 +54,48 @@ erneut geraten werden:
 - Das komprimierte Format zählt: fünf Minuten sind als WAV 9,6 MB und als Opus 0,9 MB.
   Der Endpunkt nimmt `format: "ogg"`.
 
-**Zum Untertitel-Weg im Browser – die Ursache ist gefunden:**
+**Zum Untertitel-Weg im Browser – gemessen, anonym und angemeldet:**
 
-`POST /youtubei/v1/player` mit dem visionOS-Client (clientName `VISIONOS`, clientVersion
-`1.02`, deviceModel `RealityDevice17,1`, `X-Youtube-Client-Name: 101`) antwortet
-`playabilityStatus: LOGIN_REQUIRED`, Grund im Wortlaut: **„Melde dich an, damit wir sehen,
-dass du kein Bot bist"** – mit und ohne Sitzungsdaten. YouTube verweigert das Video, nicht
-die Untertitel. Alle drei Browser-Wege scheitern daran:
+| | anonym | **angemeldet** |
+|---|---|---|
+| `playabilityStatus` (visionOS-Client) | `LOGIN_REQUIRED` | **`OK`** |
+| Spurliste | kommt an | kommt an, 31 Spuren |
+| `baseUrl` abrufen (roh, `fmt=json3`, `fmt=srv3`, `&c=WEB`) | HTTP 200, **Body leer** | HTTP 200, **Body leer** |
+| Panel im DOM, programmatischer Klick | 0 Segmente | 0 Segmente |
+| Panel im DOM, **echter Nutzerklick** | – | **0 Segmente** |
+| `POST /youtubei/v1/get_transcript` | HTTP 400 „Precondition check failed." | – |
 
-- Direkter Abruf der `baseUrl`: **HTTP 200 mit leerem Body**, bei `roh`, `fmt=json3`,
-  `fmt=srv3`, `fmt=json3&c=WEB`, mit und ohne Consent. Die Spurliste kommt weiterhin an.
-- `POST /youtubei/v1/get_transcript` mit vollständigen Headern: **HTTP 400, „Precondition
-  check failed."**
-- Klick auf „Transkript anzeigen" aus Skript: expandiert das Panel, löst aber **keinen
-  Netzwerk-Request** aus.
+**Die Anmeldung ist nicht die Ursache.** Das war die naheliegende Vermutung und sie ist
+widerlegt: angemeldet gibt YouTube das Video frei (`OK`) und liefert die Spurliste, der
+Abruf bleibt trotzdem leer. Auch ein echter Klick auf „Transkript anzeigen" öffnet nichts;
+im DOM liegen inzwischen zwei Transkript-Panels (`PAmodern_transcript_view` und
+`engagement-panel-searchable-transcript`), beide bleiben `HIDDEN` und ohne Inhalt.
+
+**Nicht gemessen, aber die wahrscheinliche Ursache:** YouTube verlangt für
+`/api/timedtext` einen Proof-of-Origin-Token. `yt-dlp` erzeugt ihn, ein `fetch` aus der
+Seite heraus nicht. Wer daran weiterarbeitet, misst zuerst das – nicht noch einmal die
+Anmeldung.
 
 **Der Ausweg, gemessen:** `yt-dlp` kommt durch. Host-Route `"subtitles"` holt die
 vorhandene Spur mit `--write-subs --write-auto-subs --sub-format json3 --skip-download`:
 **286 Segmente, 18.430 Zeichen**, kostenlos, mit YouTubes Zeitstempeln. In der Sidebar
 steht sie vor dem Audio-Fallback – billig vor teuer.
 
-**Offen und ungemessen bleibt die angemeldete Sitzung.** Nicht mehr blockierend, aber
-falls jemand daran weiterarbeitet: zuerst dort messen, nicht wieder im Anonymfall.
+**Folge für den `store`-Build:** Er hat keinen Helfer und kommt damit an kein Transkript –
+auch nicht beim angemeldeten Nutzer. Das ist ein offenes Loch, kein Randfall. Solange es
+besteht, ist der Store-Build nicht einreichbar.
+
+**Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
+Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
+still gekappt. Deshalb `pendingSeek` plus `durationchange`/`loadedmetadata`.
+
+Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
+
+- YouTube hält **zwei identische Segmentlisten**, eine unsichtbar. Ein Selektor über das
+  Dokument verdoppelt das Transkript still. Nur die sichtbare Liste lesen, zusätzlich
+  nach Zeit und Text deduplizieren.
+- Im **Hintergrundtab** lädt das Panel nie (zehn Anläufe über 141 s: null Segmente).
+  Deshalb wartet der Code auf `visibilityState === "visible"`.
 
 **Die Translator API verlangt eine Nutzergeste**, solange das Sprachmodell noch nicht
 geladen ist: *„NotAllowedError: Requires a user gesture when availability is 'downloading'
@@ -115,6 +135,8 @@ Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
   einmal versuchen – der Weg führt über einen Debug-Port am laufenden Chrome.
 - **Der Cookie-Banner als Ursache** des leeren Panels: selbst vermutet, selbst widerlegt.
   Ein frisches Profil ohne jeden Banner-Klick zeigte denselben Fehler.
+- **Die fehlende Anmeldung als Ursache**: ebenfalls selbst vermutet, am 01.09.2026 in
+  einer angemeldeten Sitzung widerlegt. Nicht erneut prüfen.
 
 ---
 

@@ -237,7 +237,12 @@ export class PanelError extends Error {}
 
 export async function readTranscriptPanel(captionLang: string): Promise<PanelResult> {
   const opened = await openPanel();
-  if (!opened.ok) throw new PanelError(opened.grund);
+  if (!opened.ok) {
+    // Auch beim Fehlschlag aufräumen: sonst bleibt YouTubes Panel offen in der Spalte
+    // stehen und behauptet „Keine Ergebnisse gefunden“, obwohl das unsere Sache war.
+    closePanel();
+    throw new PanelError(opened.grund);
+  }
 
   const langs = readLanguages();
 
@@ -288,7 +293,12 @@ export async function switchPanelTrack(
   track: CaptionTrack,
 ): Promise<{ transcript: Transcript; active: CaptionTrack }> {
   const opened = await openPanel();
-  if (!opened.ok) throw new PanelError(opened.grund);
+  if (!opened.ok) {
+    // Auch beim Fehlschlag aufräumen: sonst bleibt YouTubes Panel offen in der Spalte
+    // stehen und behauptet „Keine Ergebnisse gefunden“, obwohl das unsere Sache war.
+    closePanel();
+    throw new PanelError(opened.grund);
+  }
   await selectLanguage(track.name);
 
   const cues = readCues();

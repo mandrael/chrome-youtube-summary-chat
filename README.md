@@ -14,7 +14,8 @@ kein Proxy, keine Telemetrie.
 
 | | `full` (GitHub, unpacked) | `store` (Chrome Web Store) |
 |---|---|---|
-| Untertitel-Transkript | ja | ja |
+| Untertitel-Transkript aus der Seite | gebaut, liefert derzeit nichts | gebaut, liefert derzeit nichts |
+| Untertitel über yt-dlp | **ja, die tragende Route** | **nein** |
 | Audio-Fallback ohne Untertitel | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
 | Fallback-Code im Bundle | ja | **nein, nachgemessen** |
@@ -124,27 +125,32 @@ cd native-host && python3 selfcheck.py
 
 ### Der Untertitel-Weg im Browser – und warum er scheitert
 
-Am 01.09.2026 in einer *nicht angemeldeten* Chrome-Sitzung gemessen, drei Wege, alle
-erfolglos:
+Am 01.09.2026 gemessen, einmal in einer anonymen und einmal in einer **angemeldeten**
+Chrome-Sitzung:
 
-| Weg | Ergebnis |
-|---|---|
-| `baseUrl` aus `ytInitialPlayerResponse` direkt abrufen | HTTP 200, **Body leer** – bei `roh`, `fmt=json3`, `fmt=srv3` und `fmt=json3&c=WEB`, mit und ohne gesetzten Consent |
-| YouTubes Transkript-Panel im DOM auslesen | Der programmatische Klick expandiert das Panel (`visibility=…EXPANDED`), löst aber **keinen einzigen Netzwerk-Request** aus |
-| InnerTube `POST /youtubei/v1/get_transcript` mit vollständigen Headern | HTTP 400, *„Precondition check failed."* |
+| Weg | anonym | angemeldet |
+|---|---|---|
+| `playabilityStatus` des Videos | `LOGIN_REQUIRED` | **`OK`** |
+| Untertitelspuren in der Seite | vorhanden | vorhanden, 31 Stück |
+| `baseUrl` abrufen – roh, `fmt=json3`, `fmt=srv3`, `&c=WEB` | HTTP 200, **Body leer** | HTTP 200, **Body leer** |
+| Transkript-Panel, programmatischer Klick | 0 Segmente | 0 Segmente |
+| Transkript-Panel, **echter Nutzerklick** | – | **0 Segmente** |
+| `POST /youtubei/v1/get_transcript` | HTTP 400 „Precondition check failed." | – |
 
-**Die gemeinsame Ursache ist gefunden.** `POST /youtubei/v1/player` mit dem
-visionOS-Client (clientName `VISIONOS`, clientVersion `1.02`, deviceModel
-`RealityDevice17,1`, `X-Youtube-Client-Name: 101`) antwortet
-`playabilityStatus: LOGIN_REQUIRED` mit dem Grund im Wortlaut: *„Melde dich an, damit wir
-sehen, dass du kein Bot bist."* YouTube verweigert nicht die Untertitel, sondern das
-Video – und das nimmt jedem Untertitel-Weg im Browser die Grundlage.
+**Die Anmeldung ist nicht die Ursache** – die naheliegende Vermutung, gemessen und
+widerlegt. Angemeldet gibt YouTube das Video frei und liefert die Spurliste; der Abruf der
+Untertitel bleibt trotzdem leer. Auch ein echter Klick auf „Transkript anzeigen" öffnet
+nichts: im DOM liegen zwei Transkript-Panels (`PAmodern_transcript_view` und
+`engagement-panel-searchable-transcript`), beide bleiben verborgen und leer.
 
-Ob eine angemeldete Sitzung das aufhebt, ist **nicht gemessen** und bleibt offen. Der
-Untertitel-Weg im Browser ist gebaut und läuft als erster Versuch – erst der direkte
+**Wahrscheinlich, aber nicht gemessen:** YouTube verlangt für `/api/timedtext` einen
+Proof-of-Origin-Token, den `yt-dlp` erzeugt und ein `fetch` aus der Seite heraus nicht.
+
+Der Browser-Weg ist trotzdem gebaut und läuft als erster Versuch – erst der direkte
 Abruf, dann das Panel. Scheitert beides, nennt die Fehlermeldung **beide Gründe im
 Klartext** statt nur „ging nicht", daneben steht ein „Erneut versuchen", und im
-`full`-Build folgen die beiden Knöpfe für den lokalen Helfer.
+`full`-Build folgen die beiden Knöpfe für den lokalen Helfer. Bis zur Meldung vergehen
+rund 26 Sekunden.
 
 Zwei Fallstricke, die dabei aufgefallen und behoben sind:
 
@@ -153,7 +159,8 @@ Zwei Fallstricke, die dabei aufgefallen und behoben sind:
   durcheinandergeratene Zeitstempel. Gelesen wird nur die sichtbare Liste, zusätzlich
   wird nach Zeit und Text dedupliziert.
 - In einem **Hintergrundtab** lädt YouTube den Panelinhalt nicht (zehn Anläufe über 141
-  Sekunden: null Segmente). Der Code wartet deshalb, bis der Tab sichtbar ist.
+  Sekunden: null Segmente). Der Code wartet, bis der Tab sichtbar ist, und sagt das in
+  der Sidebar auch – sonst sähe das Warten wie ein Hänger aus.
 
 Welche Spur genommen wird, steuert die Einstellung „Untertitelsprache"; die tatsächlich
 vorhandenen Spuren stehen im Transkript-Tab der Sidebar zur Wahl.
@@ -279,10 +286,12 @@ automatische Downloads.
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
 
-- **Der Untertitel-Weg im Browser in einer angemeldeten Sitzung.** In einer anonymen
-  Sitzung liefert er nichts, die Ursache ist oben belegt. Ob eine Anmeldung das aufhebt,
-  ist ungemessen. Praktisch aufgefangen durch die yt-dlp-Route des `full`-Builds –
-  **im `store`-Build bleibt dieser Punkt offen**, dort gibt es keinen Helfer.
+- **Der `store`-Build kommt derzeit an kein Transkript.** Das ist kein ungeprüfter Punkt,
+  sondern ein gemessenes Loch: der Untertitel-Weg im Browser liefert nichts, weder anonym
+  noch angemeldet (Tabelle oben), und ohne lokalen Helfer gibt es keine zweite Route.
+  Solange das so ist, ist der Store-Build nicht einreichbar. Der `full`-Build ist davon
+  nicht betroffen – dort trägt die yt-dlp-Route.
+- **Der Proof-of-Origin-Token** als vermutete Ursache ist nicht nachgewiesen.
 - **Windows.** `install-windows.ps1` folgt Chromes dokumentiertem Verfahren, ist aber
   mangels Windows-Rechner nie ausgeführt worden. Die lokale Route Parakeet MLX ist dort
   ohnehin nicht verfügbar (Apple Silicon).

@@ -24,6 +24,8 @@ const de = {
   tabHistory: "Verlauf",
   extraPrompt: "Zusatz zum Prompt (optional)",
   loadingTranscript: "Transkript wird geladen …",
+  waitingVisible:
+    "Wartet, bis dieser Tab im Vordergrund ist – im Hintergrund lädt YouTube das Transkript nicht.",
   noCaptions: "Für dieses Video sind keine Untertitel verfügbar.",
   noCaptionsStore:
     "Für dieses Video sind keine Untertitel verfügbar. Ohne Untertitel kann dieser Build kein Transkript erzeugen.",
@@ -78,6 +80,8 @@ const en: Record<Keys, string> = {
   tabHistory: "History",
   extraPrompt: "Extra prompt (optional)",
   loadingTranscript: "Loading transcript …",
+  waitingVisible:
+    "Waiting for this tab to come to the front – YouTube does not load the transcript in a background tab.",
   noCaptions: "No captions are available for this video.",
   noCaptionsStore:
     "No captions are available for this video. Without captions this build cannot produce a transcript.",

@@ -107,3 +107,39 @@ export function translationPrompt(targetLanguage: string, uiLang: "de" | "en"): 
     `- No comments, no preamble, no closing note – the translation only.`
   );
 }
+
+
+/**
+ * Übersetzt eine bereits erzeugte Antwort – Zusammenfassung, Kapitel, Chatantwort.
+ *
+ * Anders als beim Transkript geht es hier nicht um Vollständigkeit, sondern um
+ * **Formattreue**: Überschriften, Listen, Fettungen und Zeitstempel müssen exakt so
+ * wieder herauskommen, sonst zerfällt die Antwort beim Rendern.
+ */
+export function answerTranslationPrompt(
+  targetLanguage: string,
+  uiLang: "de" | "en",
+): string {
+  if (uiLang === "de") {
+    return (
+      `Übersetze den folgenden Text nach ${targetLanguage}.\n\n` +
+      `Regeln:\n` +
+      `- Die Markdown-Formatierung bleibt exakt erhalten: Überschriften (#), Listen, ` +
+      `Nummerierungen, Fettungen, Codeblöcke, Zeilenumbrüche.\n` +
+      `- Zeitstempel wie [12:34] bleiben unverändert und an derselben Stelle stehen.\n` +
+      `- Übersetze den gesamten Text. Keine Zusammenfassung, keine Kürzung.\n` +
+      `- Eigennamen, Produktnamen und Fachbegriffe im Original belassen.\n` +
+      `- Keine Kommentare, keine Einleitung – nur die Übersetzung.`
+    );
+  }
+  return (
+    `Translate the following text into ${targetLanguage}.\n\n` +
+    `Rules:\n` +
+    `- Keep the Markdown formatting exactly: headings (#), lists, numbering, bold, ` +
+    `code blocks, line breaks.\n` +
+    `- Leave timestamps like [12:34] untouched and in the same place.\n` +
+    `- Translate the entire text. No summary, no shortening.\n` +
+    `- Keep proper nouns, product names and technical terms in the original.\n` +
+    `- No comments, no preamble – the translation only.`
+  );
+}

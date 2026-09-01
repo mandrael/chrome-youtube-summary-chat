@@ -1,4 +1,4 @@
-import { Copy, Download } from "lucide-react";
+import { AudioLines, Copy, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatTs, transcriptToText } from "@/lib/timestamps";
 import type { T } from "@/lib/i18n";
@@ -13,6 +13,8 @@ export function TranscriptView({
   tracks,
   activeTrack,
   onSwitchTrack,
+  onForceAudio,
+  busy,
 }: {
   t: T;
   transcript: Transcript | null;
@@ -23,9 +25,15 @@ export function TranscriptView({
   tracks: CaptionTrack[];
   activeTrack: CaptionTrack | null;
   onSwitchTrack: (track: CaptionTrack) => void;
+  onForceAudio?: () => void;
+  busy?: string | null;
 }) {
   if (!transcript) {
     return <p className="p-3 text-sm text-muted-foreground">{t("loadingTranscript")}</p>;
+  }
+
+  if (busy) {
+    return <p className="p-3 text-sm text-muted-foreground">{busy}</p>;
   }
 
   const withHours =
@@ -62,6 +70,17 @@ export function TranscriptView({
           </span>
         )}
         <div className="ml-auto flex gap-0.5">
+          {onForceAudio && (
+            <Button
+              size="iconSm"
+              variant="ghost"
+              title={t("forceAudioHint")}
+              disabled={!!busy}
+              onClick={onForceAudio}
+            >
+              <AudioLines />
+            </Button>
+          )}
           <Button
             size="iconSm"
             variant="ghost"

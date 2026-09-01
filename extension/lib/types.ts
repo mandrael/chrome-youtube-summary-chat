@@ -111,6 +111,12 @@ export interface Settings {
   sttRoute: SttRoute;
   /** Chrome-eigene Translator API statt OpenRouter fürs Übersetzen. */
   preferLocalTranslate: boolean;
+  /**
+   * Wo die Oberfläche erscheint. "page" hängt sie wie bisher in YouTubes rechte Spalte,
+   * "panel" in die Seitenleiste des Browsers – dort ist sie breiter und YouTubes
+   * Tastaturkürzel greifen nicht in den Chat.
+   */
+  uiPlacement: "page" | "panel" | "both";
 }
 
 /** Nachrichten zwischen Content-Script/Options und Service Worker. */

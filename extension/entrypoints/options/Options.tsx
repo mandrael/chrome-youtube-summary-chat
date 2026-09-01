@@ -226,6 +226,21 @@ export function Options() {
         </Field>
 
         <Field
+          label="Wo die Oberfläche erscheint"
+          hint="Eingebettet steht sie wie gewohnt in YouTubes rechter Spalte und lässt sich dort einklappen. Die Seitenleiste des Browsers öffnet sich per Klick aufs Symbol, ist breiter und YouTubes Tastaturkürzel greifen dort nicht in den Chat – die Leertaste pausiert also nicht beim Tippen."
+        >
+          <Radio
+            value={s.uiPlacement}
+            onChange={(v) => patch({ uiPlacement: v as typeof s.uiPlacement })}
+            options={[
+              ["both", "Beides"],
+              ["page", "Nur eingebettet"],
+              ["panel", "Nur Seitenleiste"],
+            ]}
+          />
+        </Field>
+
+        <Field
           label="Übersetzen mit Chrome statt OpenRouter"
           hint="Nutzt Chromes eingebaute Translator API (ab Chrome 138). Läuft auf dem Gerät, kostet nichts und lässt Zeitstempel unangetastet, weil nur der Text jeder Zeile übersetzt wird. Trifft Fachbegriffe schlechter als ein Sprachmodell."
         >

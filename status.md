@@ -5,6 +5,42 @@
 1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 2. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (abends) – vier Korrekturen nach Michaels Test
+
+### 1. Die eingebettete Sidebar war weg – mein Fehler
+
+Beim Umzug in die Seitenleiste habe ich die Sidebar in YouTubes rechter Spalte
+**ersetzt statt ergänzt**. Der ursprüngliche Auftrag galt aber weiter. Sie ist zurück;
+neue Einstellung `uiPlacement` mit „Beides" (Default), „Nur eingebettet", „Nur
+Seitenleiste". Einklappen konnte die eingebettete Variante schon immer, der Zustand wird
+gemerkt.
+
+### 2. Übersetzen nahm immer das Transkript
+
+Jetzt kontextabhängig: steht eine Antwort im Chat, wird die übersetzt – erst wenn keine
+da ist, das Transkript. Der Knopf beschriftet sich entsprechend.
+
+### 3. Formattreue beim Übersetzen
+
+Wirft man der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
+`translateMarkdown` geht deshalb zeilenweise vor und lässt den strukturtragenden
+Zeilenanfang stehen: `## `, `- `, `1. `, `> ` und Zeitstempel wie `[02:13] `. Codeblöcke,
+Leerzeilen und Trennlinien werden übersprungen. Für den Cloud-Weg gibt es
+`answerTranslationPrompt`, der Formattreue statt Vollständigkeit verlangt.
+
+**Verifiziert:** Zusammenfassung erzeugt, dann übersetzt – 2.418 Zeichen mit erhaltenen
+Listen, Zeitstempeln und Fettungen.
+
+### 4. Audio-Route auch bei vorhandenen Untertiteln
+
+Im Transkript-Tab sitzt jetzt ein Knopf, der die Tonspur über die eingestellte STT-Route
+transkribiert, obwohl Untertitel da sind. Nur im `full`-Build.
+
+## Offene To-Dos (oberstes zuerst)
+
+1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+2. Optional: Store-Build einreichen.
+
 ## Stand 02.09.2026 – Umzug in Chromes Seitenleiste, Farben, Icon
 
 ### Warum die eingebettete Sidebar weg ist

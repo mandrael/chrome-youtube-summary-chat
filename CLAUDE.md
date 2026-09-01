@@ -94,8 +94,11 @@ wird aber nur angeboten, wenn der Browser-Weg scheitert.
 im DOM liegen zwei Panels (`PAmodern_transcript_view`,
 `engagement-panel-searchable-transcript`), beide `HIDDEN` und leer.
 
-**Die Oberfläche liegt in Chromes Seitenleiste**, nicht mehr in YouTubes rechter Spalte.
-Drei Gründe, alle gemessen:
+**Die Oberfläche gibt es zweimal**, umschaltbar über `uiPlacement` (Default „beides"):
+eingebettet in YouTubes rechter Spalte – die ursprüngliche und von Michael bevorzugte
+Variante, dort einklappbar – und in der Seitenleiste des Browsers. Die Seitenleiste war
+zwischenzeitlich der Ersatz; das war falsch, sie ist die Ergänzung. Drei gemessene
+Nachteile der eingebetteten Variante, die in der Seitenleiste entfallen:
 
 - Die Spalte ist rund 400 px breit, mehr gibt sie nicht her.
 - Tastendrücke im Chat erreichten YouTubes globale Kürzel – die **Leertaste pausierte das
@@ -104,6 +107,14 @@ Drei Gründe, alle gemessen:
   bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM. Die eingebettete Sidebar
   lief damit auf 62,5 % ihrer Grösse: `text-sm` waren 8,75 px statt 14. Deshalb stehen
   Schriftgrössen, Abstände und Radien im `@theme`-Block in **Pixeln**.
+
+**Übersetzt wird, was gerade auf dem Tisch liegt.** Steht eine Antwort im Chat – eine
+Zusammenfassung, Kapitel –, wird die übersetzt; erst wenn keine da ist, geht es an das
+Transkript. Beides braucht einen anderen Weg: eine Zusammenfassung ist Markdown mit
+Überschriften und Listen, ein Transkript sind Zeitstempelzeilen. Bei der lokalen
+Übersetzung geht deshalb jede Zeile einzeln durch `translateMarkdown`, und der
+strukturtragende Zeilenanfang (`## `, `- `, `[02:13] `) bleibt unangetastet – wirft man
+der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
 
 **Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
 einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von
@@ -146,8 +157,11 @@ Klicks – auch ein dynamischer Import. Deshalb ist `translate()` in der Sidebar
 und `create()` der erste `await` überhaupt. Gemessen: 286 Zeitstempel, 22.507 Zeichen,
 rund drei Minuten, davon 160 s Modell-Download.
 
-**Die Oberfläche liegt in Chromes Seitenleiste**, nicht mehr in YouTubes rechter Spalte.
-Drei Gründe, alle gemessen:
+**Die Oberfläche gibt es zweimal**, umschaltbar über `uiPlacement` (Default „beides"):
+eingebettet in YouTubes rechter Spalte – die ursprüngliche und von Michael bevorzugte
+Variante, dort einklappbar – und in der Seitenleiste des Browsers. Die Seitenleiste war
+zwischenzeitlich der Ersatz; das war falsch, sie ist die Ergänzung. Drei gemessene
+Nachteile der eingebetteten Variante, die in der Seitenleiste entfallen:
 
 - Die Spalte ist rund 400 px breit, mehr gibt sie nicht her.
 - Tastendrücke im Chat erreichten YouTubes globale Kürzel – die **Leertaste pausierte das
@@ -156,6 +170,14 @@ Drei Gründe, alle gemessen:
   bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM. Die eingebettete Sidebar
   lief damit auf 62,5 % ihrer Grösse: `text-sm` waren 8,75 px statt 14. Deshalb stehen
   Schriftgrössen, Abstände und Radien im `@theme`-Block in **Pixeln**.
+
+**Übersetzt wird, was gerade auf dem Tisch liegt.** Steht eine Antwort im Chat – eine
+Zusammenfassung, Kapitel –, wird die übersetzt; erst wenn keine da ist, geht es an das
+Transkript. Beides braucht einen anderen Weg: eine Zusammenfassung ist Markdown mit
+Überschriften und Listen, ein Transkript sind Zeitstempelzeilen. Bei der lokalen
+Übersetzung geht deshalb jede Zeile einzeln durch `translateMarkdown`, und der
+strukturtragende Zeilenanfang (`## `, `- `, `[02:13] `) bleibt unangetastet – wirft man
+der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
 
 **Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
 einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von

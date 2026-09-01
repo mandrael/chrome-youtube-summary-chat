@@ -17,7 +17,7 @@ import { TranscriptView } from "@/components/TranscriptView";
 import { HistoryView } from "@/components/HistoryView";
 import { startChat, startFallback } from "@/lib/chat-client";
 import { makeT, resolveUiLang, type T } from "@/lib/i18n";
-import { PRESETS, translationPrompt } from "@/lib/prompts";
+import { answerTranslationPrompt, PRESETS, translationPrompt } from "@/lib/prompts";
 import { FALLBACK_MODELS, listModels } from "@/lib/openrouter";
 import {
   collapsedItem,
@@ -29,10 +29,12 @@ import {
 import { transcriptToText } from "@/lib/timestamps";
 import { NoCaptionsError } from "@/lib/transcript";
 import { loadTrackViaTab, loadTranscriptViaTab } from "@/lib/transcript-bridge";
+import { loadTrack, loadTranscript } from "@/lib/transcript";
 import {
   availability as localAvailability,
   baseLang,
   isSupported as localTranslateSupported,
+  translateMarkdown,
   translateTranscript,
 } from "@/lib/translate-local";
 import type {
@@ -52,8 +54,12 @@ type Tab = "chat" | "transcript" | "history";
 export interface SidebarProps {
   videoId: string;
   videoTitle: string;
-  /** Tab mit der YouTube-Seite – dort holt das Content-Script das Transkript. */
-  tabId: number;
+  /**
+   * Tab mit der YouTube-Seite. Nur die Seitenleiste setzt das: sie läuft ausserhalb der
+   * Seite und muss das Transkript über das Content-Script holen. Steckt die Sidebar
+   * selbst in der Seite, lädt sie direkt.
+   */
+  tabId?: number;
   /** Setzt die Wiedergabeposition im Player der Seite. */
   onSeek: (seconds: number) => void;
   /** In Chromes Seitenleiste gibt es nichts einzuklappen – dort schliesst man das Panel. */
@@ -146,7 +152,10 @@ export function Sidebar({
       if (!cancelled) setMessages(conv?.messages ?? []);
 
       try {
-        const res = await loadTranscriptViaTab(tabId, settings.captionLang);
+        const res =
+          tabId == null
+            ? await loadTranscript(videoId, settings.captionLang)
+            : await loadTranscriptViaTab(tabId, settings.captionLang);
         if (cancelled) return;
         setTranscript(res.transcript);
         setTracks(res.tracks);
@@ -219,14 +228,20 @@ export function Sidebar({
     return parts.join("\n\n");
   }
 
-  async function send(text: string, systemOverride?: string) {
+  /**
+   * @param nutzlast Text, der statt des Transkripts als Grundlage dient – beim
+   *   Übersetzen einer bereits erzeugten Antwort ist das diese Antwort. Ohne ihn
+   *   arbeitet das Modell wie sonst auf dem Transkript im System-Prompt.
+   */
+  async function send(text: string, systemOverride?: string, nutzlast?: string) {
     if (!settings || !transcript || streaming) return;
     if (!settings.apiKey) {
       setMessages((m) => [...m, { role: "assistant", content: t("noKey"), error: true }]);
       return;
     }
 
-    const prompt = extra.trim() ? `${text}\n\n${extra.trim()}` : text;
+    const basis = nutzlast ? `${text}\n\n---\n\n${nutzlast}` : text;
+    const prompt = extra.trim() ? `${basis}\n\n${extra.trim()}` : basis;
     const next: ChatMessage[] = [...messages, { role: "user", content: prompt }];
     setMessages([...next, { role: "assistant", content: "" }]);
     setStreaming(true);
@@ -280,8 +295,21 @@ export function Sidebar({
 
   /* ---- Übersetzung ---- */
 
+  /**
+   * Übersetzt das, was gerade auf dem Tisch liegt: steht eine Antwort im Chat – eine
+   * Zusammenfassung, Kapitel, eine Chatantwort –, wird die übersetzt. Erst wenn keine
+   * da ist, geht es an das Transkript.
+   *
+   * Der Unterschied ist nicht kosmetisch: eine Zusammenfassung ist Markdown mit
+   * Überschriften und Listen, ein Transkript sind Zeitstempelzeilen. Beides braucht
+   * einen anderen Weg, sonst kommt die Formatierung zerlegt zurück.
+   */
   function translate() {
-    if (!settings || !transcript) return;
+    if (!settings) return;
+
+    const letzteAntwort = [...messages].reverse().find((m) => m.role === "assistant" && !m.error);
+    const quelle = letzteAntwort?.content?.trim();
+    const target = languageToCode(settings.translationTarget);
 
     if (settings.preferLocalTranslate) {
       if (!localTranslateOk) {
@@ -292,14 +320,12 @@ export function Sidebar({
         return;
       }
 
-      const source = baseLang(transcript.lang) || "en";
-      const target = languageToCode(settings.translationTarget);
-
+      const source = baseLang(transcript?.lang) || "en";
       setStreaming(true);
       setTab("chat");
       setMessages((m) => [
         ...m,
-        { role: "user", content: t("presetTranslate") },
+        { role: "user", content: quelle ? t("translateAnswer") : t("translateTranscriptLabel") },
         { role: "assistant", content: `${t("localTranslateDownloading")} …` },
       ]);
 
@@ -314,25 +340,43 @@ export function Sidebar({
           return copy;
         });
 
-      // Kein await vor diesem Aufruf: die Nutzergeste des Klicks muss bis zu
-      // Translator.create() durchhalten, sonst NotAllowedError.
-      translateTranscript(transcript, {
+      const optionen = {
         source,
         target,
         // Der Modell-Download blockiert create() – gemessen 160 s. Ohne diese Anzeige
         // sieht die Sidebar in der Zeit aus, als hinge sie.
-        onDownload: (loaded) =>
+        onDownload: (loaded: number) =>
           setLast(`${t("localTranslateDownloading")} … ${Math.round(loaded * 100)} %`),
-        onProgress: (done, total) => setLast(`${t("presetTranslate")} … ${done}/${total}`),
-      })
-        .then((translated) => setLast(transcriptToText(translated)))
+        onProgress: (done: number, total: number) =>
+          setLast(`${t("presetTranslate")} … ${done}/${total}`),
+      };
+
+      // Kein await vor diesem Aufruf: die Nutzergeste des Klicks muss bis zu
+      // Translator.create() durchhalten, sonst NotAllowedError.
+      const lauf = quelle
+        ? translateMarkdown(quelle, optionen)
+        : transcript
+          ? translateTranscript(transcript, optionen).then(transcriptToText)
+          : Promise.reject(new Error(t("noCaptions")));
+
+      lauf
+        .then((text) => setLast(text))
         .catch((e) => setLast(String((e as Error)?.message ?? e), true))
         .finally(() => setStreaming(false));
       return;
     }
 
+    if (quelle) {
+      void send(
+        `${t("translateAnswer")} → ${settings.translationTarget}`,
+        answerTranslationPrompt(settings.translationTarget, uiLang),
+        quelle,
+      );
+      return;
+    }
+
     void send(
-      `${t("presetTranslate")} → ${settings.translationTarget}`,
+      `${t("translateTranscriptLabel")} → ${settings.translationTarget}`,
       translationPrompt(settings.translationTarget, uiLang),
     );
   }
@@ -365,7 +409,10 @@ export function Sidebar({
     setLoadState("loading");
     setLoadError("");
     try {
-      const res = await loadTranscriptViaTab(tabId, settings.captionLang);
+      const res =
+          tabId == null
+            ? await loadTranscript(videoId, settings.captionLang)
+            : await loadTranscriptViaTab(tabId, settings.captionLang);
       setTranscript(res.transcript);
       setTracks(res.tracks);
       setActiveTrack(res.active ?? null);
@@ -385,7 +432,16 @@ export function Sidebar({
   async function switchTrack(track: CaptionTrack) {
     setLoadState("loading");
     try {
-      const res = await loadTrackViaTab(tabId, track);
+      const res =
+        tabId == null
+          ? await (async () => {
+              // Panel-Spuren kennen keine URL – sie werden im DOM umgeschaltet.
+              const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
+              const r = isPanelTrack(track) ? await switchPanelTrack(track) : await loadTrack(track);
+              if (!r) throw new Error("Die Spur liess sich nicht laden.");
+              return r;
+            })()
+          : await loadTrackViaTab(tabId, track);
       setTranscript(res.transcript);
       setActiveTrack(res.active ?? track);
       setLoadState("ready");
@@ -613,6 +669,8 @@ export function Sidebar({
           tracks={tracks}
           activeTrack={activeTrack}
           onSwitchTrack={(tr) => void switchTrack(tr)}
+          onForceAudio={__FALLBACK__ ? () => runFallbackJob("audio") : undefined}
+          busy={fallbackState}
         />
       )}
 

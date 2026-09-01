@@ -98,3 +98,69 @@ export async function translateTranscript(
     translator.destroy?.();
   }
 }
+
+
+/**
+ * Übersetzt Markdown, ohne die Auszeichnung zu zerstören.
+ *
+ * Die Translator API bekommt reinen Text und gibt reinen Text zurück – wirft man ihr
+ * eine ganze Markdown-Antwort hin, kommen Überschriften, Listenpunkte und Zeitstempel
+ * verändert oder gar nicht zurück. Deshalb geht hier jede Zeile einzeln durch, und der
+ * strukturtragende Anfang der Zeile bleibt unangetastet:
+ *
+ *   `## Kapitel`     → `## ` bleibt, nur „Kapitel" wird übersetzt
+ *   `- [02:13] Text` → `- [02:13] ` bleibt, nur „Text" wird übersetzt
+ *   ` ```js `        → Codeblöcke werden komplett übersprungen
+ *
+ * Damit ist Formattreue strukturell garantiert statt nur erbeten.
+ */
+const ZEILENPRAEFIX =
+  /^(\s*(?:[-*+]\s+|\d+[.)]\s+|>\s*|#{1,6}\s+)?(?:\[\d{1,2}:\d{2}(?::\d{2})?\]\s*)?)/;
+
+export async function translateMarkdown(
+  text: string,
+  o: LocalTranslateOptions,
+): Promise<string> {
+  if (!isSupported()) throw new Error("Translator API nicht verfügbar.");
+
+  const translator = await Translator!.create({
+    sourceLanguage: o.source,
+    targetLanguage: o.target,
+    monitor(m) {
+      m.addEventListener("downloadprogress", (e) => {
+        o.onDownload?.((e as ProgressEvent).loaded);
+      });
+    },
+  });
+
+  try {
+    const zeilen = text.split("\n");
+    const aus: string[] = [];
+    let imCodeblock = false;
+
+    for (const [i, zeile] of zeilen.entries()) {
+      if (o.signal?.aborted) throw new DOMException("Abgebrochen", "AbortError");
+
+      if (/^\s*```/.test(zeile)) {
+        imCodeblock = !imCodeblock;
+        aus.push(zeile);
+        continue;
+      }
+      // Code, Trennlinien und Leerzeilen bleiben, wie sie sind.
+      if (imCodeblock || !zeile.trim() || /^\s*([-*_])\1{2,}\s*$/.test(zeile)) {
+        aus.push(zeile);
+        continue;
+      }
+
+      const praefix = zeile.match(ZEILENPRAEFIX)?.[1] ?? "";
+      const rest = zeile.slice(praefix.length);
+      aus.push(rest.trim() ? praefix + (await translator.translate(rest)) : zeile);
+
+      if (i % 10 === 0) o.onProgress?.(i + 1, zeilen.length);
+    }
+    o.onProgress?.(zeilen.length, zeilen.length);
+    return aus.join("\n");
+  } finally {
+    translator.destroy?.();
+  }
+}

@@ -57,6 +57,11 @@ const de = {
   retry: "Erneut versuchen",
   panelNoVideo:
     "Kein YouTube-Video im aktiven Tab. Öffne ein Video – die Seitenleiste folgt automatisch.",
+  translateAnswer: "Antwort übersetzen",
+  translateTranscriptLabel: "Transkript übersetzen",
+  forceAudio: "Neu transkribieren (Audio)",
+  forceAudioHint:
+    "Nimmt nicht die Untertitel von YouTube, sondern lädt die Tonspur und transkribiert sie über die eingestellte STT-Route. Dauert länger und kostet je nach Route Geld.",
 } as const;
 
 type Keys = keyof typeof de;
@@ -113,6 +118,11 @@ const en: Record<Keys, string> = {
   retry: "Retry",
   panelNoVideo:
     "No YouTube video in the active tab. Open one – the side panel follows automatically.",
+  translateAnswer: "Translate answer",
+  translateTranscriptLabel: "Translate transcript",
+  forceAudio: "Re-transcribe (audio)",
+  forceAudioHint:
+    "Ignores YouTube's captions, downloads the audio track and transcribes it via the configured STT route. Slower, and depending on the route it costs money.",
 };
 
 const dict = { de, en };

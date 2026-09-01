@@ -2,15 +2,57 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Entscheidung nötig: was passiert mit dem `store`-Build?** Er kommt an kein
-   Transkript – gemessen, anonym wie angemeldet. Ohne Helfer gibt es keine zweite Route.
-   Drei Wege: (a) Store-Build fallenlassen und nur den GitHub-Build pflegen,
-   (b) den Proof-of-Origin-Token nachbauen (aufwendig, spröde), (c) den Store-Build
-   ausliefern mit dem ehrlichen Hinweis, dass er nur auf Videos funktioniert, bei denen
-   YouTube die Untertitel doch herausgibt. Empfehlung: (a), bis (b) sich lohnt.
-2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
    `native-host/install-windows.ps1` (Registry-Schlüssel) und die winget-Pfade sind
-   ungetestet – hier stand kein Windows zur Verfügung.
+   ungetestet.
+2. Alles andere ist erledigt. Zum Store-Build siehe unten – entschieden, aber bewusst
+   nicht umgesetzt.
+
+## Entscheidung 01.09.2026: Store-Build wird nicht eingereicht
+
+Michael hat Weg **A** gewählt: nur den GitHub-Build pflegen. **Vorerst wird nichts
+umgesetzt** – kein Code entfernt, keine Build-Skripte geändert. Der Store-Build bleibt
+baubar und geprüft, er wird nur nicht ausgeliefert.
+
+**Grund:** Ohne lokalen Helfer kommt er an kein Transkript – gemessen, anonym wie
+angemeldet. Er wäre eine Attrappe.
+
+### Was zu tun wäre, wenn A umgesetzt wird
+
+Nichts löschen. Nur diese drei Punkte:
+
+1. Im README den Store-Build von „zweite Auslieferungsvariante" auf „gebaut und geprüft,
+   aber nicht ausgeliefert" umstellen. Der Tree-Shaking-Nachweis bleibt wertvoll: er
+   belegt, dass der Fallback-Code sauber trennbar ist.
+2. `pnpm run build:store` und `scripts/verify-store-bundle.sh` **behalten**. Sie kosten
+   nichts und sind sofort wieder brauchbar, falls sich die Lage ändert.
+3. `__FALLBACK__` und die `if (__FALLBACK__)`-Zweige bleiben unangetastet.
+
+### Woran man merkt, dass sich die Lage geändert hat
+
+Diesen Einzeiler in der Konsole einer YouTube-Videoseite ausführen. Kommt eine Länge
+grösser null zurück, liefert YouTube die Untertitel wieder an den Browser aus – dann ist
+der Store-Build ohne jede Änderung wieder tragfähig:
+
+```js
+(async () => {
+  const h = await (await fetch(location.href)).text();
+  const u = h.match(/"baseUrl":"(https:\/\/[^"]*timedtext[^"]*)"/)?.[1]?.replace(/\\u0026/g, "&");
+  const b = u ? await (await fetch(u + "&fmt=json3")).text() : null;
+  return { spurGefunden: !!u, laenge: b?.length ?? null };
+})()
+```
+
+Stand 01.09.2026: `{ spurGefunden: true, laenge: 0 }` – die Spur ist da, der Inhalt nicht.
+
+### Wenn stattdessen doch Weg B (Token nachbauen) kommen soll
+
+Der fehlende Baustein ist der Proof-of-Origin-Token für `/api/timedtext`. Er wird von
+YouTubes BotGuard-Skript erzeugt; `yt-dlp` löst das über einen externen Provider
+(`bgutil-ytdlp-pot-provider`). Im Browser hiesse das: YouTubes eigenes BotGuard-Skript in
+der Seite ausführen und den Token abgreifen. Aufwendig, bricht bei jeder YouTube-Änderung,
+und ob es unter den Store-Richtlinien durchgeht, ist offen. Ungemessen – zuerst prüfen,
+ob der Token wirklich die Ursache ist.
 
 ## Stand 01.09.2026 (abends) – die Anmeldung war nicht die Ursache
 

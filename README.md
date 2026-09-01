@@ -12,6 +12,12 @@ kein Proxy, keine Telemetrie.
 
 ## Zwei Builds aus einer Codebase
 
+**Ausgeliefert wird derzeit nur `full`.** Der Store-Build ist gebaut und geprüft, aber
+nicht eingereicht: ohne lokalen Helfer kommt er an kein Transkript (siehe
+[Transkript-Quellen](#transkript-quellen)). Er bleibt im Repo, damit er sofort wieder
+brauchbar ist, falls YouTube die Untertitel wieder an den Browser ausliefert – wie man das
+prüft, steht in [status.md](status.md).
+
 | | `full` (GitHub, unpacked) | `store` (Chrome Web Store) |
 |---|---|---|
 | Untertitel-Transkript aus der Seite | gebaut, liefert derzeit nichts | gebaut, liefert derzeit nichts |
@@ -295,8 +301,8 @@ Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nich
 - **Windows.** `install-windows.ps1` folgt Chromes dokumentiertem Verfahren, ist aber
   mangels Windows-Rechner nie ausgeführt worden. Die lokale Route Parakeet MLX ist dort
   ohnehin nicht verfügbar (Apple Silicon).
-- **Der Chrome Web Store.** Der Store-Build wird gebaut und geprüft, aber nicht
-  eingereicht.
+- **Der Chrome Web Store.** Der Store-Build wird gebaut und geprüft, aber bewusst nicht
+  eingereicht – Begründung und Wiederaufnahme-Bedingung in [status.md](status.md).
 
 Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 

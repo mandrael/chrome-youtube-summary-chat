@@ -180,6 +180,10 @@
   .spur-select {
     appearance: none;
     appearance: base-select;
+    /* Ohne diese drei Zeilen bricht der gewählte Text unter den Kasten. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color-scheme: light;
     padding: 0 22px 0 8px;
     border: 1px solid var(--border);
@@ -201,6 +205,13 @@
   }
   .spur-select::picker-icon {
     display: none;
+  }
+  /* Der geschlossene Zustand ist ein eigener Baum (`selectedcontent`) – auch er kürzt. */
+  .spur-select selectedcontent {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   :host(.dark) .spur-select,

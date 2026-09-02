@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AudioLines, Copy, Download, Languages, Search, X } from "lucide-react";
-import { kurzname, langname } from "@/lib/tracks";
+import { kurzcode, kurzname, langname } from "@/lib/tracks";
 import { Button } from "@/components/ui/button";
 import { formatTs, transcriptToText } from "@/lib/timestamps";
 import type { T } from "@/lib/i18n";
@@ -74,11 +74,11 @@ export function TranscriptView({
               if (next) onSwitchTrack(next);
             }}
             title={t("captionTrackYouTube")}
-            className="spur-select h-6 min-w-0 max-w-[170px] shrink"
+            className="spur-select h-6 min-w-0 max-w-[190px] shrink"
           >
             {tracks.map((tr) => (
               <option key={tr.url} value={tr.url}>
-                {`${kurzname(tr, tracks)} · ${langname(tr)}`}
+                {`${kurzcode(tr, tracks)} · ${langname(tr)}`}
               </option>
             ))}
           </select>
@@ -91,7 +91,7 @@ export function TranscriptView({
                 ? `${t("captionTrackYouTube")}: ${langname(activeTrack)}`
                 : transcript.source
             }
-            className="inline-flex h-6 min-w-0 max-w-[170px] items-center truncate px-1 text-xs font-medium text-muted-foreground"
+            className="inline-flex h-6 min-w-0 max-w-[190px] items-center truncate px-1 text-xs font-medium text-muted-foreground"
           >
             {activeTrack ? kurzname(activeTrack) : transcript.source}
           </span>

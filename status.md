@@ -31,7 +31,10 @@ Kontextzeile, beide Wege) und `webLookupPrompt` (das Nachschlagen).
 ### „German (auto-generated) (automatisch)" ist Geschichte
 
 Der Zusatz kam doppelt: YouTube schreibt „auto-generated" in den Namen, die Extension
-hängte „(automatisch)" an. Die Wahrheit steht im Flag `auto`. Neues Modul
+hängte „(automatisch)" an. Im zweiten Anlauf kam er noch einmal doppelt, weil Kürzel und
+Name ihn beide setzten („en (auto) · Englisch (auto)") – jetzt steht er genau einmal am
+Ende der Zeile. Dazu `white-space: nowrap` samt Auslassungspunkten am Kasten und an
+`selectedcontent`: der gewählte Text brach sonst unter das Feld. Die Wahrheit steht im Flag `auto`. Neues Modul
 `lib/tracks.ts`: geschlossen steht das Kürzel – **`de (auto)`, `en`, `pt-BR`** –, in der
 Liste Kürzel und ausgeschriebener Name in der Sprache der Oberfläche
 (**`de · Deutsch`**, nicht „German"; über `Intl.DisplayNames`, YouTubes Rohname nur als

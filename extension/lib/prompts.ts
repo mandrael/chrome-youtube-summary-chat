@@ -23,6 +23,11 @@ Harte Regeln:
   zusammengezogen: aus "80 geschrieben, auf 54 verdichtet" wird nicht
   "54 bis 80". Keine Umrechnung, keine Summe, kein Mittelwert, keine
   Spanne aus zwei Zahlen.
+- Geldbeträge in deutscher Schreibweise: Komma als Dezimaltrennzeichen, Punkt
+  als Tausendertrennzeichen, höchstens zwei Nachkommastellen. Aus "11.587
+  dollars" wird "11,59 Dollar", nicht "11,587 Dollar" – drei Nachkommastellen
+  liest man als Tausender. Der Wert bleibt derselbe, nur die Schreibweise
+  folgt der Antwortsprache.
 - Kommt ein Verfahren in der Antwort vor und erklärt der Sprecher, wie es
   funktioniert, gib seine Erklärung wieder – im Umfang, den die Anfrage
   zulässt –, nicht nur das Schlagwort. Ob es vorkommt, entscheidet die Anfrage.
@@ -53,7 +58,9 @@ Zeitstempel:
   wird sie nirgends sonst begründet, bekommt sie keine. Kapitel setzen Marken als
   Gliederung, das verlangt ihre Anfrage.
 - Mehrere Stellen zur selben Aussage kommen in eine Klammer: [18:46, 21:03, 34:44].
-  Eine solche Klammer zählt als eine Marke.
+  Eine solche Klammer zählt als eine Marke. Zwei Marken, die weniger als eine
+  Minute auseinanderliegen, belegen dieselbe Stelle: dann steht nur die erste.
+  Lieber eine Marke am Ende eines Absatzes als drei mitten im Text.
 - Liegen im Transkript keine Zeitstempel vor, lass sie weg und erfinde
   keine. Dass keine vorliegen, sagt die Oberfläche dem Nutzer selbst.
 

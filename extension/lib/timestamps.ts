@@ -61,3 +61,20 @@ export function transcriptToText(t: Transcript): string {
 export function replaceCueTexts(t: Transcript, texts: string[]): Transcript {
   return { ...t, cues: t.cues.map((c, i): Cue => ({ ...c, text: texts[i] ?? c.text })) };
 }
+
+/**
+ * Marken, die dichter als `MIN_MARKEN_ABSTAND` Sekunden beieinanderliegen, zeigen auf
+ * dieselbe Stelle: „[00:02, 00:10]" sind acht Sekunden, da springt niemand zweimal hin.
+ * Behalten wird jeweils die erste; der Prompt sagt dasselbe, das hier greift auch, wenn
+ * das Modell sich nicht daran hält.
+ */
+export const MIN_MARKEN_ABSTAND = 30;
+
+export function duenneMarkenAus(sekunden: number[], mindestens = MIN_MARKEN_ABSTAND): boolean[] {
+  let letzte: number | null = null;
+  return sekunden.map((s) => {
+    if (letzte !== null && Math.abs(s - letzte) < mindestens) return false;
+    letzte = s;
+    return true;
+  });
+}

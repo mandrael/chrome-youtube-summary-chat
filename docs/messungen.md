@@ -383,3 +383,43 @@ namentlich eingetragene Begriffe anfasst.
 **Ergebnis: 4x, ein Modus, kein Schnell-Schalter.** Ein Umschalter „schnell oder genau"
 wäre die Wahl zwischen „meistens gut" und „manchmal flüssig formulierter Unsinn", ohne
 dass der Nutzer vorher sagen kann, welcher Fall vorliegt.
+
+## Audiospur und Videoqualität: dritter Anlauf, diesmal mit Kontrollwert (02.09.2026)
+
+Zwei Messungen davor waren wertlos, und das stand jeweils im eigenen Ergebnis:
+
+1. `setPlaybackQualityRange()` gesetzt, `getStatsForNerds()` gelesen – aber
+   `getPlaybackQuality()` meldete bei allen fünf Stufen unverändert „large". Die
+   Umschaltung hatte nie gegriffen.
+2. Ein Sprung von 45 Sekunden im laufenden Video sollte eine neue Aushandlung erzwingen.
+   Er garantiert weder einen ungepufferten Bereich noch einen neuen Audio-Request – der
+   vorhandene Puffer spielt die alte Spur weiter. Befund von Codex, nicht von mir.
+
+Der tragfähige Aufbau: Qualität setzen, **Seite neu laden** (YouTube merkt sich die Wahl
+für die Sitzung, und erst der frische Ladevorgang handelt beide Spuren neu aus), dann
+Qualität, Codecs und die Pixelmasse des `<video>`-Elements zusammen auslesen. Die
+Auflösung des Elements ist der Kontrollwert: wechselt sie nicht, hat die Messung nicht
+gegriffen.
+
+| gewünscht | gemeldete Qualität | `<video>`-Element | Codecs |
+|---|---|---|---|
+| tiny | tiny | 256x144 | av01 (394) / **opus (251)** |
+| small | tiny | 426x240 | av01 (395) / **opus (251)** |
+| medium | medium | 640x360 | av01 (396) / **opus (251)** |
+| hd720 | hd720 | 1280x720 | av01 (398) / **opus (251)** |
+
+Die Videospur wechselt über vier Stufen, die Audiospur bleibt dieselbe. Für die
+beschleunigte Erfassung heisst das: eine niedrige Auflösung kostet nichts an Tonqualität
+und entlastet den Dekoder.
+
+Der itag lässt sich **nicht** mehr aus den Netzwerk-URLs lesen: die DASH-Segmente laufen
+heute als POST an `/videoplayback` ohne `itag=` im Query. Im Mitschnitt tauchte nur
+itag 18 auf (das alte muxed 360p-Format für die Vorschau). Wer das nachmessen will, nimmt
+`getStatsForNerds().codecs` und den Kontrollwert oben.
+
+Die öffentliche Beleglage stützt das: bis zur Umstellung auf HTML5 mit Media Source
+Extensions (27.01.2015) waren Ton und Bild in einer Datei – itag 18 mit 96 kbit/s AAC,
+itag 22 mit 192 kbit/s –, wer damals herunterschaltete, bekam zwingend schlechteren Ton.
+Seither sind es getrennte Ströme; die alten muxed-Formate hat YouTube Mitte 2024
+abgeschaltet. Auf itag 249/250 stuft heute nur die Bandbreitenregelung herunter, nicht
+die Auflösungswahl.

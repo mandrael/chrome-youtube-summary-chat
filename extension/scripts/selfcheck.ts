@@ -18,6 +18,7 @@ import {
   TS_GROUP_PATTERN,
   TS_PATTERN,
   TS_SINGLE,
+  duenneMarkenAus,
 } from "../lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
@@ -251,6 +252,20 @@ check("TS_GROUP_PATTERN fasst mehrere Zeiten in einer Klammer", () => {
   // Zahlen ohne Klammern bleiben in Ruhe.
   TS_GROUP_PATTERN.lastIndex = 0;
   assert.equal(TS_GROUP_PATTERN.test("Preise 3,55 bis 11,587 Dollar"), false);
+});
+
+check("Zu dichte Zeitmarken werden ausgedünnt", () => {
+  // „[00:02, 00:10]" sind acht Sekunden – dort springt niemand zweimal hin.
+  TS_SINGLE.lastIndex = 0;
+  const zeiten = [...("00:02, 00:10, 05:30".matchAll(TS_SINGLE))].map((m) =>
+    tsToSeconds(m[1], m[2], m[3]),
+  );
+  assert.deepEqual(zeiten, [2, 10, 330]);
+  const behalten = duenneMarkenAus(zeiten as number[]);
+  assert.deepEqual(behalten, [true, false, true]);
+  // Drei dicht aufeinanderfolgende: nur die erste bleibt, gemessen wird immer gegen
+  // die zuletzt behaltene, nicht gegen die unmittelbar vorige.
+  assert.deepEqual(duenneMarkenAus([0, 10, 20, 40]), [true, false, false, true]);
 });
 
 console.log("korrektur");

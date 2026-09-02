@@ -1,7 +1,12 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { TS_GROUP_PATTERN, TS_SINGLE, tsToSeconds } from "@/lib/timestamps";
+import {
+  duenneMarkenAus,
+  TS_GROUP_PATTERN,
+  TS_SINGLE,
+  tsToSeconds,
+} from "@/lib/timestamps";
 import { cn } from "@/lib/utils";
 
 /* Minimal-Typen für den hast-Baum – ein Paket dafür wäre hier Ballast. */
@@ -74,20 +79,31 @@ function splitTimestamps(text: string): HNode[] | null {
 /** Aus „18:46, 21:03“ werden zwei Knöpfe mit dem Komma dazwischen. */
 function zeitKnoepfe(inhalt: string): HNode[] {
   TS_SINGLE.lastIndex = 0;
-  const out: HNode[] = [];
-  let last = 0;
+  const treffer: { index: number; laenge: number; sekunden: number }[] = [];
   let t: RegExpExecArray | null;
   while ((t = TS_SINGLE.exec(inhalt)) !== null) {
     const seconds = tsToSeconds(t[1], t[2], t[3]);
-    if (seconds === null) continue;
-    if (t.index > last) out.push({ type: "text", value: inhalt.slice(last, t.index) });
+    if (seconds !== null) treffer.push({ index: t.index, laenge: t[0].length, sekunden: seconds });
+  }
+  // Zu dichte Marken belegen dieselbe Stelle und fallen samt Trennzeichen weg.
+  const behalten = duenneMarkenAus(treffer.map((x) => x.sekunden));
+
+  const out: HNode[] = [];
+  let last = 0;
+  for (let k = 0; k < treffer.length; k++) {
+    const x = treffer[k]!;
+    if (!behalten[k]) {
+      last = x.index + x.laenge;
+      continue;
+    }
+    if (x.index > last) out.push({ type: "text", value: inhalt.slice(last, x.index) });
     out.push({
       type: "element",
       tagName: "button",
-      properties: { dataTs: String(seconds), type: "button" },
-      children: [{ type: "text", value: t[0] }],
+      properties: { dataTs: String(x.sekunden), type: "button" },
+      children: [{ type: "text", value: inhalt.slice(x.index, x.index + x.laenge) }],
     });
-    last = t.index + t[0].length;
+    last = x.index + x.laenge;
   }
   if (last < inhalt.length) out.push({ type: "text", value: inhalt.slice(last) });
   return out;

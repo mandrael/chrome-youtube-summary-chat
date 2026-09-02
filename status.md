@@ -7,6 +7,19 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, zehnter Durchgang) – Suche und Spurwahl im Transkript
+
+Über der Transkriptliste steht jetzt eine **Suchzeile**: sie filtert die Zeilen auf die
+Treffer, hebt den Begriff hervor und zeigt die Trefferzahl, ein X leert sie wieder.
+Gemessen: bei „cool" bleiben von 6 Zeilen 2 übrig, mit 2 Hervorhebungen. Die Suche
+erscheint nur bei einem Transkript mit Zeitstempeln – ohne Zeilen gibt es nichts zu
+filtern.
+
+Die **Spurwahl war schon da, aber auf 60 % Breite gestutzt** und damit abgeschnitten. Sie
+steht jetzt über die volle Breite (`flex-1`), die Werkzeugsymbole daneben bleiben
+schrumpffrei. Sie erscheint weiterhin nur, wenn das Video mehr als eine Spur hat – bei
+einer Spur steht dort die Quelle.
+
 ## Stand 02.09.2026 (nachts, neunter Durchgang) – volle Höhe, Schnellbefehle, Farben hell
 
 ### Die Karte nimmt jetzt die ganze sichtbare Höhe

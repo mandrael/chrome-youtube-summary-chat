@@ -273,33 +273,50 @@ export const PRESETS = {
  * Nutzernachricht. Ohne den Titel sucht es nach „Ist Fable besser in Sprache" und findet
  * nichts Passendes; mit ihm nach dem Modell, um das es im Video geht.
  */
-export function webSearchPrompt(
+/**
+ * Kontextzeile für die Internetsuche. Sie steht in der Nutzernachricht, weil OpenRouters
+ * Web-Plugin daraus seine Suchanfrage bildet – im System-Prompt käme sie in der Suche
+ * gar nicht vor.
+ */
+export function webKontext(videoTitle: string, channel: string, uiLang: "de" | "en"): string {
+  const quelle = channel ? `„${videoTitle}" von ${channel}` : `„${videoTitle}"`;
+  return uiLang === "de"
+    ? `Kontext dieser Frage: das YouTube-Video ${quelle}. Beziehe Titel und Kanal und ihre Eigennamen in die Suche ein – die Frage allein ist ohne sie mehrdeutig.`
+    : `Context for this question: the YouTube video ${quelle}. Include the title, the channel and their proper nouns in your search – the question alone is ambiguous without them.`;
+}
+
+/**
+ * Nachschlagen zu einer Frage, die schon anhand des Transkripts beantwortet wurde.
+ *
+ * Der Knopf wird gedrückt, **nachdem** die Antwort stand – oft, weil im Transkript nichts
+ * dazu steht. Eine Wiederholung dieser Antwort wäre also genau das, was niemand will;
+ * verlangt ist der Zuwachs aus dem Netz.
+ */
+export function webLookupPrompt(
   frage: string,
   videoTitle: string,
   channel: string,
   uiLang: "de" | "en",
 ): string {
-  const quelle = channel ? `„${videoTitle}" von ${channel}` : `„${videoTitle}"`;
   if (uiLang === "de") {
     return (
       `${frage}\n\n` +
-      `Kontext dieser Frage: das YouTube-Video ${quelle}. Beziehe Titel und Kanal und ` +
-      `ihre Eigennamen in die Suche ein – die Frage allein ist ohne sie mehrdeutig.\n\n` +
-      `Recherchiere im Internet und antworte auf Deutsch. Sag, was du gefunden hast und ` +
-      `was offen bleibt; unterscheide dabei ausdrücklich zwischen dem, was das Video ` +
-      `behauptet, und dem, was die Quellen sagen. Widersprechen sie sich, schreib das hin. ` +
-      `Nenne hinter jeder Angabe die Quelle als Link.`
+      `${webKontext(videoTitle, channel, uiLang)}\n\n` +
+      `Diese Frage wurde bereits anhand des Transkripts beantwortet. Wiederhole diese ` +
+      `Antwort nicht und schreib auch nicht noch einmal, was im Transkript fehlt. ` +
+      `Schreib nur, was die Suche ergibt: die Antwort selbst, jeweils mit Quelle als Link. ` +
+      `Widerspricht das Netz dem Video, sag das in einem Satz. Findest du nichts ` +
+      `Belastbares, sag genau das – erfinde nichts.`
     );
   }
   return (
     `${frage}\n\n` +
-    `Context for this question: the YouTube video ${quelle}. Include the title, the ` +
-    `channel and their proper nouns in your search – the question alone is ambiguous ` +
-    `without them.\n\n` +
-    `Search the web and answer in English. Say what you found and what remains open; ` +
-    `distinguish explicitly between what the video claims and what the sources say. If ` +
-    `they contradict each other, write that down. Cite the source as a link after each ` +
-    `claim.`
+    `${webKontext(videoTitle, channel, uiLang)}\n\n` +
+    `This question has already been answered from the transcript. Do not repeat that ` +
+    `answer and do not restate what the transcript lacks. Write only what the search ` +
+    `yields: the answer itself, each claim with its source as a link. If the web ` +
+    `contradicts the video, say so in one sentence. If you find nothing solid, say ` +
+    `exactly that – invent nothing.`
   );
 }
 

@@ -7,6 +7,25 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, dreizehnter Durchgang) – zwei Wege ins Netz
+
+Die Internetsuche hat jetzt **zwei Bedienstellen mit verschiedenen Aufträgen**:
+
+**Der Schalter rechts unter dem Eingabefeld** (Weltkugel mit Zustand) gilt für die nächste
+getippte Frage: Transkript und Netz zusammen. Er bleibt an, bis er ausgeschaltet wird.
+Angezeigt wird im Chat die reine Frage, gesendet wird sie samt Kontextzeile mit Titel und
+Kanal – aus dieser Nachricht bildet OpenRouters Web-Plugin seine Suchanfrage.
+
+**Die Weltkugel unter einer Antwort** schlägt zu einer **schon beantworteten** Frage nach.
+Der Auftrag verbietet dort ausdrücklich die Wiederholung: „Diese Frage wurde bereits
+anhand des Transkripts beantwortet. Wiederhole diese Antwort nicht und schreib auch nicht
+noch einmal, was im Transkript fehlt. Schreib nur, was die Suche ergibt." Genau dafür
+drückt man den Knopf – man hat gerade gelesen, dass im Transkript nichts dazu steht.
+Tooltip: „Im Netz nachschlagen zur letzten Frage".
+
+`webSearchPrompt` ist damit weggefallen, an seine Stelle treten `webKontext` (die
+Kontextzeile, beide Wege) und `webLookupPrompt` (das Nachschlagen).
+
 ## Stand 02.09.2026 (nachts, zwölfter Durchgang) – Spurwahl, Kurznamen, Übersetzen-Symbol
 
 ### „German (auto-generated) (automatisch)" ist Geschichte

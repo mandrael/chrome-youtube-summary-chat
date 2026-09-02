@@ -23,7 +23,8 @@ import {
   answerTranslationPrompt,
   PRESETS,
   translationPrompt,
-  webSearchPrompt,
+  webKontext,
+  webLookupPrompt,
 } from "@/lib/prompts";
 import { FALLBACK_MODELS, listModels } from "@/lib/openrouter";
 import {
@@ -92,6 +93,11 @@ export function Sidebar({
    * Preset-Klick, der so genau einen Klick kostet.
    */
   const [presetsOpen, setPresetsOpen] = React.useState(false);
+  /*
+   * Schalter unter dem Eingabefeld: die nächste Frage geht mit Internetsuche los. Bleibt
+   * an, bis er ausgeschaltet wird – wer einmal recherchiert, tut es meist mehrfach.
+   */
+  const [webAn, setWebAn] = React.useState(false);
   const [tab, setTab] = React.useState<Tab>("chat");
 
   const [transcript, setTranscript] = React.useState<Transcript | null>(null);
@@ -383,9 +389,31 @@ export function Sidebar({
    * Recherchiert dieselbe Frage noch einmal im Internet, mit dem Videotitel als Kontext.
    * Ohne ihn ist eine Rückfrage wie „ist das besser?" für eine Suchmaschine wertlos.
    */
+  /** Eine getippte Frage – mit Suche, wenn der Schalter an ist. */
+  function frageSenden(frage: string) {
+    if (!webAn) {
+      void send(frage);
+      return;
+    }
+    // Angezeigt wird die Frage, gesendet die Frage plus Kontextzeile: aus ihr bildet
+    // OpenRouter die Suchanfrage.
+    void send(
+      `${frage}\n\n${webKontext(videoTitle, channel ?? "", uiLang)}`,
+      undefined,
+      undefined,
+      frage,
+      true,
+    );
+  }
+
+  /**
+   * Nachschlagen zu einer bereits beantworteten Frage. Der Auftrag verbietet ausdrücklich
+   * die Wiederholung der Transkript-Antwort – man drückt den Knopf ja gerade deshalb,
+   * weil man sie schon gelesen hat.
+   */
   function recherchiere(frage: string) {
     void send(
-      webSearchPrompt(frage, videoTitle, channel ?? "", uiLang),
+      webLookupPrompt(frage, videoTitle, channel ?? "", uiLang),
       undefined,
       undefined,
       `${t("webSearch")}: ${frage}`,
@@ -771,7 +799,7 @@ export function Sidebar({
                     const v = input.trim();
                     if (v) {
                       setInput("");
-                      void send(v);
+                      void frageSenden(v);
                     }
                   }
                 }}
@@ -791,7 +819,7 @@ export function Sidebar({
                   onClick={() => {
                     const v = input.trim();
                     setInput("");
-                    void send(v);
+                    void frageSenden(v);
                   }}
                   title={t("send")}
                 >
@@ -800,8 +828,9 @@ export function Sidebar({
               )}
             </div>
 
-            {messages.length > 0 && (
-              <div className="mt-1 flex gap-1">
+            <div className="mt-1 flex items-center gap-1">
+              {messages.length > 0 && (
+                <>
                 <Button size="iconSm" variant="ghost" title={t("copy")} onClick={() => void kopiereMitFormat(chatMarkdown(), chatHtml())}>
                   <Copy />
                 </Button>
@@ -820,9 +849,24 @@ export function Sidebar({
                 >
                   <BrushCleaning />
                 </Button>
-
-              </div>
-            )}
+                </>
+              )}
+              {/*
+                Der Schalter gilt für die nächste getippte Frage: Transkript und Netz
+                zusammen. Die Weltkugel unter einer Antwort ist etwas anderes – sie
+                schlägt zu einer schon beantworteten Frage nach.
+              */}
+              <Button
+                size="iconSm"
+                variant="ghost"
+                aria-pressed={webAn}
+                className={cn("ml-auto", webAn && "bg-secondary text-primary")}
+                title={webAn ? t("webToggleOn") : t("webToggleOff")}
+                onClick={() => setWebAn((v) => !v)}
+              >
+                <Globe />
+              </Button>
+            </div>
           </div>
         </>
       )}

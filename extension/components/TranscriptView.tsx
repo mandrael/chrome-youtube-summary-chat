@@ -107,7 +107,12 @@ export function TranscriptView({
             <Button
               size="iconSm"
               variant="ghost"
-              title={`${t("translateAiHint")}${translationTarget ? ` → ${translationTarget}` : ""}`}
+              title={
+                // Volle Namen, keine Kürzel: der Tooltip ist ohnehin lang genug, und
+                // „EN ➔ DE" liest sich schlechter als „Englisch ➔ Deutsch".
+                `${t("translateAiHint")}: ${activeTrack ? langname(activeTrack, uiLang).replace(/\s*\(auto\)$/, "") : "?"}` +
+                (translationTarget ? ` ➔ ${translationTarget}` : "")
+              }
               disabled={!!busy}
               onClick={onTranslate}
             >

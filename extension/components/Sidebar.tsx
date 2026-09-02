@@ -37,6 +37,7 @@ import {
   wideItem,
 } from "@/lib/storage";
 import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
+import { ZIELSPRACHEN } from "@/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
 import { transcriptToText } from "@/lib/timestamps";
 import { NoCaptionsError } from "@/lib/transcript";
@@ -1118,6 +1119,8 @@ function MessageBubble({
 
 /** Anzeigename der Zielsprache auf einen BCP-47-Code für die Chrome-Translator-API. */
 function languageToCode(name: string): string {
+  const aus_liste = ZIELSPRACHEN.find(([n]) => n.toLowerCase() === name.trim().toLowerCase());
+  if (aus_liste) return aus_liste[1];
   const map: Record<string, string> = {
     deutsch: "de",
     german: "de",

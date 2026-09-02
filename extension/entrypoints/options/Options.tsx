@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ZIELSPRACHEN } from "@/lib/tracks";
 import { Check, Copy, Loader2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -224,12 +225,21 @@ export function Options() {
           />
         </Field>
 
-        <Field label="Zielsprache der Übersetzung">
-          <Input
+        <Field
+          label="Zielsprache der Übersetzung"
+          hint="Gilt für den Übersetzen-Knopf im Chat und im Transkript."
+        >
+          <select
             value={s.translationTarget}
             onChange={(e) => patch({ translationTarget: e.target.value })}
-            className="max-w-xs"
-          />
+            className="spur-select h-8 max-w-xs"
+          >
+            {ZIELSPRACHEN.map(([name]) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </Field>
 
         <Field

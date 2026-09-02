@@ -7,6 +7,22 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, vierzehnter Durchgang) – Zielsprachen als Liste
+
+Der Tooltip des Übersetzen-Symbols nennt jetzt beide Sprachen ausgeschrieben:
+**„Transkript mit KI übersetzen: Englisch ➔ Deutsch"** – Kürzel wären dort keine
+Erleichterung, der Text ist ohnehin lang.
+
+Die Zielsprache war ein **Freitextfeld**, in dem ein Tippfehler still zu „de" wurde. Sie
+ist jetzt eine Auswahlliste aus zwölf Sprachen (`ZIELSPRACHEN` in `lib/tracks.ts`,
+westeuropäisch plus Polnisch, Tschechisch, Ungarisch, Russisch, Türkisch) und
+`languageToCode` liest gegen dieselbe Liste – eine Quelle statt zweier.
+
+**Offen:** eine Zielsprachwahl direkt im Transkript-Tab, damit man ein deutsches
+Transkript ohne Umweg über die Optionen ins Englische übersetzen kann. Sie gehört in
+dieselbe Kopfzeile, die gerade neu entworfen wird (Untertitel/Fliesstext, Zeit-Sync) –
+deshalb zusammen mit dieser Umstellung.
+
 ## Stand 02.09.2026 (nachts, dreizehnter Durchgang) – zwei Wege ins Netz
 
 Die Internetsuche hat jetzt **zwei Bedienstellen mit verschiedenen Aufträgen**:

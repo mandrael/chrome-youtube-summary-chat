@@ -1,6 +1,28 @@
 import type { CaptionTrack } from "./types";
 
 /**
+ * Zielsprachen der Übersetzung.
+ *
+ * Bewusst kurz und westeuropäisch geschnitten: das sind die Sprachen, in denen die
+ * verwendeten Modelle verlässlich sind und die hier gebraucht werden. Ein Freitextfeld
+ * stand vorher da – es liess Tippfehler zu, die still zu „de" wurden.
+ */
+export const ZIELSPRACHEN = [
+  ["Deutsch", "de"],
+  ["Englisch", "en"],
+  ["Französisch", "fr"],
+  ["Italienisch", "it"],
+  ["Niederländisch", "nl"],
+  ["Polnisch", "pl"],
+  ["Portugiesisch", "pt"],
+  ["Russisch", "ru"],
+  ["Spanisch", "es"],
+  ["Tschechisch", "cs"],
+  ["Türkisch", "tr"],
+  ["Ungarisch", "hu"],
+] as const satisfies ReadonlyArray<readonly [string, string]>;
+
+/**
  * Beschriftung der Untertitelspuren.
  *
  * YouTube schreibt „auto-generated" in den Namen und die Extension hängte zusätzlich

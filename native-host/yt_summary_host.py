@@ -225,7 +225,17 @@ def download_audio(video_id: str, workdir: Path) -> Path:
     progress("download", "Tonspur wird geladen …")
 
     out = workdir / "audio.%(ext)s"
-    res = run([ytdlp, "-f", "bestaudio", "--no-playlist", "--no-warnings",
+    # Fuer die Spracherkennung zaehlt die Abtastrate, nicht die Bitrate. Gemessen am
+    # 02.09.2026 gegen eine unbeschleunigte Referenz: Opus mit 46 kbit/s und 48 kHz
+    # liegt bei 0,4 % Wortfehlern, Opus mit 142 kbit/s bei 0,0 % - dafuer ist es ein
+    # Drittel der Datenmenge. Die AAC-Spur mit 22 kHz Abtastrate (itag 139) faellt mit
+    # 8,0 % durch und wird deshalb ausgeschlossen, obwohl sie die kleinste waere.
+    #
+    #   1. schmale 48-kHz-Spur (itag 249/250), das ist der Normalfall,
+    #   2. sonst die beste Spur ab 44,1 kHz,
+    #   3. sonst irgendeine - lieber schlechter Ton als gar keiner.
+    fmt = "bestaudio[asr=48000][abr<=70]/bestaudio[asr>=44100]/bestaudio"
+    res = run([ytdlp, "-f", fmt, "--no-playlist", "--no-warnings",
                "-o", str(out), f"https://www.youtube.com/watch?v={video_id}"])
     if res.returncode != 0:
         raise HostError(f"yt-dlp ist fehlgeschlagen:\n{(res.stderr or res.stdout)[-800:]}")

@@ -423,3 +423,26 @@ itag 22 mit 192 kbit/s –, wer damals herunterschaltete, bekam zwingend schlech
 Seither sind es getrennte Ströme; die alten muxed-Formate hat YouTube Mitte 2024
 abgeschaltet. Auf itag 249/250 stuft heute nur die Bandbreitenregelung herunter, nicht
 die Auflösungswahl.
+
+## Welche Tonspur der lokale Helfer lädt (02.09.2026)
+
+`-f bestaudio` nahm immer die grösste Spur. Für die Spracherkennung zählt aber die
+Abtastrate, nicht die Bitrate – siehe die Tabelle weiter oben: Opus mit 46 kbit/s und
+48 kHz liegt bei 0,4 % Wortfehlern, Opus mit 142 kbit/s bei 0,0 %, die AAC-Spur mit
+22 kHz Abtastrate dagegen bei 8,0 %.
+
+Der Selektor lautet jetzt
+`bestaudio[asr=48000][abr<=70]/bestaudio[asr>=44100]/bestaudio`: erst eine schmale
+48-kHz-Spur, sonst die beste ab 44,1 kHz, sonst irgendeine. Die 22-kHz-Spur ist damit
+ausgeschlossen, obwohl sie die kleinste wäre.
+
+Gemessen an drei Videos:
+
+| Video | vorher | jetzt | Datenmenge |
+|---|---|---|---|
+| M4Tw_3SmNXg | 251, 142 kbit/s | **250, 64 kbit/s** | 47,2 → 22,3 MB |
+| jNQXAC9IVRw | 251 | **250, 60 kbit/s** | – |
+| 9D-xzper0wQ | 251, 121 kbit/s | 251 | unverändert, es gibt dort keine schmale Spur |
+
+Die ganze Kette (Download, ffmpeg auf 16 kHz Mono, parakeet-mlx) an einem kurzen Video
+gegengeprüft: das Transkript kommt sauber heraus.

@@ -42,6 +42,9 @@ import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
 import { transcriptToText } from "@/lib/timestamps";
 import { translateCuesViaOpenRouter } from "@/lib/translate-cues";
 import { NoCaptionsError } from "@/lib/transcript";
+import { formatTs } from "@/lib/timestamps";
+import { starteLiveTranskription } from "@/lib/audio-live";
+import { STT_MODEL_IDS } from "@/lib/openrouter";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
 import { korrigiereTranskript, parseWoerterbuch, schreibweisenHinweis } from "@/lib/korrektur";
 import {
@@ -610,6 +613,54 @@ export function Sidebar({
       });
   }
 
+  /* ---- Spracherkennung aus dem laufenden Ton (beide Builds) ---- */
+
+  /**
+   * Der Weg für Videos ohne Untertitel, den auch der Store-Build gehen darf: kein
+   * Download, der Ton wird im Arbeitsspeicher gelesen. Läuft ausschliesslich auf Klick.
+   *
+   * Fest auf whisper-large-v3-turbo: es ist die einzige Route, die über OpenRouter
+   * Zeitstempel liefert (parakeet lehnt verbose_json mit HTTP 400 ab). Ohne Zeitstempel
+   * gäbe es keine Sprungmarken, und darauf beruht der halbe Nutzen des Transkripts.
+   */
+  const liveRef = React.useRef<{ cancel: () => void } | null>(null);
+
+  function runLive() {
+    const schluessel = settings?.apiKey;
+    if (!schluessel) return;
+    setFallbackState(`${t("liveRunning")} …`);
+    const job = starteLiveTranskription({
+      apiKey: schluessel,
+      model: STT_MODEL_IDS[0],
+      zeitstempel: true,
+      onProgress: ({ position, dauer, phase }) =>
+        setFallbackState(
+          phase === "werbung"
+            ? t("liveWaitingAd")
+            : `${t("liveRunning")} … ${formatTs(position, dauer >= 3600)} / ${formatTs(dauer, dauer >= 3600)}`,
+        ),
+    });
+    liveRef.current = job;
+    job.promise
+      .then((tr) => {
+        uebernimmTranskript(tr);
+        setLoadState("ready");
+        setFallbackState(null);
+      })
+      .catch((e) => {
+        setLoadError(String((e as Error)?.message ?? e));
+        setLoadState("error");
+        setFallbackState(null);
+      })
+      .finally(() => {
+        liveRef.current = null;
+      });
+  }
+
+  // Beim Videowechsel läuft sonst die Erkennung des alten Videos weiter und stellt am
+  // Ende die Wiedergabezeit des neuen zurück.
+  React.useEffect(() => () => liveRef.current?.cancel(), [videoId]);
+
   /* ---- Audio-Fallback (nur Build "full") ---- */
 
   function runFallbackJob(kind: HelperJob) {
@@ -841,6 +892,9 @@ export function Sidebar({
                 t={t}
                 busy={fallbackState}
                 onStart={runFallbackJob}
+                onLive={runLive}
+                onCancel={() => liveRef.current?.cancel()}
+                keyFehlt={!settings?.apiKey}
                 spurenVorhanden={tracks.length > 0}
               />
             )}
@@ -864,6 +918,9 @@ export function Sidebar({
                 t={t}
                 busy={fallbackState}
                 onStart={runFallbackJob}
+                onLive={runLive}
+                onCancel={() => liveRef.current?.cancel()}
+                keyFehlt={!settings?.apiKey}
                 spurenVorhanden={tracks.length > 0}
               />
               </div>
@@ -1102,11 +1159,19 @@ function NoCaptions({
   t,
   busy,
   onStart,
+  onLive,
+  onCancel,
+  keyFehlt,
   spurenVorhanden,
 }: {
   t: T;
   busy: string | null;
   onStart: (job: HelperJob) => void;
+  /** Spracherkennung aus dem laufenden Ton – in beiden Builds erlaubt. */
+  onLive: () => void;
+  onCancel: () => void;
+  /** Ohne hinterlegten OpenRouter-Zugang geht die Spracherkennung nicht. */
+  keyFehlt: boolean;
   /**
    * Ob YouTube überhaupt eine Untertitelspur meldet. Zwei verschiedene Lagen, die
    * bisher gleich aussahen: gibt es gar keine Spur, kann auch yt-dlp keine holen –
@@ -1115,32 +1180,32 @@ function NoCaptions({
    */
   spurenVorhanden: boolean;
 }) {
-  // Im Store-Build endet es hier: klare Meldung, kein Platzhalter, keine erfundene Ausgabe.
-  if (!__FALLBACK__) {
-    return (
-      <p className="py-4 text-sm text-destructive">
-        {spurenVorhanden ? t("noCaptionsStore") : t("noTracksAtAll")}
-      </p>
-    );
-  }
-
   if (busy) {
     return (
-      <p className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        {busy}
-      </p>
+      <div className="py-2 text-sm">
+        <p className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          {busy}
+        </p>
+        <Button size="sm" variant="outline" className="mt-2" onClick={onCancel}>
+          {t("liveCancel")}
+        </Button>
+      </div>
     );
   }
 
-  // Beide Wege starten ausschliesslich auf Klick, nie automatisch.
+  // Jeder Weg startet ausschliesslich auf Klick, nie automatisch.
   return (
     <div className="text-sm">
       <p className="mb-3 text-destructive">
-        {spurenVorhanden ? t("noCaptionsFull") : t("noTracksAtAll")}
+        {!spurenVorhanden
+          ? t("noTracksAtAll")
+          : __FALLBACK__
+            ? t("noCaptionsFull")
+            : t("noCaptionsStore")}
       </p>
 
-      {spurenVorhanden && (
+      {__FALLBACK__ && spurenVorhanden && (
         <>
           <Button size="sm" className="mb-1" onClick={() => onStart("subtitles")}>
             {t("startSubtitles")}
@@ -1149,16 +1214,38 @@ function NoCaptions({
         </>
       )}
 
+      {__FALLBACK__ && (
+        <>
+          <Button
+            size="sm"
+            variant={spurenVorhanden ? "outline" : "default"}
+            className="mb-1"
+            onClick={() => onStart("audio")}
+          >
+            {t("startFallback")}
+          </Button>
+          <p className="mb-4 text-xs text-muted-foreground">
+            {spurenVorhanden ? t("audioHint") : t("audioHintOnly")}
+          </p>
+        </>
+      )}
+
+      {/*
+        Ohne Download und ohne lokalen Helfer: das Video läuft stumm und beschleunigt,
+        der Ton wird im Arbeitsspeicher erkannt. Deshalb steht dieser Weg auch im
+        Store-Build – dort ist er der einzige.
+      */}
       <Button
         size="sm"
-        variant={spurenVorhanden ? "outline" : "default"}
+        variant={__FALLBACK__ ? "outline" : "default"}
         className="mb-1"
-        onClick={() => onStart("audio")}
+        disabled={keyFehlt}
+        onClick={onLive}
       >
-        {t("startFallback")}
+        {t("liveStart")}
       </Button>
       <p className="text-xs text-muted-foreground">
-        {spurenVorhanden ? t("audioHint") : t("audioHintOnly")}
+        {keyFehlt ? t("noKey") : t("liveHint")}
       </p>
     </div>
   );

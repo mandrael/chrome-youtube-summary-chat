@@ -17,18 +17,24 @@ optionaler Zweig, auch nicht als Fallback. Groq ausschliesslich über OpenRouter
 Provider-Routing. Keine Provider-Abstraktion: es gibt genau eine Gegenstelle, ein
 Interface mit einer Implementierung wäre Ballast.
 
-**2. Der Store-Build enthält keinen Fallback-Code.** Nicht ausgeblendet, sondern nicht
-vorhanden. Jede Änderung am Fallback wird mit `extension/scripts/verify-store-bundle.sh`
-gegengeprüft, und zwar gegen das gebaute Bundle, nicht gegen den Quelltext. Das Skript
-enthält eine Gegenprobe gegen den `full`-Build – ohne sie könnte ein Test bestehen, der
-nichts misst.
+**2. Der Store-Build enthält keinen Download-Code.** Nicht ausgeblendet, sondern nicht
+vorhanden: Native Messaging, yt-dlp-Weg und Helfer-Routen fehlen im Bundle. Was im
+Arbeitsspeicher bleibt, ist erlaubt und **muss** drin sein – die Spracherkennung aus dem
+laufenden Ton (`lib/audio-live.ts`) ist im Store-Build der einzige Weg zu einem
+Transkript, wenn Untertitel fehlen. Jede Änderung daran wird mit
+`extension/scripts/verify-store-bundle.sh` gegengeprüft, und zwar gegen das gebaute
+Bundle, nicht gegen den Quelltext. Das Skript prüft beide Richtungen – verbotener Code
+darf nicht drin sein, erwarteter Code muss – und macht eine Gegenprobe gegen den
+`full`-Build; ohne sie könnte ein Test bestehen, der nichts misst.
 
 **3. Kein stiller Fehlschlag beim Transkript.** Fehlen Untertitel, sagt die UI das. Kein
 Platzhalter, kein Ersatztext, keine erfundene Ausgabe. Liefert eine Quelle keine
 Zeitstempel, steht `hasTimestamps: false` und es werden keine Sprungmarken angeboten.
 
-**4. Kein Download ohne Klick.** Der Audio-Fallback startet ausschliesslich auf eine
-ausdrückliche Nutzeraktion.
+**4. Kein Download und keine Tonaufnahme ohne Klick.** Audio-Fallback und
+Spracherkennung starten ausschliesslich auf eine ausdrückliche Nutzeraktion, nie
+automatisch. Der Zustand des Players (Position, Tempo, Ton, Pause) wird danach in jedem
+Fall wiederhergestellt, auch bei Abbruch und Fehler.
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
 `youtube.com` und `openrouter.ai`.
@@ -85,7 +91,7 @@ build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
   entrypoints/        content.tsx · background.ts · options/
   components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
-  lib/                openrouter · transcript · fallback · translate-local · prompts …
+  lib/                openrouter · transcript · audio-live · fallback · korrektur · prompts …
   scripts/            selfcheck.ts · verify-store-bundle.sh
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```

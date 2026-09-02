@@ -15,9 +15,16 @@ kein Proxy, keine Telemetrie.
 | | `full` (GitHub, unpacked) | `store` (Chrome Web Store) |
 |---|---|---|
 | Untertitel-Transkript aus der Seite | ja | ja |
-| Audio-Fallback ohne Untertitel | ja | **nein** |
+| Spracherkennung aus dem laufenden Ton | ja | ja |
+| Tonspur herunterladen und transkribieren | ja | **nein** |
+| Untertitel über yt-dlp holen | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
 | Fallback-Code im Bundle | ja | **nein, nachgemessen** |
+
+Der Unterschied ist der **Download**: den untersagen die Programmrichtlinien des Stores
+ausdrücklich. Was im Arbeitsspeicher passiert, ist erlaubt – deshalb steht die
+Spracherkennung aus dem laufenden Ton in beiden Builds, und im Store-Build ist sie der
+einzige Weg zu einem Transkript, wenn Untertitel fehlen.
 
 Der Store-Build enthält den Fallback nicht nur unsichtbar, sondern gar nicht: das
 Build-Flag `__FALLBACK__` wird als Boolean-Literal eingesetzt, Rolldown entfernt den
@@ -49,13 +56,23 @@ Wem die Schrift zu klein ist, stellt dort die **Schriftgrösse der Oberfläche**
 klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
 die Einstellungen.
 
-Die fünf Knöpfe unterscheiden sich im Zweck, nicht in der Länge:
+Die acht Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe nimmt
+das ganze Video, die untere schneidet einen Zweck heraus:
 
 - **Fazit** – was behauptet wird und wozu es kommt, ein bis zwei Absätze, ohne Zeitstempel.
-- **Kapitel** – Sprungmarken entlang des Videos, mit Aussage statt Themennamen.
-- **Argumente** – Hauptaussage plus die drei bis fünf tragenden Punkte mit Begründung.
-- **Fakten** – Zahlen, Namen, Daten und Zitate als Liste, je Angabe ein Zeitstempel als Beleg.
+- **Kernaussagen** – Hauptaussage plus die drei bis fünf tragenden Punkte mit Begründung.
 - **Ausführlich** – jede Sachfrage als eigener Abschnitt, mit Zahlen, Namen, Zeitstempeln.
+- **Kapitel** – Sprungmarken entlang des Videos, mit Aussage statt Themennamen.
+- **Fakten** – Zahlen, Namen, Daten und Zitate als Liste, je Angabe ein Zeitstempel als Beleg.
+- **Behauptungen** – bis zu 15 Behauptungen, jede mit ihrer Belegart: Gemessen, Quelle,
+  Gezeigt, Erfahrung oder Unbelegt. Der Vorlauf zur Internetrecherche.
+- **Anleitung** – die Schritte in der Reihenfolge des Nachmachens, mit Befehlen, Werten
+  und Zeitstempeln; was der Sprecher nur zeigt und nicht ausspricht, wird nicht erraten.
+- **Pro/Contra** – Argumente beider Seiten mit ihren Belegen, dazu „Für wen",
+  „Alternativen" und „Nicht geprüft", soweit das Video sie hergibt.
+
+Passt ein Knopf nicht zum Video, sagt seine Antwort das in einem Satz – ausgeblendet wird
+keiner, denn das liesse sich nur raten.
 
 Die Leiste weicht, sobald etwas im Chat steht; das Zauberstab-Symbol in der Kopfzeile holt
 sie zurück.
@@ -219,10 +236,36 @@ yt-dlp --write-subs --write-auto-subs --sub-langs <Sprache> --sub-format json3 -
 Gemessen: 286 Segmente, 18.430 Zeichen. Der Notnagel für den Fall, dass YouTube den
 Browser-Weg wieder zumacht.
 
-### Audio-Fallback (nur `full`, nur auf Klick)
+### Spracherkennung aus dem laufenden Ton (beide Builds, nur auf Klick)
 
-Hat ein Video keine Untertitel, endet es im Store-Build mit einer sichtbaren Meldung. Kein
-Platzhalter, keine erfundene Ausgabe.
+Hat ein Video keine Untertitel, steht in beiden Builds der Knopf **„Transkript per
+Spracherkennung erstellen"**. Das Video läuft dabei stumm mit vierfacher Geschwindigkeit,
+der Ton wird über `video.captureStream()` im Arbeitsspeicher mitgelesen, in Stücken von
+zwei Videominuten an OpenRouter geschickt und danach verworfen. Es entsteht keine Datei.
+
+Der Zeitgewinn kommt aus `preservesPitch = false`: die beschleunigte Wiedergabe ist dann
+eine reine Zeitkompression samt Frequenzverschiebung. Zurückgerechnet wird sie, indem die
+WAV-Daten mit einem Viertel der Aufnahmerate deklariert werden – aus 44.100 aufgenommenen
+Abtastwerten je Sekunde wird ein 11.025-Hz-Signal in Videozeit. Kein Resampling, keine
+Signalverarbeitung.
+
+Faktor 4 ist gemessen die Grenze (siehe [docs/messungen.md](docs/messungen.md)): das
+Nutzband sinkt auf 6 kHz, was die Erkennung kaum trifft. Bei Faktor 8 blieben 3 kHz, und
+die Wortfehlerrate sprang von 3,2 auf 33,0 Prozent, weil das Modell in die falsche Sprache
+kippt. Erkannt wird mit `openai/whisper-large-v3-turbo` – die einzige Route, die über
+OpenRouter Zeitstempel liefert.
+
+Vier Fälle sind abgefangen: Werbung läuft im selben `<video>`-Element (die Erkennung
+wartet sie ab und übernimmt weder ihren Ton noch ihre Länge), YouTube setzt die
+Wiedergabegeschwindigkeit gelegentlich zurück (sie wird nachgezogen), ein Videowechsel
+bricht den Lauf ab, und geschützter Ton kommt als Stille an (nach 15 Sekunden Stille
+bricht der Lauf mit einer klaren Meldung ab). Wiedergabeposition, Tempo, Ton und
+Pausenzustand werden danach in jedem Fall wiederhergestellt, auch bei Abbruch und Fehler.
+
+Ein 30-Minuten-Video braucht so gut sieben Minuten. Der `full`-Build hat dafür den
+schnelleren Weg:
+
+### Audio-Fallback (nur `full`, nur auf Klick)
 
 Im `full`-Build lädt yt-dlp auf Klick die Tonspur, ffmpeg wandelt sie nach Opus (Faktor 10
 kleiner als WAV: fünf Minuten sind 0,9 MB statt 9,6 MB), dann übernimmt eine von drei
@@ -256,6 +299,37 @@ Sekunden (whisper-turbo/DeepInfra `0.00000333`), mal für Minuten
 (parakeet-v3/Together `0.0015`), mal für Stunden (whisper-turbo/Groq `0.04`). Die
 Options-Page rechnet daher über eine Grössenordnungs-Heuristik auf $/h um und stellt den
 Rohwert samt vermuteter Einheit daneben, damit die Zahl nachprüfbar bleibt.
+
+### Wörterbuch gegen verhörte Eigennamen
+
+Automatische Untertitel und Spracherkennung verhören Namen zuverlässig: aus „Claude Code"
+wird „Cloud Code", aus „DiktaGo" wird „Dikta Go". Ein Prompt hilft dagegen nur der
+Chat-Antwort – im Transkript selbst, das im Transkript-Tab steht und exportiert wird,
+bliebe der Fehler stehen.
+
+In den Einstellungen steht deshalb ein Wörterbuch, eine Zeile je Eintrag:
+
+```
+Cloud Code => Claude Code     ersetzt das Linke durch das Rechte
+DiktaGo                       setzt nur diese Schreibweise durch
+# Zeile mit Raute             Kommentar
+```
+
+Angewendet wird es auf jedes Transkript, egal aus welcher Quelle, und zwar zeilenweise
+beim Übernehmen – dadurch stimmt die Schreibweise auch im Export, im Prompt und in der
+Übersetzung, und kein Begriff wird über eine Zeilengrenze hinweg ersetzt. Zusätzlich
+nennt der System-Prompt genau die Begriffe, die im Transkript tatsächlich vorkommen.
+
+Übernommen sind die beiden sicheren Stufen aus DiktaGo. Dessen Fuzzy-Stufen (ein
+vertauschter Buchstabe, Kölner Phonetik) fehlen bewusst: sie brauchen ein Veto der
+Rechtschreibprüfung, das es im Browser nicht als API gibt. Ohne dieses Veto wurde in
+DiktaGos eigener Messung an 25.193 Wörtern aus „Kind" ein „Contao" und aus „Bild" ein
+„Build". Wer einen Begriff gegen ein echtes Wort durchsetzen will, trägt ein
+Ersetzungspaar ein.
+
+Die Schreibweise ist nur am Wortanfang verankert, damit deutsche Endungen sie nicht
+verfehlen: aus „Neuroenergetische" wird „NeuroEnergetische", die Endung bleibt. Bei
+Ersetzungspaaren gilt die Verankerung an beiden Enden – sonst griffe „the" in „theater".
 
 ### Nicht enthaltene Routen
 
@@ -306,7 +380,7 @@ Hänger aussehen.
 |---|---|---|
 | `storage` | API-Key, Einstellungen, System-Prompt, Chatverlauf pro Video. Alles in `chrome.storage.local`, nichts verlässt das Gerät ausser den Modellanfragen selbst. | beide |
 | `*://*.youtube.com/*` | Die Sidebar in die Videoseite einhängen, die Untertitelspuren der Seite lesen, die Wiedergabeposition beim Klick auf einen Zeitstempel setzen. | beide |
-| `https://openrouter.ai/*` | Die einzige Cloud-Gegenstelle: Chat, Modellliste, Key-Prüfung. | beide |
+| `https://openrouter.ai/*` | Die einzige Cloud-Gegenstelle: Chat, Modellliste, Key-Prüfung und – bei Videos ohne Untertitel – kurze Tonabschnitte aus dem Arbeitsspeicher zur Spracherkennung. | beide |
 | `nativeMessaging` | Den lokalen Helfer für den Audio-Fallback starten. Nur nach ausdrücklichem Klick, nie automatisch. | nur `full` |
 
 Es gibt keine weiteren Host-Permissions, kein `tabs`, kein `<all_urls>`, kein
@@ -342,10 +416,10 @@ Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 | Alle drei STT-Routen end-to-end | siehe Tabelle oben |
 | `/api/v1/key`, Modellliste live | 375 Modelle in der Options-Page |
 | Sidebar-Platzierung, Dark-Mode, SPA-Wechsel | im Browser gesehen |
-| Extension-Logik / Host | 12 bzw. 6 Prüfungen |
+| Extension-Logik / Host | 18 bzw. 6 Prüfungen |
 
 ```bash
-cd extension    && pnpm run check          # 12 Prüfungen
+cd extension    && pnpm run check          # 18 Prüfungen
 cd native-host  && python3 selfcheck.py    # 6 Prüfungen
 ```
 

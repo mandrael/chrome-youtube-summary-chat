@@ -91,6 +91,14 @@ const de = {
   audioHint:
     "Nur nötig, wenn auch das nichts bringt. Lädt die Tonspur und transkribiert sie – dauert länger; lokal mit Parakeet kostenlos, über OpenRouter kostet es Geld.",
   fallbackRunning: "Wird verarbeitet …",
+  liveStart: "Transkript per Spracherkennung erstellen",
+  liveHint:
+    "Das Video läuft dabei stumm mit vierfacher Geschwindigkeit; der Ton wird dabei über "
+    + "OpenRouter mit deinem eigenen Schlüssel erkannt. Es dauert etwa ein Viertel der "
+    + "Videolänge, der Tab darf dabei im Hintergrund liegen. Es wird nichts gespeichert.",
+  liveRunning: "Erkennt",
+  liveWaitingAd: "Wartet, bis die Werbung vorbei ist – ihr Ton gehört nicht ins Transkript.",
+  liveCancel: "Abbrechen",
   noKey:
     "Es ist kein OpenRouter-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
   openOptions: "Einstellungen öffnen",
@@ -201,6 +209,14 @@ const en: Record<Keys, string> = {
   audioHint:
     "Only needed when there really are no captions. Downloads the audio track and transcribes it – slower, and depending on the route it costs money.",
   fallbackRunning: "Processing …",
+  liveStart: "Create transcript by speech recognition",
+  liveHint:
+    "The video plays muted at four times speed while its audio is recognised via "
+    + "OpenRouter with your own key. It takes about a quarter of the video's length and "
+    + "the tab may stay in the background. Nothing is stored.",
+  liveRunning: "Recognising",
+  liveWaitingAd: "Waiting for the ad to finish – its audio does not belong in the transcript.",
+  liveCancel: "Cancel",
   noKey: "No OpenRouter API key configured. Please add one in the settings.",
   openOptions: "Open settings",
   noTimestamps:

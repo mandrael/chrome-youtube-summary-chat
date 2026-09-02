@@ -26,6 +26,7 @@ import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
 import { bildeAbsaetze, bildeLeseabsaetze } from "../lib/absaetze.ts";
+import { baueWav } from "../lib/audio-live.ts";
 import {
   korrigiere,
   korrigiereTranskript,
@@ -271,6 +272,33 @@ check("Zu dichte Zeitmarken werden ausgedünnt", () => {
   // Drei dicht aufeinanderfolgende: nur die erste bleibt, gemessen wird immer gegen
   // die zuletzt behaltene, nicht gegen die unmittelbar vorige.
   assert.deepEqual(duenneMarkenAus([0, 10, 20, 40]), [true, false, false, true]);
+});
+
+console.log("audio-live");
+
+check("Der WAV-Kopf traegt die zurückgerechnete Abtastrate", () => {
+  // Vier Abtastwerte, aufgenommen bei 44.100 Hz und vierfachem Tempo: in Videozeit ist
+  // das ein 11.025-Hz-Signal. Genau diese Zahl muss im Kopf stehen – sie allein macht
+  // die beschleunigte Aufnahme wieder normal schnell.
+  const wav = baueWav(new Float32Array([0, 1, -1, 0.5]), 11025);
+  const view = new DataView(wav.buffer);
+  const text = (pos: number, len: number) =>
+    String.fromCharCode(...Array.from(wav.subarray(pos, pos + len)));
+
+  assert.equal(text(0, 4), "RIFF");
+  assert.equal(text(8, 8), "WAVEfmt ");
+  assert.equal(text(36, 4), "data");
+  assert.equal(view.getUint16(22, true), 1, "ein Kanal");
+  assert.equal(view.getUint32(24, true), 11025, "Abtastrate in Videozeit");
+  assert.equal(view.getUint32(28, true), 11025 * 2, "Bytes je Sekunde");
+  assert.equal(view.getUint16(34, true), 16, "16 Bit");
+  assert.equal(wav.length, 44 + 4 * 2);
+  assert.equal(view.getUint32(4, true), 36 + 4 * 2, "RIFF-Laenge");
+  assert.equal(view.getUint32(40, true), 4 * 2, "data-Laenge");
+
+  // Vollausschlag darf nicht ueberlaufen: +1 wird 32767, -1 wird -32768.
+  assert.equal(view.getInt16(44 + 2, true), 32767);
+  assert.equal(view.getInt16(44 + 4, true), -32768);
 });
 
 console.log("korrektur");

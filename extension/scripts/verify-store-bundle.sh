@@ -31,12 +31,16 @@ echo "  Permissions: $(python3 -c "import json,sys;print(json.load(open('$OUT/ma
 echo
 echo "== 2. Bundle: keine Fallback-Faehigkeit =="
 # Harte Kriterien: die Bezeichner, ohne die der Fallback technisch unmoeglich ist.
-# Das sind die Native-Messaging-API, der Host-Name und der STT-Endpunkt.
+# Das sind die Native-Messaging-API und der Host-Name.
 #
 # "yt-dlp" und "ffmpeg" stehen bewusst NICHT hier: die Extension ruft sie nie selbst
 # auf, das macht der Host. Im Bundle koennen sie nur als Wort in einem Hinweistext
 # vorkommen - dort waere ein Treffer kein Befund, sondern ein blinder Alarm.
-HARD='connectNative|sendNativeMessage|at\.gasperl\.youtube_summary_chat|audio/transcriptions'
+#
+# Der STT-Endpunkt stand bis 02.09.2026 hier und ist bewusst entfernt: die
+# Spracherkennung aus dem laufenden Ton (lib/audio-live.ts) laedt nichts herunter und
+# ist im Store erlaubt. Sie MUSS im Store-Bundle stehen, siehe Test 2c.
+HARD='connectNative|sendNativeMessage|at\.gasperl\.youtube_summary_chat'
 
 HITS=$(grep -rInE "$HARD" "$OUT" --include='*.js' --include='*.json' 2>/dev/null || true)
 if [ -n "$HITS" ]; then
@@ -75,15 +79,30 @@ fi
 LEFT=$(grep -coE 'startFallback|startSubtitles|subtitlesHint|audioHint|noCaptionsFull' "$OUT/content-scripts/content.js" || true)
 echo "  Hinweis: $LEFT ungenutzte i18n-Zeichenketten des Fallbacks im Bundle (Text, kein Code)"
 
-# Gesucht ist die Implementierung, nicht der case-Label-String: der bleibt im
-# Store-Build stehen und antwortet "In diesem Build nicht enthalten".
-STT=$(grep -rInE 'STT_MODEL_IDS|function listSttModels|whisper-large-v3-turbo|parakeet-tdt' "$OUT" --include='*.js' 2>/dev/null | cut -c1-120 || true)
-if [ -n "$STT" ]; then
-  echo "  FEHLGESCHLAGEN – die STT-Modellliste des Fallbacks steht im Store-Bundle:"
-  echo "$STT"
+# Die Modellliste selbst ist erlaubt (der Live-Weg nutzt whisper-large-v3-turbo).
+# Verboten bleibt die Auswahl der Host-Routen: sie gehoert zum lokalen Helfer.
+# Gesucht ist die Implementierung, nicht der Vorgabewert: "parakeet-mlx" steht als
+# Zeichenkette in DEFAULT_SETTINGS und ist dort ein Datenwert, kein Weg zum Helfer.
+ROUTEN=$(grep -rInE 'function listSttModels|output_modalities=transcription' "$OUT" --include='*.js' 2>/dev/null | cut -c1-120 || true)
+if [ -n "$ROUTEN" ]; then
+  echo "  FEHLGESCHLAGEN – die Routenauswahl des lokalen Helfers steht im Store-Bundle:"
+  echo "$ROUTEN"
   FAIL=1
 else
-  echo "  ok – keine STT-Modellliste im Store-Bundle"
+  echo "  ok – keine Helfer-Routen im Store-Bundle"
+fi
+
+echo
+echo "== 2c. Der erlaubte Weg MUSS drin sein =="
+# Ein Test, der nur Verbotenes sucht, wuerde auch bestehen, wenn das Store-Bundle gar
+# nichts mehr kann. Die Spracherkennung aus dem laufenden Ton ist dort der einzige Weg
+# zu einem Transkript, wenn Untertitel fehlen.
+if grep -rqE 'captureStream' "$OUT" --include='*.js'; then
+  echo "  ok – die Spracherkennung aus dem laufenden Ton ist enthalten"
+else
+  echo "  FEHLGESCHLAGEN – captureStream fehlt: der Store-Build hat ohne Untertitel"
+  echo "  keinen Weg mehr zu einem Transkript."
+  FAIL=1
 fi
 
 echo

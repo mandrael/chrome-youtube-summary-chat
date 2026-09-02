@@ -327,3 +327,59 @@ Kleinigkeiten („ist" → „is"), bei 6x beginnt dasselbe Kippen einzelner Sä
 
 Damit ist **4x der Arbeitspunkt** und 5x die Grenze, an die man gehen kann. Der Gewinn
 von 6x (eine Minute je halbe Stunde) steht gegen den Anfang des Sprachkippens.
+
+## Audioqualität, Geschwindigkeit und der Versuch, sie nachzukorrigieren (02.09.2026)
+
+**Die Audiospur hängt nicht an der Videoqualität.** Gemessen über
+`getStatsForNerds()` an `M4Tw_3SmNXg`: von 720p bis 144p zieht Chrome immer dieselbe
+Spur, `opus (251)` mit 142 kbit/s und 48 kHz. Das Video wechselt (640x480 → 320x240 →
+192x144), der Ton bleibt. Eine niedrige Auflösung ist also gratis – sie entlastet den
+Dekoder für die beschleunigte Wiedergabe, ohne den Ton zu verschlechtern.
+
+Was zählt, ist die **Abtastrate der Quelle**, nicht ihre Bitrate. Dieselben vier Minuten,
+drei Audiospuren, gegen die unbeschleunigte Referenz:
+
+| Audiospur | 1x | 4x | 6x | 8x |
+|---|---|---|---|---|
+| AAC 49k, **22 kHz** (itag 139) | 8,0 % | 13,7 % | 29,2 % | 34,9 % |
+| Opus 46k, 48 kHz (itag 249) | 0,4 % | 1,1 % | 6,4 % | 28,5 % |
+| Opus 142k, 48 kHz (itag 251) | 0,0 % | 0,9 % | 4,0 % | 33,0 % |
+
+Opus mit 46 kbit/s ist praktisch so gut wie mit 142; die AAC-Spur mit halber Abtastrate
+ist schon unbeschleunigt unbrauchbar. Im Browser kommt sie nicht vor – gut zu wissen,
+falls jemand später auf die Idee kommt, die Tonspur selbst auszuwählen.
+
+**Der Zusammenbruch bei 8x ist nicht berechenbar.** Derselbe Aufbau an einem zweiten
+Ausschnitt desselben Videos (Minute 20 bis 24 statt 2 bis 6):
+
+| Ausschnitt | 4x | 6x | 8x |
+|---|---|---|---|
+| A: Fachdeutsch mit englischen Begriffen | 0,9 % | 4,0 % | **33,0 %** |
+| B: erzählendes Deutsch | 1,2 % | 1,2 % | **3,2 %** |
+
+In Ausschnitt A kippt Parakeet bei 8x in die falsche Sprache und übersetzt halb; in B
+bleibt es bei Kleinigkeiten. Das Argument gegen 8x ist deshalb nicht der Mittelwert,
+sondern das Risiko: der Nutzer kann vorher nicht wissen, welchen Fall er hat, und die
+Ausgabe klingt in beiden Fällen flüssig.
+
+**Eine deterministische Nachkorrektur rettet das nicht.** Geprüft mit einer Liste
+englischer Funktionswörter, die im deutschen Satz nichts verloren haben („and" → „und",
+„for" → „für"), abgesichert über die Nachbarwörter, damit echte englische Passagen in
+Ruhe bleiben:
+
+| | roh | nachkorrigiert |
+|---|---|---|
+| Ausschnitt A, 6x | 4,0 % | **2,7 %** |
+| Ausschnitt A, 8x | 33,0 % | 30,7 % |
+| Ausschnitt B, 4x | 1,2 % | **2,3 %** |
+| Ausschnitt B, 6x | 1,2 % | **2,3 %** |
+
+Sie nimmt ein Drittel der Fehler weg, wo der Fehler auftritt, und verdoppelt ihn, wo er
+nicht auftritt: in einem Text über Programmierwerkzeuge sind „and" und „for" oft richtig.
+Beides zu unterscheiden verlangt genau das Sprachverständnis, das der deterministischen
+Nachbearbeitung fehlt. Das ist der Unterschied zu DiktaGos Wörterbuch, das nur
+namentlich eingetragene Begriffe anfasst.
+
+**Ergebnis: 4x, ein Modus, kein Schnell-Schalter.** Ein Umschalter „schnell oder genau"
+wäre die Wahl zwischen „meistens gut" und „manchmal flüssig formulierter Unsinn", ohne
+dass der Nutzer vorher sagen kann, welcher Fall vorliegt.

@@ -7,6 +7,45 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, neunter Durchgang) – volle Höhe, Schnellbefehle, Farben hell
+
+### Die Karte nimmt jetzt die ganze sichtbare Höhe
+
+`h-[calc(100vh-80px)]` an einer **unskalierten Hülle**, das gezoomte Kind steht auf
+`h-full`. Der Grund steht in [docs/messungen.md](docs/messungen.md): `zoom` multipliziert
+Viewport-Einheiten mit, Prozentwerte nicht – `h-[72vh]` am gezoomten Element waren bei
+uiScale 110 in Wahrheit 79 vh. Gemessen bei 913 px Fensterhöhe: Karte von 68 bis 901 px,
+833 px hoch, Nachrichtenbereich 673 px (vorher 512).
+
+Nicht `sticky`: eine Karte über die volle Höhe würde beim Scrollen die Empfehlungen
+darunter verdecken, und YouTubes Kopfzeile blendet sich in manchen Layouts aus – dann
+stünde ein 56-px-Loch. Die Karte scrollt mit dem Video weg, wie der Player selbst.
+
+### Die Knopfleiste klappt sich weg
+
+Sichtbar, solange der Chat leer ist; sobald etwas darin steht, verschwindet sie und ein
+Zauberstab-Symbol in der Kopfzeile holt sie zurück. Nach jedem Senden klappt sie wieder
+ein. Bewusst **nicht gespeichert**: der Zustand leitet sich aus `messages.length` ab und
+fällt beim Videowechsel zurück – ein gespeicherter Wert brächte verwaiste Einträge für
+den seltenen zweiten Preset-Klick, der so genau einen Klick kostet.
+
+### Eingabezeile und Sendeknopf kleiner
+
+Feld und Knopf stehen auf 32 px statt 38 (`py-[5px]`, `size-8`), das Symbol im Knopf auf
+18 px, das Zusatzfeld darüber auf 24 px mit gestricheltem Rand. Schrift bleibt bei 14 px –
+dieselbe wie der Chattext, sonst springt der Text beim Absenden in eine andere Grösse.
+
+**Das Symbol ist jetzt ein Pfeil statt des Papierfliegers.** Nachgemessen: die Bounding-Box
+von `Send` ist zentriert, die Masse des Dreiecks aber nicht – Schwerpunkt bei (13, 11)
+statt (12, 12), das Symbol wirkt nach oben rechts versetzt. `ArrowUp` ist in beiden Achsen
+symmetrisch.
+
+### Hell folgt jetzt auch YouTube
+
+`#FFFFFF` Grund, `#F2F2F2` für Chips und Knöpfe, `#0F0F0F` Text, `#606060` sekundär,
+`#E5E5E5` Ränder. Der warme Beigeton aus DiktaGo ist raus – neben YouTubes neutralem Grau
+las er sich als Fremdkörper. Gemessen: unsere Knöpfe `rgb(242, 242, 242)`.
+
 ## Stand 02.09.2026 (nachts, achter Durchgang) – Kopieren mit zwei Formaten
 
 Der Kopier-Knopf legt jetzt **Markdown und HTML nebeneinander** in die Zwischenablage

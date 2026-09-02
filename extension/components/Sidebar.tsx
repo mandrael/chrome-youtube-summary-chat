@@ -5,10 +5,11 @@ import {
   Copy,
   Download,
   Loader2,
+  ArrowUp,
   BrushCleaning,
   Settings,
   Square,
-  Send,
+  WandSparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -74,6 +75,14 @@ export function Sidebar({
 }: SidebarProps) {
   const [settings, setSettings] = React.useState<AppSettings | null>(null);
   const [collapsed, setCollapsed] = React.useState(false);
+  /*
+   * Die Knopfleiste steht im leeren Chat und verschwindet, sobald etwas darin steht –
+   * dort kostet sie zwei Zeilen, die zum Lesen fehlen. Bewusst flüchtig: sie leitet sich
+   * aus `messages.length` ab und fällt beim Videowechsel und nach jedem Senden zurück.
+   * Ein gespeicherter Zustand brächte verwaiste Einträge für den seltenen zweiten
+   * Preset-Klick, der so genau einen Klick kostet.
+   */
+  const [presetsOpen, setPresetsOpen] = React.useState(false);
   const [tab, setTab] = React.useState<Tab>("chat");
 
   const [transcript, setTranscript] = React.useState<Transcript | null>(null);
@@ -189,9 +198,11 @@ export function Sidebar({
     });
   }, [messages, videoId, videoTitle]);
 
+  const presetsVisible = messages.length === 0 || presetsOpen;
+
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, streaming]);
+  }, [messages, streaming, presetsVisible]);
 
   /* ---- Senden ---- */
 
@@ -250,6 +261,7 @@ export function Sidebar({
     ];
     setMessages([...next, { role: "assistant", content: "" }]);
     setStreaming(true);
+    setPresetsOpen(false);
     setTab("chat");
 
     const handle = startChat({
@@ -553,11 +565,17 @@ export function Sidebar({
   }
 
   return (
+    /*
+     * Die Höhe hängt an der äusseren, **unskalierten** Hülle: `zoom` multipliziert
+     * Viewport-Einheiten mit (gemessen: `100vh` bei `zoom: 1.1` sind 110 vh), Prozentwerte
+     * dagegen nicht. Innen genügt deshalb `h-full`.
+     * 80 px = 56 px Kopfzeile + 12 px oberer Abstand der Spalte (zusammen YouTubes
+     * `--ytd-watch-flexy-non-player-height` ohne die 48 px unter dem Player) + 12 px Luft
+     * unten, symmetrisch zum Abstand oben.
+     */
+    <div className={cn(fullHeight ? "h-full" : "mb-3 h-[calc(100vh-80px)] min-h-[440px]")}>
     <div
-      className={cn(
-        "relative flex flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden",
-        fullHeight ? "h-full" : "mb-3 h-[72vh] min-h-[440px]",
-      )}
+      className="relative flex h-full flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden"
       // zoom skaliert den ganzen Baum – Schrift, Abstände, Knöpfe – in einem Zug.
       style={{ zoom: (settings?.uiScale ?? 110) / 100 }}
     >
@@ -574,6 +592,11 @@ export function Sidebar({
         t={t}
         tab={tab}
         setTab={setTab}
+        presetsToggle={
+          tab === "chat" && messages.length > 0
+            ? { open: presetsOpen, toggle: () => setPresetsOpen((v) => !v) }
+            : undefined
+        }
         onCollapse={
           collapsible
             ? () => {
@@ -586,6 +609,7 @@ export function Sidebar({
 
       {tab === "chat" && (
         <>
+          {presetsVisible && (
           <div className="border-b border-border px-2 py-2">
             <div className="flex flex-wrap items-center gap-1">
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetShortHint")} onClick={() => preset("summary_short")}>
@@ -609,6 +633,7 @@ export function Sidebar({
               </Button>
             </div>
           </div>
+          )}
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 min-h-32">
             {loadState === "loading" && (
@@ -671,7 +696,7 @@ export function Sidebar({
                 value={extra}
                 onChange={(e) => setExtra(e.target.value)}
                 placeholder={t("extraPrompt")}
-                className="mb-1 h-7 w-full rounded-md border border-input bg-transparent px-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="mb-1 h-6 w-full rounded-md border border-dashed border-input bg-transparent px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
 
             <div className="flex items-end gap-1">
@@ -691,16 +716,16 @@ export function Sidebar({
                 }}
                 placeholder={t("ask")}
                 disabled={!transcript}
-                className="max-h-40 min-h-9 text-sm [field-sizing:content]"
+                className="max-h-40 min-h-8 px-2.5 py-[5px] text-sm [field-sizing:content]"
               />
               {streaming ? (
-                <Button size="icon" variant="destructive" className="h-[38px] w-[38px] shrink-0" onClick={() => stopRef.current?.()} title={t("stop")}>
+                <Button size="icon" variant="destructive" className="size-8 shrink-0 [&_svg]:size-[18px]" onClick={() => stopRef.current?.()} title={t("stop")}>
                   <Square />
                 </Button>
               ) : (
                 <Button
                   size="icon"
-                  className="h-[38px] w-[38px] shrink-0"
+                  className="size-8 shrink-0 [&_svg]:size-[18px]"
                   disabled={!transcript || !input.trim()}
                   onClick={() => {
                     const v = input.trim();
@@ -709,7 +734,7 @@ export function Sidebar({
                   }}
                   title={t("send")}
                 >
-                  <Send />
+                  <ArrowUp />
                 </Button>
               )}
             </div>
@@ -771,6 +796,7 @@ export function Sidebar({
         />
       )}
     </div>
+    </div>
   );
 }
 
@@ -778,11 +804,13 @@ function Header({
   t,
   tab,
   setTab,
+  presetsToggle,
   onCollapse,
 }: {
   t: T;
   tab: Tab;
   setTab: (t: Tab) => void;
+  presetsToggle?: { open: boolean; toggle: () => void };
   onCollapse?: () => void;
 }) {
   const tabs: Array<[Tab, string]> = [
@@ -806,6 +834,18 @@ function Header({
         </button>
       ))}
       <div className="ml-auto flex items-center gap-0.5">
+        {presetsToggle && (
+          <Button
+            size="iconSm"
+            variant="ghost"
+            aria-pressed={presetsToggle.open}
+            className={cn(presetsToggle.open && "bg-secondary text-secondary-foreground")}
+            title={t("presets")}
+            onClick={presetsToggle.toggle}
+          >
+            <WandSparkles />
+          </Button>
+        )}
         <Button size="iconSm" variant="ghost" title="Einstellungen" onClick={() => void chrome.runtime.sendMessage({ type: "openOptions" })}>
           <Settings />
         </Button>

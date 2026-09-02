@@ -203,3 +203,28 @@ Echte Werte der Hilfsvariablen (headless, ohne sichtbare Scrollbar):
 
 `--ytd-watch-flexy-sidebar-min-width` (300 px) ist das Sicherheitsventil und bleibt
 unangetastet.
+
+
+## `zoom` und Viewport-Einheiten (02.09.2026)
+
+**`zoom` multipliziert Viewport-Einheiten mit, Prozentwerte nicht.** Gemessen: ein
+Element mit `zoom: 1.1` und `height: calc(100vh - 80px)` misst bei 813 px Viewport
+**806,3 px**, also (813 − 80) × 1,1 statt 733. Das heisst, ein `h-[72vh]` am gezoomten
+Element rendert bei `uiScale` 110 in Wahrheit 79 vh, bei 150 % über 100 vh.
+
+Deshalb trägt die **äussere, unskalierte Hülle** die Höhe und das gezoomte Kind steht auf
+`h-full`. Gegenprobe: Hülle ohne `zoom` mit `calc(100vh - 80px)` = 733 px, Kind mit
+`zoom: 1.1; height: 100%` = exakt 733 px.
+
+**YouTubes Custom Properties kommen durch WXTs Reset hindurch**: `all: initial !important`
+am `:host` lässt Custom Properties per Spezifikation aus, `--ytd-watch-flexy-non-player-height`
+ist im Shadow DOM als `calc(56px + 12px + 48px)` lesbar. Verwendet werden trotzdem feste
+Zahlen – eine Umbenennung bei YouTube würde sonst stumm die Höhe zerstören.
+
+## Symbolgeometrie im Sendeknopf (02.09.2026)
+
+`getBBox()` des lucide-Icons `Send` liefert x 2…22, y 2…22, Mitte exakt (12, 12) – die Box
+ist zentriert, die **Masse** aber nicht: der Papierflieger hat Ecken bei (22, 2), (2, 9)
+und (15, 22), Schwerpunkt rund (13, 11). Das Symbol wirkt dadurch nach oben rechts
+versetzt. `ArrowUp` ist x 5…19, y 5…19 und in beiden Achsen spiegelsymmetrisch – deshalb
+steht dort jetzt ein Pfeil, wie in allen aktuellen Chat-Eingaben.

@@ -25,7 +25,9 @@ import {
   getSettings,
   loadConversation,
   saveConversation,
+  setSettings as speichereSettings,
 } from "@/lib/storage";
+import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
 import { transcriptToText } from "@/lib/timestamps";
 import { NoCaptionsError } from "@/lib/transcript";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
@@ -293,6 +295,41 @@ export function Sidebar({
     chapters: "presetChapters",
   } as const;
 
+  /**
+   * Ziehgriff zwischen Video und Sidebar.
+   *
+   * Gezogen wird gegen ein gemerktes Delta, nicht gegen die Fensterkante – der rechte
+   * Rand der Spalte hat je nach Scrollbar und Seitenrand einen anderen Abstand, und ein
+   * Rechenfehler darin würde die Sidebar beim ersten Griff springen lassen. Während des
+   * Ziehens wird nur die CSS-Regel angefasst; gespeichert wird einmal am Ende, sonst
+   * schriebe jeder Mauspixel in chrome.storage.
+   */
+  function zieheBreite(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startBreite = settings?.columnWidth ?? 620;
+    let letzte = startBreite;
+
+    // Listener am window, nicht am Griff mit `setPointerCapture`: der Griff ist nur acht
+    // Pixel breit, ohne Capture verlöre er den Zeiger sofort – und `setPointerCapture`
+    // wirft, sobald die Zeiger-ID nicht mehr aktiv ist.
+    const bewegen = (ev: PointerEvent) => {
+      letzte = Math.min(SPALTE_MAX, Math.max(SPALTE_MIN, startBreite - (ev.clientX - startX)));
+      setzeSpaltenbreite(letzte);
+    };
+    const beenden = () => {
+      window.removeEventListener("pointermove", bewegen);
+      window.removeEventListener("pointerup", beenden);
+      window.removeEventListener("pointercancel", beenden);
+      document.body.style.userSelect = "";
+      void speichereSettings({ columnWidth: Math.round(letzte) });
+    };
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", bewegen);
+    window.addEventListener("pointerup", beenden);
+    window.addEventListener("pointercancel", beenden);
+  }
+
   function preset(key: keyof (typeof PRESETS)["de"]) {
     // Angezeigt wird der Name des Knopfes, gesendet der volle Anweisungstext.
     const beschriftung = PRESET_LABELS[key as keyof typeof PRESET_LABELS];
@@ -490,12 +527,21 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden",
+        "relative flex flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden",
         fullHeight ? "h-full" : "mb-3 h-[72vh] min-h-[440px]",
       )}
       // zoom skaliert den ganzen Baum – Schrift, Abstände, Knöpfe – in einem Zug.
       style={{ zoom: (settings?.uiScale ?? 110) / 100 }}
     >
+      {collapsible && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          title={t("resizeHint")}
+          onPointerDown={zieheBreite}
+          className="absolute inset-y-0 left-0 z-20 w-2 cursor-col-resize hover:bg-primary/25"
+        />
+      )}
       <Header
         t={t}
         tab={tab}

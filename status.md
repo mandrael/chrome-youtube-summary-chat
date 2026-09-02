@@ -7,6 +7,27 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, vierter Durchgang) – Ziehgriff
+
+Zwischen Video und Sidebar sitzt jetzt ein Griff am linken Innenrand der Karte: ziehen
+setzt die Breite live, losgelassen wird sie einmal gespeichert. Gemessen: 620 → 744 px
+gezogen, Wert steht danach in den Einstellungen.
+
+Zwei Fallen dabei, beide gemessen:
+
+- Der Griff lag zuerst 12 px **ausserhalb** der Karte – die Karte hat `overflow-hidden`,
+  er war abgeschnitten und nicht anklickbar. Jetzt liegt er innen, 8 px breit.
+- `setPointerCapture` wirft, sobald die Zeiger-ID nicht mehr aktiv ist, und riss den
+  ganzen Handler mit. Die Bewegung hängt jetzt am `window` – ohne Capture verlöre ein
+  acht Pixel breiter Griff den Zeiger sofort.
+
+**Eingeklappt gibt die Spalte ihre Breite zurück** (gemessen: 620 → 489 px, Player von
+932 auf 1063). Sonst stünde neben dem schmalen Balken eine leere Fläche, während das
+Video klein bleibt. Gesteuert über `collapsedItem.watch` im Content-Script.
+
+Die Breitenlogik liegt jetzt in `lib/spalte.ts`, weil sie zwei Aufrufer hat – das
+Content-Script beim Laden und die Sidebar beim Ziehen.
+
 ## Stand 02.09.2026 (nachts, dritter Durchgang) – Breite, Platz, Enter, Optionen
 
 ### YouTubes Spalte lässt sich verbreitern, aber nur mit zwei Variablen

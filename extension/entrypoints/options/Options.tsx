@@ -8,7 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -30,6 +32,9 @@ import type {
 } from "@/lib/types";
 
 const REASONING_STEPS: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
+
+/** Das eine Feld, das „Alles zurücksetzen" unangetastet lässt. */
+const ZUGANGSFELD: keyof Settings = "apiKey";
 
 /** Lite-Modelle bekommen minimal vorbelegt – dort kostet Reasoning mehr, als es bringt. */
 function isLiteModel(id: string): boolean {
@@ -63,6 +68,7 @@ export function Options() {
     "unavailable" | "downloadable" | "downloading" | "available" | "unbekannt"
   >("unbekannt");
   const [lokalLaeuft, setLokalLaeuft] = React.useState<string | null>(null);
+  const [modellSuche, setModellSuche] = React.useState("");
 
   const zielCode = React.useMemo(
     () => ZIELSPRACHEN.find(([n]) => n === s?.translationTarget)?.[1] ?? "de",
@@ -75,6 +81,43 @@ export function Options() {
       setLokalZustand(await localAvailability("en", baseLang(zielCode)));
     })();
   }, [zielCode]);
+
+  const gefilterteModelle = React.useMemo(() => {
+    const liste = models ?? FALLBACK_MODELS;
+    const q = modellSuche.trim().toLowerCase();
+    if (!q) return liste;
+    return liste.filter(
+      (m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
+    );
+  }, [models, modellSuche]);
+
+  /*
+   * Zwei Zugänge zur selben Liste, weil es zwei Arten von Suche gibt: „was ist neu"
+   * beantwortet die Gruppe oben, „was hat Anbieter X" die Gruppen darunter. Die
+   * Anbietergruppen stehen in der Reihenfolge ihres jeweils neuesten Modells, damit
+   * auch dort das Aktuelle vorne liegt. Der Anbieter steht im Namen vor dem
+   * Doppelpunkt – das einzige Feld, aus dem er sich ohne gepflegte Liste ergibt.
+   */
+  const gruppen = React.useMemo(() => {
+    const neueste = gefilterteModelle.slice(0, 8);
+    const nachAnbieter = new Map<string, ModelInfo[]>();
+    for (const m of gefilterteModelle) {
+      const anbieter = m.name.includes(":") ? m.name.split(":")[0]!.trim() : "Weitere";
+      const bisher = nachAnbieter.get(anbieter);
+      if (bisher) bisher.push(m);
+      else nachAnbieter.set(anbieter, [m]);
+    }
+    // Anbieter mit ein oder zwei Modellen zerhacken die Liste in 43 Grüppchen. Sie
+    // wandern zusammen nach „Weitere" ans Ende, damit oben die grossen Häuser stehen.
+    const gross: [string, ModelInfo[]][] = [];
+    const klein: ModelInfo[] = [];
+    for (const [anbieter, liste] of nachAnbieter) {
+      if (anbieter !== "Weitere" && liste.length >= 3) gross.push([anbieter, liste]);
+      else klein.push(...liste);
+    }
+    if (klein.length) gross.push(["Weitere", klein]);
+    return { neueste, anbieter: gross };
+  }, [gefilterteModelle]);
 
   React.useEffect(() => {
     void getSettings().then(setS);
@@ -120,7 +163,7 @@ export function Options() {
           ? "Das Sprachmodell wird gerade geladen."
           : lokalZustand === "unbekannt"
             ? "Wird geprüft …"
-            : "In diesem Browser nicht verfügbar. Die API steckt in Chromium, das Modell liefert aber Google aus – Vivaldi, Brave und andere Chromium-Browser bekommen es nicht zwangsläufig.";
+            : "Dieser Browser bietet die eingebaute Übersetzung nicht an. Sie steckt zwar in Chromium, dem Unterbau von Chrome, Vivaldi, Brave und Edge – das Sprachmodell dazu liefert Google aber nur an Chrome selbst aus. Übersetzt wird dann wie bisher über OpenRouter.";
 
   async function modellLaden() {
     setLokalLaeuft("Lädt …");
@@ -141,6 +184,17 @@ export function Options() {
     models?.find((m) => m.id === s.model) ??
     FALLBACK_MODELS.find((m) => m.id === s.model);
   const customValid = !s.customModel.trim() || isValidSlug(s.customModel);
+
+  /** „Zurücksetzen" erscheint nur, wo tatsächlich vom Standard abgewichen wird. */
+  const reset = <K extends keyof Settings>(feld: K) =>
+    s[feld] === DEFAULT_SETTINGS[feld]
+      ? undefined
+      : () => patch({ [feld]: DEFAULT_SETTINGS[feld] } as Partial<Settings>);
+
+  /** Weicht überhaupt etwas ab? Sonst ist „Alles zurücksetzen" ein toter Knopf. */
+  const etwasVerstellt = (Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]).some(
+    (k) => k !== ZUGANGSFELD && s[k] !== DEFAULT_SETTINGS[k],
+  );
 
   return (
     <div className="mx-auto min-h-screen max-w-5xl bg-background p-8 text-foreground">
@@ -191,6 +245,7 @@ export function Options() {
 
         <Field
           label="Modell"
+          onReset={reset("model")}
           hint={`Gefiltert auf Kontextfenster ab 128.000 Token und Textausgabe.${
             models ? ` ${models.length} Modelle.` : ""
           }`}
@@ -205,21 +260,81 @@ export function Options() {
               })
             }
           >
+            {/*
+              Der Auslöser zeigt nur die erste Zeile – Name und Kontextgrösse. Slug und
+              Preis stehen in der Liste, sonst wäre das geschlossene Feld dreizeilig.
+            */}
             <SelectTrigger>
-              <SelectValue />
+              {selected ? (
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate">{selected.name}</span>
+                  <KontextMarke n={selected.contextLength} />
+                </span>
+              ) : (
+                <SelectValue />
+              )}
             </SelectTrigger>
-            <SelectContent>
-              {(models ?? FALLBACK_MODELS).map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  <ModelRow m={m} />
-                </SelectItem>
-              ))}
+            {/*
+              Filterfeld: knapp 300 Modelle lassen sich nicht scrollend finden. Es sitzt
+              ausserhalb des scrollenden Bereichs, sonst verdeckt es die erste Zeile,
+              sobald Radix beim Öffnen zur gewählten Option springt. Tastatureingaben
+              dürfen nicht durchgereicht werden, sonst springt der Typeahead des
+              Auswahlfelds beim Tippen zwischen den Einträgen.
+            */}
+            <SelectContent
+              header={
+                <div className="border-b border-border bg-card px-2 py-1.5">
+                  <Input
+                    autoFocus
+                    value={modellSuche}
+                    placeholder="Filtern – Name oder Slug"
+                    onChange={(e) => setModellSuche(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    className="h-7 text-xs"
+                  />
+                </div>
+              }
+            >
+              {gefilterteModelle.length === 0 ? (
+                <p className="px-2 py-3 text-xs text-muted-foreground">
+                  Kein Modell passt zu „{modellSuche}".
+                </p>
+              ) : (
+                <>
+                  {/* Nur ohne Filter: wer tippt, sucht gezielt und will kein Modell doppelt sehen. */}
+                  {!modellSuche.trim() && (
+                  <SelectGroup>
+                    <SelectLabel>Zuletzt erschienen</SelectLabel>
+                    {gruppen.neueste.map((m) => (
+                      <SelectItem
+                        key={`neu-${m.id}`}
+                        value={m.id}
+                        textValue={`${m.name} ${m.id}`}
+                      >
+                        <ModelRow m={m} />
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                  )}
+                  {gruppen.anbieter.map(([anbieter, liste]) => (
+                    <SelectGroup key={anbieter}>
+                      <SelectLabel>{anbieter}</SelectLabel>
+                      {liste.map((m) => (
+                        <SelectItem key={m.id} value={m.id} textValue={`${m.name} ${m.id}`}>
+                          <ModelRow m={m} />
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </>
+              )}
             </SelectContent>
           </Select>
         </Field>
 
         <Field
           label="Eigener Modell-Slug"
+          onReset={reset("customModel")}
           hint="Überschreibt die Auswahl oben. Läuft ebenfalls über OpenRouter, deshalb ist das Provider-Präfix Pflicht."
         >
           <Input
@@ -238,24 +353,35 @@ export function Options() {
 
         <Field
           label="Reasoning"
+          onReset={reset("reasoning")}
           hint={
             selected && !selected.supportsReasoning
-              ? "Das gewählte Modell unterstützt den Parameter nicht."
-              : "Bei Lite-Modellen bleibt minimal die sinnvolle Vorgabe."
+              ? `${selected.name} unterstützt kein Reasoning – die Stufen bleiben wirkungslos.`
+              : "Bei Lite-Modellen bleibt minimal die sinnvolle Vorgabe. Reasoning-Tokens zählen als Ausgabe und können den Preis je Anfrage übersteigen."
           }
         >
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={1}
-              value={REASONING_STEPS.indexOf(s.reasoning)}
-              disabled={!!selected && !selected.supportsReasoning}
-              onChange={(e) => patch({ reasoning: REASONING_STEPS[Number(e.target.value)] })}
-              className="w-56 accent-[var(--primary)] disabled:opacity-40"
-            />
-            <span className="w-16 text-sm">{s.reasoning}</span>
+          <div className="flex flex-wrap gap-1">
+            {REASONING_STEPS.map((stufe) => {
+              const aus = !!selected && !selected.supportsReasoning;
+              const an = s.reasoning === stufe;
+              return (
+                <button
+                  key={stufe}
+                  type="button"
+                  disabled={aus}
+                  aria-pressed={an}
+                  onClick={() => patch({ reasoning: stufe })}
+                  className={
+                    "rounded-md border px-3 py-1 text-sm transition-colors disabled:opacity-40 " +
+                    (an
+                      ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                      : "border-border hover:bg-secondary")
+                  }
+                >
+                  {stufe}
+                </button>
+              );
+            })}
           </div>
         </Field>
       </Section>
@@ -279,6 +405,7 @@ export function Options() {
 
         <Field
           label="Zielsprache der Übersetzung"
+          onReset={reset("translationTarget")}
           hint="Gilt für den Übersetzen-Knopf im Chat und im Transkript."
         >
           <select
@@ -296,7 +423,8 @@ export function Options() {
 
         <Field
           label="Schriftgrösse der Oberfläche"
-          hint="Skaliert die ganze Sidebar – Schrift, Abstände, Knöpfe. 100 % entspricht YouTubes eigener Textgrösse; grössere Bildschirme vertragen mehr."
+          onReset={reset("uiScale")}
+          hint={`Skaliert die ganze Sidebar – Schrift, Abstände, Knöpfe. 100 % entspricht YouTubes eigener Textgrösse; grössere Bildschirme vertragen mehr. Standard: ${DEFAULT_SETTINGS.uiScale} %.`}
         >
           <div className="flex items-center gap-2">
             <input
@@ -314,7 +442,8 @@ export function Options() {
 
         <Field
           label="Breite der Spalte auf YouTube"
-          hint="Wie breit die rechte Spalte mit der Sidebar sein darf; der Player weicht entsprechend zurück. Bei schmalem Fenster schrumpft die Spalte von selbst wieder, YouTubes Mindestbreite für den Player bleibt gewahrt. YouTubes eigener Wert liegt je nach Fenster bei rund 400 bis 490 px."
+          onReset={reset("columnWidth")}
+          hint={`Wie breit die rechte Spalte mit der Sidebar sein darf; der Player weicht entsprechend zurück. Bei schmalem Fenster schrumpft die Spalte von selbst wieder, YouTubes Mindestbreite für den Player bleibt gewahrt. YouTubes eigener Wert liegt je nach Fenster bei rund 400 bis 490 px. Standard: ${DEFAULT_SETTINGS.columnWidth} px.`}
         >
           <div className="flex items-center gap-2">
             <input
@@ -506,12 +635,16 @@ export function Options() {
         <Button
           variant="ghost"
           size="sm"
+          disabled={!etwasVerstellt}
           onClick={() => {
-            setS(DEFAULT_SETTINGS);
-            void setSettings(DEFAULT_SETTINGS);
+            // Der Zugang bleibt stehen: ihn beim Zurücksetzen der Darstellung
+            // mitzulöschen wäre eine böse Überraschung.
+            const frisch = { ...DEFAULT_SETTINGS, apiKey: s.apiKey };
+            setS(frisch);
+            void setSettings(frisch);
           }}
         >
-          Alle Einstellungen zurücksetzen
+          Alle Einstellungen zurücksetzen (Zugang bleibt)
         </Button>
       </Section>
     </div>
@@ -534,15 +667,30 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({
   label,
   hint,
+  onReset,
   children,
 }: {
   label: string;
   hint?: string;
+  /** Zeigt „Zurücksetzen" neben der Beschriftung – nur übergeben, wenn abgewichen wird. */
+  onReset?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div className="mb-4 last:mb-0">
-      <label className="mb-1 block text-sm font-medium">{label}</label>
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <label className="block text-sm font-medium">{label}</label>
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            aria-label={`${label} zurücksetzen`}
+            className="shrink-0 cursor-pointer text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
       {hint && <p className="mb-1.5 text-xs text-muted-foreground">{hint}</p>}
       {children}
     </div>
@@ -574,26 +722,76 @@ function Radio({
   );
 }
 
+/** Kontextgrösse kurz: 128K, 200K, 1M, 2M – dieselbe Schreibweise überall. */
+export function formatTokens(n: number): string {
+  // Auf eine Nachkommastelle runden und die Null wegkürzen: 1.048.576 Token sind „1M",
+  // nicht „1.0M". Kontextfenster sind ohnehin Näherungen.
+  if (n >= ONE_M_CONTEXT) {
+    return `${(Math.round((n / ONE_M_CONTEXT) * 10) / 10).toLocaleString("de-DE")}M`;
+  }
+  return `${Math.round(n / 1000)}K`;
+}
+
+function KontextMarke({ n }: { n: number }) {
+  return (
+    <span
+      className="shrink-0 rounded border border-border px-1 text-xs font-medium text-muted-foreground"
+      title={`Kontextfenster: ${n.toLocaleString("de-DE")} Token. Ab 1M passen ganze Transkripte ungekürzt hinein.`}
+    >
+      {formatTokens(n)}
+    </span>
+  );
+}
+
+/**
+ * Was eine Anfrage ungefähr kostet – 30.000 Token Transkript hinein, 2.000 heraus.
+ * Das Preispaar je Million verlangt Kopfrechnen, dieser Betrag nicht. Die Eingabe macht
+ * über 90 % davon aus; Reasoning-Tokens zählen als Ausgabe und können den Betrag bei
+ * hoher Stufe übersteigen.
+ */
+const ANFRAGE_EIN = 30_000;
+const ANFRAGE_AUS = 2_000;
+
+export function preisProAnfrage(m: ModelInfo): number | null {
+  if (m.pricePrompt == null) return null;
+  return m.pricePrompt * ANFRAGE_EIN + (m.priceCompletion ?? 0) * ANFRAGE_AUS;
+}
+
+function formatPreis(usd: number): string {
+  if (usd === 0) return "gratis";
+  if (usd < 0.01) return "< 0,01 $";
+  return `${usd.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+}
+
 function ModelRow({ m }: { m: ModelInfo }) {
-  const oneM = m.contextLength >= ONE_M_CONTEXT;
+  // Zwei Zeilen: oben, was man sucht (Name, Kontextgrösse, fehlendes Reasoning), unten
+  // die Kennung mit dem Preis je Anfrage dahinter. Der Auslöser zeigt nur die obere.
+  const preis = preisProAnfrage(m);
   return (
     <span className="block">
       <span className="flex items-center gap-1.5">
         {m.name}
-        {oneM && (
+        <KontextMarke n={m.contextLength} />
+        {!m.supportsReasoning && (
           <span
-            className="rounded border border-border px-1 text-xs font-medium text-muted-foreground"
-            title="Ganze Transkripte passen ungekürzt in den Kontext. Das liefert bessere Ergebnisse als Chunking."
+            className="shrink-0 rounded border border-border px-1 text-xs text-muted-foreground"
+            title="Dieses Modell kennt den Reasoning-Parameter nicht; die Stufen darunter bleiben wirkungslos."
           >
-            1M
+            kein Reasoning
           </span>
         )}
       </span>
-      <span className="block font-mono text-xs text-muted-foreground">{m.id}</span>
       <span className="block text-xs text-muted-foreground">
-        {m.contextLength.toLocaleString("de-DE")} Token
-        {m.pricePrompt != null &&
-          ` · $${(m.pricePrompt * 1e6).toFixed(2)} / $${((m.priceCompletion ?? 0) * 1e6).toFixed(2)} pro Mio.`}
+        <span className="font-mono">{m.id}</span>
+        {preis != null && (
+          <span
+            title={`Eingabe $${((m.pricePrompt ?? 0) * 1e6).toFixed(2)} / Ausgabe $${((m.priceCompletion ?? 0) * 1e6).toFixed(2)} je Mio. Token`}
+          >
+            {" "}
+            ({preis < 0.01 && preis > 0 ? "" : "≈ "}
+            {formatPreis(preis)} je Anfrage)
+          </span>
+        )}
       </span>
     </span>
   );

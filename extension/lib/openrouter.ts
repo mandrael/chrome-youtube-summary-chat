@@ -66,6 +66,7 @@ interface RawModel {
   id: string;
   name: string;
   context_length: number;
+  created?: number;
   architecture?: { output_modalities?: string[] };
   pricing?: { prompt?: string; completion?: string };
   supported_parameters?: string[];
@@ -76,20 +77,51 @@ export async function listModels(): Promise<ModelInfo[]> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const { data } = (await res.json()) as { data: RawModel[] };
 
-  return data
+  const passend = data
     .filter((m) => (m.context_length ?? 0) >= MIN_CONTEXT)
-    .filter((m) => m.architecture?.output_modalities?.includes("text"))
+    .filter((m) => m.architecture?.output_modalities?.includes("text"));
+
+  // Dubletten raus, sonst steht dasselbe Modell drei- bis viermal in der Liste.
+  // Gemessen am 02.09.2026: 378 passende Einträge, nach dieser Regel 283.
+  //
+  // Eine Variante fliegt genau dann, wenn ihr Grundmodell ebenfalls in der Liste steht.
+  // Bei „:free" ist das nicht bloss Aufräumen: der Preis 0 verschweigt das Tageslimit
+  // und die Datennutzung, und mit 30.000 Token je Anfrage ist das Limit schnell
+  // erreicht. Wo es kein bezahltes Gegenstück gibt, bleibt die freie Fassung stehen.
+  const vorhanden = new Set(passend.map((m) => m.id));
+  const sichtbar = passend
+    .filter((m) => !m.id.endsWith(":batch")) // Batch läuft asynchron, der Chat streamt
+    .filter((m) => {
+      const grund = grundmodell(m.id);
+      return grund === m.id || !vorhanden.has(grund);
+    });
+
+  return sichtbar
     .map(
       (m): ModelInfo => ({
         id: m.id,
         name: m.name,
         contextLength: m.context_length,
+        created: m.created,
         pricePrompt: num(m.pricing?.prompt),
         priceCompletion: num(m.pricing?.completion),
         supportsReasoning: !!m.supported_parameters?.includes("reasoning"),
       }),
     )
-    .sort((a, b) => a.id.localeCompare(b.id));
+    // Neueste zuerst: wer ein Modell sucht, sucht fast immer das aktuelle.
+    .sort((a, b) => (b.created ?? 0) - (a.created ?? 0) || a.name.localeCompare(b.name));
+}
+
+/** Datumsanhängsel wie „-2024-11-20", „-20260420" oder „-2407". */
+const DATIERT = /-(\d{4}-\d{2}-\d{2}|\d{8}|\d{4})$/;
+
+/**
+ * Der Slug ohne Varianten-Anhängsel. „-instruct" bleibt bewusst stehen: das ist ein
+ * eigenes Modell, nicht die Variante eines anderen.
+ */
+function grundmodell(id: string): string {
+  const ohneSuffix = id.split(":")[0]!;
+  return ohneSuffix.replace(/-(preview|exp|thinking|latest)$/, "").replace(DATIERT, "");
 }
 
 function num(v: string | undefined): number | undefined {

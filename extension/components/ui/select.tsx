@@ -7,6 +7,21 @@ export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
 export const SelectGroup = SelectPrimitive.Group;
 
+export const SelectLabel = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn(
+      "sticky top-0 z-10 bg-card px-2 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground",
+      className,
+    )}
+    {...props}
+  />
+));
+SelectLabel.displayName = "SelectLabel";
+
 export const SelectTrigger = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
@@ -32,8 +47,14 @@ export const SelectContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
     /** Im Shadow DOM muss das Portal in die Shadow-Wurzel, sonst greift kein CSS. */
     container?: HTMLElement | null;
+    /**
+     * Steht über dem scrollenden Bereich – gedacht für ein Filterfeld. Innerhalb des
+     * Viewports würde es die erste Zeile verdecken, sobald Radix beim Öffnen zur
+     * gewählten Option scrollt.
+     */
+    header?: React.ReactNode;
   }
->(({ className, children, container, position = "popper", ...props }, ref) => (
+>(({ className, children, container, header, position = "popper", ...props }, ref) => (
   <SelectPrimitive.Portal container={container ?? undefined}>
     <SelectPrimitive.Content
       ref={ref}
@@ -45,6 +66,7 @@ export const SelectContent = React.forwardRef<
       )}
       {...props}
     >
+      {header}
       <SelectPrimitive.Viewport className="p-1 max-h-96 overflow-y-auto">
         {children}
       </SelectPrimitive.Viewport>

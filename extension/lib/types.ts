@@ -67,6 +67,8 @@ export interface ModelInfo {
   id: string;
   name: string;
   contextLength: number;
+  /** Unix-Sekunden der Veröffentlichung; sortiert die Liste. */
+  created?: number;
   /** USD pro Token, roh wie von der API geliefert. */
   pricePrompt?: number;
   priceCompletion?: number;

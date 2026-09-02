@@ -9,6 +9,7 @@
  * den Importen braucht – Node braucht die, der Bundler nicht.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { formatTs, transcriptToText, tsToSeconds, TS_PATTERN } from "../lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
@@ -208,6 +209,22 @@ check("Leseabsätze fassen Absätze zusammen und behalten die Grenzen", () => {
   // Jede Leseabsatzgrenze liegt auf einer Absatzgrenze.
   const enden = new Set(abs.map((a) => a.bis));
   for (const a of lese) assert.ok(enden.has(a.bis));
+});
+
+console.log("options");
+
+check("Kein React-Hook hinter dem Lade-Guard der Options-Seite", () => {
+  // Zweimal passiert und beide Male erst im Browser aufgefallen: die Seite rendert
+  // dann gar nichts mehr („Rendered more hooks than during the previous render").
+  const quelle = readFileSync(new URL("../entrypoints/options/Options.tsx", import.meta.url), "utf8");
+  const guard = quelle.indexOf("  if (!s) {");
+  assert.ok(guard > 0, "Lade-Guard nicht gefunden – Prüfung würde nichts messen");
+  const danach = quelle.slice(guard, quelle.indexOf("\n/* ---------- Bausteine"));
+  assert.equal(
+    /React\.use(State|Memo|Effect|Callback|Ref|Reducer)\b/.test(danach),
+    false,
+    "Hook steht hinter dem frühen Return",
+  );
 });
 
 console.log(`\n${checks} Prüfungen bestanden.`);

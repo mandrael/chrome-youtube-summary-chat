@@ -209,8 +209,12 @@ export function Sidebar({
     }
 
     if (!tr.hasTimestamps) {
+      // Der System-Prompt läuft in der Sprache der Oberfläche, sonst mischen sich hier
+      // als einziger Stelle Deutsch und Englisch.
       parts.push(
-        "Hinweis: Dieses Transkript enthält keine Zeitstempel. Gib keine an und erfinde keine.",
+        uiLang === "de"
+          ? "Hinweis: Dieses Transkript enthält keine Zeitstempel. Gib keine an und erfinde keine."
+          : "Note: this transcript has no timestamps. Do not give any and do not invent any.",
       );
     }
 
@@ -292,6 +296,7 @@ export function Sidebar({
     summary_short: "presetShort",
     summary_medium: "presetMedium",
     summary_long: "presetLong",
+    summary_facts: "presetFacts",
     chapters: "presetChapters",
   } as const;
 
@@ -563,14 +568,17 @@ export function Sidebar({
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetShortHint")} onClick={() => preset("summary_short")}>
                 {t("presetShort")}
               </Button>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("chapters")}>
+                {t("presetChapters")}
+              </Button>
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetMediumHint")} onClick={() => preset("summary_medium")}>
                 {t("presetMedium")}
               </Button>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetFactsHint")} onClick={() => preset("summary_facts")}>
+                {t("presetFacts")}
+              </Button>
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetLongHint")} onClick={() => preset("summary_long")}>
                 {t("presetLong")}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("chapters")}>
-                {t("presetChapters")}
               </Button>
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => translate()}>
                 {t("presetTranslate")}

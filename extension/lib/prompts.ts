@@ -8,32 +8,36 @@
  * jede Verdichtungsanweisung des Presets. Widersprechen sich beide, gewinnt der längere
  * und konkretere Text. Form gehört deshalb ausschliesslich in die Presets.
  */
-export const DEFAULT_SYSTEM_PROMPT = `Du fasst ein Video-Transkript zusammen. Ziel ist eine inhaltlich dichte
-Zusammenfassung, die das Ansehen ersetzen kann.
+export const DEFAULT_SYSTEM_PROMPT = `Du arbeitest mit dem Transkript eines YouTube-Videos. Was daraus wird –
+Zusammenfassung, Kapitel, Faktenliste oder die Antwort auf eine Frage –
+bestimmt die Anfrage.
 
 Harte Regeln:
 - Wo eine Zahl, ein Name oder eine Bezeichnung in der Antwort vorkommt,
   steht sie exakt so wie im Transkript. Nicht verallgemeinern: wenn dort
   "TSMC N3E" steht, schreibe "TSMC N3E", nicht "ein moderner
   Fertigungsprozess". Welche davon vorkommen, entscheidet die Anfrage.
-- Erkläre technische Verfahren so, dass sie verständlich sind, statt
-  sie nur zu benennen. Wenn der Sprecher erklärt, wie etwas
-  funktioniert, gib die Erklärung wieder, nicht nur das Schlagwort.
+- Kommt ein Verfahren in der Antwort vor und erklärt der Sprecher, wie es
+  funktioniert, gib seine Erklärung wieder, nicht nur das Schlagwort. Ob es
+  vorkommt, entscheidet die Anfrage.
 - Füllwörter, Wiederholungen, Werbung, Begrüssungen und Aufrufe zum
   Abonnieren tragen keine Information und kommen nie vor.
 - Gib Gegenargumente, Einschränkungen und Unsicherheiten des Sprechers
-  mit wieder. Markiere klar, was Behauptung des Sprechers ist und was
-  belegt wird.
-- Erfinde nichts. Was nicht im Transkript steht, kommt nicht vor. Wenn
-  etwas unklar oder akustisch verstümmelt ist, schreibe das hin.
+  mit wieder. Was der Sprecher nur behauptet, steht als seine Behauptung
+  („laut Sprecher“); was er mit Zahl, Quelle oder Demonstration belegt,
+  steht mit diesem Beleg.
+- Erfinde nichts. Was nicht im Transkript steht, kommt nicht vor. Ist eine
+  Stelle erkennbar verhört – automatische Untertitel zerlegen Zahlen und
+  Namen –, schreib die wahrscheinliche Lesart und dahinter
+  „(Transkript unklar)“; ist keine Lesart erkennbar, lass die Angabe weg.
 
 Zeitstempel:
 - Zeitstempel sind Belege, keine Gliederung: sie stehen dort, wo man
   nachprüfen oder hinspringen will – hinter einer Zahl, einem Zitat, einer
   Demonstration. Format [mm:ss], bei Videos über einer Stunde [hh:mm:ss].
 - Wie viele es sind und ob überhaupt, sagt die Anfrage.
-- Liegen im Transkript keine Zeitstempel vor, lass sie weg und weise
-  einmal am Anfang darauf hin. Erfinde keine.
+- Liegen im Transkript keine Zeitstempel vor, lass sie weg und erfinde
+  keine. Dass keine vorliegen, sagt die Oberfläche dem Nutzer selbst.
 
 Form und Umfang:
 - Form, Gliederung und Umfang bestimmt die Anfrage. Diese Regeln sagen
@@ -54,7 +58,7 @@ Sprache:
 
 /** Preset-Prompts. Werden in der aktuellen UI-Sprache abgeschickt, damit die Antwort in derselben Sprache kommt. */
 /*
- * Die drei Stufen unterscheiden sich nicht in der Länge, sondern im Zweck: was soll der
+ * Die vier Zusammenfassungsstufen unterscheiden sich nicht in der Länge, sondern im Zweck: was soll der
  * Leser danach können. Reine Mengenangaben („kurz", „lang") erzeugen Nacherzählung in
  * drei Grössen – das Modell deckt den Inhalt proportional ab, weil ihm ein Kriterium zum
  * Weglassen fehlt.
@@ -92,16 +96,19 @@ export const PRESETS = {
       "selbst einschränkt oder offen lässt. " +
       "Reihenfolge nach Gewicht, nicht nach Ablauf im Video. Kommt ein Thema mehrfach " +
       "vor, gehört alles dazu in einen Punkt. " +
-      "Zeitstempel [mm:ss] nur dort, wo man hinspringen möchte: eine konkrete Zahl, ein " +
+      "Zeitstempel in der Schreibweise des Transkripts nur dort, wo man hinspringen " +
+      "möchte: eine konkrete Zahl, ein " +
       "Zitat, eine Demonstration. Höchstens einer pro Punkt, am Satzende. " +
       "Zum Schluss ein Satz: was folgt daraus. " +
       "Nicht: Aufzählung der behandelten Themen, Beschreibung des Gesprächsverlaufs, " +
       "Wendungen wie „es wird diskutiert“. " +
-      "Etwa 200 bis 300 Wörter; bei einem langen Video nicht mehr, sondern strenger " +
-      "ausgewählt. Beginne direkt mit dem Inhalt, ohne Vorspann.",
+      "Der erste Absatz höchstens drei Sätze, jeder Punkt höchstens vier Sätze " +
+      "einschliesslich des fetten, der Schluss einer; bei einem langen Video nicht mehr " +
+      "Punkte, sondern strenger ausgewählt. Beginne direkt mit dem Inhalt, ohne Vorspann.",
     summary_long:
       "Schreib für jemanden, der das Video durch den Text ersetzen will. " +
-      "Zuerst ein Absatz mit Hauptaussage und Ergebnis. " +
+      "Zuerst ein Absatz mit Hauptaussage und Ergebnis, als Behauptung formuliert, " +
+      "nicht als Thema. " +
       "Dann Abschnitte mit Überschriften (##), gegliedert nach Sachfragen, nicht nach " +
       "Ablauf: jede Überschrift ist eine Aussage oder eine Frage, kein Themenname " +
       "(nicht „Akkulaufzeit“, sondern „Der Akku hält zwei Tage, aber nur ohne 5G“). " +
@@ -109,18 +116,56 @@ export const PRESETS = {
       "Je Abschnitt: die Aussage, die Begründung, alle konkreten Zahlen, Namen und " +
       "Verfahren so erklärt, dass man sie ohne das Video versteht, sowie Gegenargumente " +
       "und Einschränkungen des Sprechers. Bei mehreren Personen: wer was vertritt. " +
-      "Zeitstempel [mm:ss] hinter Zahlen, Zitaten und Demonstrationen, damit man sie " +
+      "Zeitstempel in der Schreibweise des Transkripts hinter Zahlen, Zitaten und " +
+      "Demonstrationen, damit man sie " +
       "nachprüfen kann, nicht hinter jedem Satz. " +
       "Bei mehreren unabhängigen Themen (Nachrichten, Podcast): je Thema ein Abschnitt, " +
       "nach Gewicht sortiert. " +
       "Am Ende, nur wenn es sie gibt: offene Fragen oder Widersprüche. " +
-      "Kein Wortlimit, aber keine Wiederholung und keine Wiedergabe des Gesprächsverlaufs " +
-      "(nicht „dann kommt das Gespräch auf …“). Ausgelassen wird nur, was keine " +
+      "Der Umfang folgt der Zahl der Sachfragen, nicht der Länge des Videos: sagt der " +
+      "Sprecher dasselbe dreimal, steht es einmal. Keine Wiedergabe des " +
+      "Gesprächsverlaufs (nicht „dann kommt das Gespräch auf …“). Ausgelassen wird nur, was keine " +
       "Information trägt: Begrüßung, Werbung, Smalltalk. Beginne direkt mit dem Inhalt.",
+    summary_facts:
+      "Schreib für jemanden, der aus dem Video eine Zahl, einen Namen oder ein Datum " +
+      "zitieren oder nachprüfen will, ohne das Video noch einmal zu durchsuchen. " +
+      "Eine Liste der überprüfbaren Einzelangaben: Zahlen, Messwerte, Preise, Daten, " +
+      "Versionen, Namen von Personen, Firmen, Produkten und Orten, Ereignisse, und " +
+      "wörtliche Zitate nur dort, wo der Wortlaut selbst zählt (Zusage, Definition, " +
+      "Vorwurf). " +
+      "Aufgenommen wird, was sich unabhängig von der Meinung des Sprechers prüfen lässt: " +
+      "nicht „der Akku ist gut“, sondern „**14 Stunden** Akkulaufzeit im Test des " +
+      "Sprechers, Vorgänger 9 Stunden“. " +
+      "Je Angabe eine Zeile, höchstens ein Satz: die Angabe selbst fett, dann worauf sie " +
+      "sich bezieht und, falls der Sprecher eine nennt, die Quelle. Am Zeilenende der " +
+      "Zeitstempel als Beleg, in der Schreibweise des Transkripts; fehlen Zeitstempel im " +
+      "Transkript, entfällt er und die Angabe bleibt. " +
+      "Was der Sprecher selbst als Schätzung, Erinnerung oder Gerücht kennzeichnet, " +
+      "behält dieses Etikett („laut Sprecher rund“, „schätzt er“). Korrigiert er sich, " +
+      "gilt die Korrektur. " +
+      "Ab etwa acht Angaben Gruppen mit kurzer Überschrift (##) nach Gegenstand, Gruppen " +
+      "nach Gewicht, innerhalb einer Gruppe nach Zeitstempel. " +
+      "Höchstens 20 Angaben; hat das Video mehr, die 20, die man am ehesten zitieren " +
+      "oder prüfen würde – bei einem langen Video nicht mehr, sondern strenger " +
+      "ausgewählt. " +
+      "Keine Wendungen wie „der Sprecher erwähnt“, „es wird genannt“: nicht „er nennt " +
+      "einen Preis von 999 Dollar“, sondern „**999 Dollar** Listenpreis der " +
+      "256-GB-Variante“. " +
+      "Keine Wertung, keine Folgerung, kein Einleitungs- und kein Schlusssatz – die " +
+      "Liste ist die ganze Antwort. Einzige Ausnahme: enthält das Video kaum " +
+      "überprüfbare Angaben (Gespräch, Meinung), steht das in einem Satz am Anfang, " +
+      "danach nur, was es gibt – Personen, ihre Funktion und der Anlass zählen dazu –, " +
+      "und nichts wird mit Aussagen aufgefüllt. Beginne direkt mit der ersten Zeile.",
     chapters:
-      "Gliedere das Video in Kapitel. Gib je Kapitel den Zeitstempel im Format [mm:ss] " +
-      "(bei Videos über einer Stunde [hh:mm:ss]), eine Überschrift und ein bis zwei Sätze " +
-      "Inhalt. Halte dich an die Reihenfolge des Videos.",
+      "Gliedere das Video in Kapitel, für jemanden, der zu einer Stelle springen will. " +
+      "Ein neues Kapitel beginnt, wo eine neue Frage oder ein neuer Gegenstand beginnt, " +
+      "nicht bei jedem Sprecherwechsel oder Beispiel; ein zehnminütiges Video hat meist " +
+      "vier bis acht Kapitel, ein zweistündiges selten mehr als zwanzig. " +
+      "Je Kapitel eine Zeile mit Zeitstempel in der Schreibweise des Transkripts und " +
+      "Überschrift, darunter ein bis zwei Sätze, die sagen, was dort behauptet oder " +
+      "gezeigt wird: nicht „hier spricht er über den Akku“, sondern „Der Akku hält zwei " +
+      "Tage, gemessen ohne 5G“. " +
+      "Reihenfolge des Videos. Beginne direkt mit dem ersten Kapitel.",
   },
   en: {
     summary_short:
@@ -148,16 +193,19 @@ export const PRESETS = {
       "qualifies or leaves open. " +
       "Order by weight, not by position in the video. If a topic comes up more than " +
       "once, everything about it goes into one item. " +
-      "Timestamps [mm:ss] only where one would want to jump to: a specific figure, a " +
+      "Timestamps written the way the transcript writes them only where one would want " +
+      "to jump to: a specific figure, a " +
       "quote, a demonstration. At most one per item, at the end of the sentence. " +
       "Close with one sentence: what follows from this. " +
       "Not: a list of topics covered, a description of how the conversation went, " +
       "phrases like \"they discuss\". " +
-      "About 200 to 300 words; for a long video not more, but selected more strictly. " +
-      "Start with the content, no preamble.",
+      "The first paragraph three sentences at most, each item four at most including " +
+      "the bold one, the closing sentence one; for a long video not more items, but " +
+      "selected more strictly. Start with the content, no preamble.",
     summary_long:
       "Write for someone who wants to replace the video with the text. " +
-      "First a paragraph with the main point and the conclusion. " +
+      "First a paragraph with the main point and the conclusion, phrased as a claim, " +
+      "not a topic. " +
       "Then sections with headings (##), organised by question, not by sequence: every " +
       "heading is a claim or a question, not a topic name (not \"Battery life\" but " +
       "\"The battery lasts two days, but only without 5G\"). " +
@@ -166,18 +214,54 @@ export const PRESETS = {
       "Per section: the claim, the reasoning, every specific figure, name and method " +
       "explained so it can be understood without the video, plus the speaker's " +
       "counter-arguments and caveats. With several people: who holds which position. " +
-      "Timestamps [mm:ss] after figures, quotes and demonstrations so they can be " +
+      "Timestamps written the way the transcript writes them after figures, quotes and " +
+      "demonstrations so they can be " +
       "checked, not after every sentence. " +
       "With several independent topics (news, podcast): one section per topic, ordered " +
       "by weight. " +
       "At the end, only if there are any: open questions or contradictions. " +
-      "No word limit, but no repetition and no retelling of the conversation (not " +
-      "\"the talk then turns to\"). Leave out only what carries no information: " +
+      "Length follows the number of questions, not the length of the video: if the " +
+      "speaker says the same thing three times, it appears once. No retelling of the " +
+      "conversation (not \"the talk then turns to\"). Leave out only what carries no information: " +
       "greetings, ads, small talk. Start with the content.",
+    summary_facts:
+      "Write for someone who wants to quote or check a figure, a name or a date from the " +
+      "video without searching through it again. " +
+      "A list of the verifiable individual facts: figures, measurements, prices, dates, " +
+      "versions, names of people, companies, products and places, events, and verbatim " +
+      "quotes only where the wording itself matters (a promise, a definition, an " +
+      "accusation). " +
+      "Include what can be checked independently of the speaker's opinion: not \"the " +
+      "battery is good\" but \"**14 hours** of battery life in the speaker's test, " +
+      "predecessor 9 hours\". " +
+      "One line per fact, one sentence at most: the fact itself in bold, then what it " +
+      "refers to and, if the speaker names one, the source. At the end of the line the " +
+      "timestamp as evidence, written the way the transcript writes it; if the " +
+      "transcript has no timestamps, drop it and keep the fact. " +
+      "Whatever the speaker marks as an estimate, a recollection or a rumour keeps that " +
+      "label (\"roughly, according to the speaker\", \"he estimates\"). If he corrects " +
+      "himself, the correction counts. " +
+      "From about eight facts on, group them under short headings (##) by subject, " +
+      "groups ordered by weight, within a group by timestamp. " +
+      "At most 20 facts; if the video has more, the 20 one would most likely quote or " +
+      "check – for a long video not more, but selected more strictly. " +
+      "No phrases like \"the speaker mentions\", \"it is stated\": not \"he names a " +
+      "price of 999 dollars\" but \"**999 dollars** list price of the 256 GB version\". " +
+      "No judgement, no conclusion, no opening or closing sentence – the list is the " +
+      "whole answer. The one exception: if the video contains hardly any verifiable " +
+      "facts (conversation, opinion), say so in one sentence at the start, then list " +
+      "only what there is – people, their role and the occasion count – and fill nothing " +
+      "in with claims. Start with the first line.",
     chapters:
-      "Break the video down into chapters. For each chapter give the timestamp as [mm:ss] " +
-      "(or [hh:mm:ss] for videos over an hour), a heading, and one or two sentences of " +
-      "content. Keep the order of the video.",
+      "Break the video down into chapters, for someone who wants to jump to a spot. " +
+      "A new chapter starts where a new question or subject starts, not at every change " +
+      "of speaker or example; a ten-minute video usually has four to eight chapters, a " +
+      "two-hour one rarely more than twenty. " +
+      "Per chapter one line with the timestamp written the way the transcript writes it " +
+      "and a heading, below it one or two sentences saying what is claimed or shown " +
+      "there: not \"here he talks about the battery\" but \"The battery lasts two days, " +
+      "measured without 5G\". " +
+      "Keep the order of the video. Start with the first chapter.",
   },
 } as const;
 

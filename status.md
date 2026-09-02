@@ -7,6 +7,49 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, fünfter Durchgang) – Knopf „Fakten", Prompts nachgeschärft
+
+Neuer Preset-Knopf **Fakten**. Reihenfolge jetzt: Fazit · Kapitel · Argumente · Fakten ·
+Ausführlich · Übersetzen, rechts „Leeren".
+
+**Die Abgrenzung, die den Knopf trägt:** Fazit, Argumente und Ausführlich sind um
+*Aussagen* gebaut, Fakten ist um *Angaben* gebaut – um das, was sich unabhängig von der
+Meinung des Sprechers prüfen lässt. „14 Stunden Akkulaufzeit im Test" ist eine Angabe,
+„der Akku ist gut" ist eine Aussage. Gegen Argumente grenzt es die Auswahl ab: Argumente
+nimmt eine Zahl, wenn sie eine Aussage trägt, Fakten nimmt sie, wenn sie prüfbar ist.
+
+Zwei Regeln, ohne die das Preset im Betrieb verwischt: jede Angabe braucht ihren Bezug
+(„48 MP" allein ist wertlos), und was der Sprecher selbst als Schätzung oder Gerücht
+kennzeichnet, behält dieses Etikett – sonst wäscht die Liste Vermutungen zu Fakten. Bei
+einem Video ohne harte Fakten sagt das Preset das in einem Satz und listet, was es gibt;
+kein leeres Ergebnis, kein Auffüllen mit Meinungen (Projektregel 3).
+
+**Fünf Form-Reste aus dem System-Prompt entfernt** – derselbe Fehler wie beim ersten Mal,
+nur kleiner: die Eröffnung „die das Ansehen ersetzen kann" ist wörtlich der Leser von
+*Ausführlich* und zog Fazit und Fakten Richtung Vollständigkeit; „Du fasst zusammen"
+machte aus einer Chatfrage eine Zusammenfassung; die Verfahrens-Regel war eine
+Tiefenvorgabe; „markiere klar" nannte kein Kriterium; der Zeitstempel-Hinweis „am Anfang"
+verlangte einen Vorspann, den jedes Preset verbietet – und die Oberfläche zeigt die
+Meldung ohnehin selbst.
+
+**Weitere Nachschärfungen:** Das Budget von *Argumente* stand auf 200 bis 300 Wörtern,
+obwohl der Kommentar darüber „Budget in Sätzen statt Wörtern" verspricht – Modelle zählen
+keine Wörter, Satzbudgets je Element sind lokal prüfbar. *Argumente* und *Ausführlich*
+schrieben `[mm:ss]` fest und widersprachen damit bei Videos über einer Stunde dem
+Transkript, das `[hh:mm:ss]` liefert; ein `[15:12]` statt `[1:15:12]` springt an die
+falsche Stelle. Die Schreibweise kommt jetzt überall aus dem Transkript. *Ausführlich*
+hatte „kein Wortlimit" – ein Budget ohne Bezugsgrösse, gelesen als „so lang wie das
+Transkript"; jetzt folgt der Umfang der Zahl der Sachfragen. *Kapitel* hatte als einziges
+Preset kein Kriterium für den Schnitt (Kapitelzahl schwankte) und kein Kontrastpaar
+(Inhaltssätze wurden Nacherzählung).
+
+Dazu: Bei einem Transkript ohne Zeitstempel war der angehängte System-Hinweis immer
+deutsch, auch bei englischer Oberfläche – die einzige Stelle, an der die Sprachen
+mischten.
+
+**Nicht geprüft:** Alle Presets sind weiterhin nur gegen den Wortlaut geprüft, nicht
+gegen ein echtes Video – dafür braucht es einen OpenRouter-Lauf.
+
 ## Stand 02.09.2026 (nachts, vierter Durchgang) – Ziehgriff
 
 Zwischen Video und Sidebar sitzt jetzt ein Griff am linken Innenrand der Karte: ziehen

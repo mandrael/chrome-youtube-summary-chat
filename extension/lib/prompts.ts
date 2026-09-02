@@ -57,23 +57,42 @@ Sprache:
   der Antwortsprache.`;
 
 /** Preset-Prompts. Werden in der aktuellen UI-Sprache abgeschickt, damit die Antwort in derselben Sprache kommt. */
+/*
+ * Die Längenstufen nennen einen konkreten Umfang statt nur „kurz" oder „lang".
+ * Adjektive allein reichen nicht: „Längenstufe: kurz" lieferte in der Praxis das, was
+ * hier als „mittel" steht. Wortzahl und erlaubte Form sind die einzigen Angaben, an
+ * denen sich ein Modell zuverlässig ausrichtet.
+ */
 export const PRESETS = {
   de: {
     summary_short:
-      "Fasse das Video zusammen. Längenstufe: kurz.",
+      "Fasse das Video in ein bis zwei Absätzen zusammen, zusammen höchstens 150 Wörter. " +
+      "Fließtext, keine Überschriften, keine Aufzählung. Nur die Kernaussage und das " +
+      "wichtigste Ergebnis. Zeitstempel nur, wenn ein Punkt ohne ihn unauffindbar wäre.",
     summary_medium:
-      "Fasse das Video zusammen. Längenstufe: mittel.",
+      "Fasse das Video zusammen: ein einleitender Absatz, danach vier bis sechs " +
+      "Stichpunkte mit je einem Zeitstempel [mm:ss]. Zusammen etwa 300 bis 400 Wörter.",
     summary_long:
-      "Fasse das Video zusammen. Längenstufe: lang.",
+      "Fasse das Video ausführlich zusammen: gegliedert nach Themen mit Überschriften, " +
+      "je Abschnitt mehrere Sätze und Zeitstempel [mm:ss]. Alle wesentlichen Punkte, " +
+      "Zahlen und Namen. Keine feste Wortgrenze, aber keine Wiederholungen.",
     chapters:
       "Gliedere das Video in Kapitel. Gib je Kapitel den Zeitstempel im Format [mm:ss] " +
       "(bei Videos über einer Stunde [hh:mm:ss]), eine Überschrift und ein bis zwei Sätze Inhalt. " +
       "Halte dich an die Reihenfolge des Videos.",
   },
   en: {
-    summary_short: "Summarise the video. Length: short.",
-    summary_medium: "Summarise the video. Length: medium.",
-    summary_long: "Summarise the video. Length: long.",
+    summary_short:
+      "Summarise the video in one or two paragraphs, 150 words at most in total. " +
+      "Prose, no headings, no bullet points. Only the core message and the key result. " +
+      "Timestamps only where a point would be unfindable without one.",
+    summary_medium:
+      "Summarise the video: one opening paragraph, then four to six bullet points, each " +
+      "with a timestamp [mm:ss]. Around 300 to 400 words in total.",
+    summary_long:
+      "Summarise the video in depth: organised by topic with headings, several sentences " +
+      "and timestamps [mm:ss] per section. All substantial points, figures and names. " +
+      "No fixed word limit, but no repetition.",
     chapters:
       "Break the video down into chapters. For each chapter give the timestamp as [mm:ss] " +
       "(or [hh:mm:ss] for videos over an hour), a heading, and one or two sentences of content. " +

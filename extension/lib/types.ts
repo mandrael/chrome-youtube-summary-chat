@@ -117,6 +117,12 @@ export interface Settings {
    * Tastaturkürzel greifen nicht in den Chat.
    */
   uiPlacement: "page" | "panel" | "both";
+  /**
+   * Skalierung der Oberfläche in Prozent. Wirkt über `zoom` auf den ganzen Baum, also
+   * auf Schrift, Abstände und Bedienelemente gleichermassen – kein Nachziehen einzelner
+   * Grössen nötig.
+   */
+  uiScale: number;
 }
 
 /** Nachrichten zwischen Content-Script/Options und Service Worker. */

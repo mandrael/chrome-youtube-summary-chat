@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sttRoute: "parakeet-mlx",
   preferLocalTranslate: false,
   uiPlacement: "both",
+  uiScale: 115,
 };
 
 /**
@@ -68,4 +69,16 @@ export async function listConversations(): Promise<Conversation[]> {
     .map(([, v]) => v as Conversation)
     .filter((c) => c && Array.isArray(c.messages))
     .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+
+/**
+ * Löscht alles, was die Extension zwischenspeichert – gespeicherte Unterhaltungen und
+ * den eingeklappt-Zustand. Einstellungen und API-Key bleiben.
+ */
+export async function clearCache(): Promise<number> {
+  const all = await storage.snapshot("local");
+  const keys = Object.keys(all).filter((k) => k.startsWith("conv:") || k === "collapsed");
+  await Promise.all(keys.map((k) => storage.removeItem(`local:${k}` as `local:${string}`)));
+  return keys.length;
 }

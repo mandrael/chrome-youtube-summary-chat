@@ -16,7 +16,7 @@ import {
   isValidSlug,
   ONE_M_CONTEXT,
 } from "@/lib/openrouter";
-import { DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
+import { clearCache, DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/prompts";
 import type {
   KeyStatus,
@@ -42,6 +42,13 @@ export function Options() {
   const [keyStatus, setKeyStatus] = React.useState<KeyStatus | null>(null);
   const [testing, setTesting] = React.useState(false);
   const [host, setHost] = React.useState<{ ok: boolean; detail: string } | null>(null);
+  const [cacheMeldung, setCacheMeldung] = React.useState<string | null>(null);
+
+  async function leeren() {
+    const anzahl = await clearCache();
+    setCacheMeldung(anzahl ? `${anzahl} Einträge gelöscht` : "War schon leer");
+    setTimeout(() => setCacheMeldung(null), 2500);
+  }
 
   React.useEffect(() => {
     void getSettings().then(setS);
@@ -238,6 +245,33 @@ export function Options() {
               ["panel", "Nur Seitenleiste"],
             ]}
           />
+        </Field>
+
+        <Field
+          label="Schriftgrösse der Oberfläche"
+          hint="Skaliert die ganze Sidebar – Schrift, Abstände, Knöpfe. 100 % entspricht YouTubes eigener Textgrösse; grössere Bildschirme vertragen mehr."
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={90}
+              max={175}
+              step={5}
+              value={s.uiScale}
+              onChange={(e) => patch({ uiScale: Number(e.target.value) })}
+              className="w-40 accent-[var(--primary)]"
+            />
+            <span className="w-12 font-mono text-xs text-muted-foreground">{s.uiScale} %</span>
+          </div>
+        </Field>
+
+        <Field
+          label="Zwischenspeicher leeren"
+          hint="Löscht gespeicherte Unterhaltungen und den eingeklappt-Zustand. Einstellungen und API-Key bleiben."
+        >
+          <Button variant="outline" size="sm" onClick={() => void leeren()}>
+            {cacheMeldung ?? "Leeren"}
+          </Button>
         </Field>
 
         <Field

@@ -471,7 +471,10 @@ export function Sidebar({
 
   if (collapsed && collapsible) {
     return (
-      <div className="mb-3 rounded-xl border border-border bg-card text-card-foreground">
+      <div
+        className="mb-3 rounded-xl border border-border bg-card text-card-foreground"
+        style={{ zoom: (settings?.uiScale ?? 115) / 100 }}
+      >
         <button
           type="button"
           onClick={() => {
@@ -493,6 +496,8 @@ export function Sidebar({
         "flex flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden",
         fullHeight ? "h-full" : "mb-3 max-h-[75vh]",
       )}
+      // zoom skaliert den ganzen Baum – Schrift, Abstände, Knöpfe – in einem Zug.
+      style={{ zoom: (settings?.uiScale ?? 115) / 100 }}
     >
       <Header
         t={t}

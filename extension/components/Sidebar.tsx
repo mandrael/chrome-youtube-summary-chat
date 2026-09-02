@@ -20,9 +20,7 @@ import { HistoryView } from "@/components/HistoryView";
 import { startChat, startFallback } from "@/lib/chat-client";
 import { makeT, resolveUiLang, type T } from "@/lib/i18n";
 import {
-  answerTranslationPrompt,
   PRESETS,
-  translationPrompt,
   webKontext,
   webLookupPrompt,
 } from "@/lib/prompts";
@@ -32,7 +30,9 @@ import {
   deleteConversation,
   getSettings,
   loadConversation,
+  loadTranslation,
   saveConversation,
+  saveTranslation,
   setSettings as speichereSettings,
   wideItem,
 } from "@/lib/storage";
@@ -40,13 +40,13 @@ import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
 import { ZIELSPRACHEN } from "@/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
 import { transcriptToText } from "@/lib/timestamps";
+import { translateCuesViaOpenRouter } from "@/lib/translate-cues";
 import { NoCaptionsError } from "@/lib/transcript";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
 import {
   availability as localAvailability,
   baseLang,
   isSupported as localTranslateSupported,
-  translateMarkdown,
   translateTranscript,
 } from "@/lib/translate-local";
 import type {
@@ -56,6 +56,7 @@ import type {
   ModelInfo,
   Settings as AppSettings,
   Transcript,
+  TranscriptTranslation,
   UiLang,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,8 @@ export interface SidebarProps {
   channel?: string;
   /** Setzt die Wiedergabeposition im Player der Seite. */
   onSeek: (seconds: number) => void;
+  /** Das `<video>` der Seite – für den Folgemodus im Transkript. */
+  getVideo?: () => HTMLVideoElement | null;
   /** In Chromes Seitenleiste gibt es nichts einzuklappen – dort schliesst man das Panel. */
   collapsible?: boolean;
   /** Seitenleiste: volle Höhe statt an YouTubes Spalte gebundene 75 vh. */
@@ -81,6 +84,7 @@ export function Sidebar({
   videoTitle,
   channel,
   onSeek,
+  getVideo = () => document.querySelector<HTMLVideoElement>("video"),
   collapsible = true,
   fullHeight = false,
 }: SidebarProps) {
@@ -99,6 +103,11 @@ export function Sidebar({
    * an, bis er ausgeschaltet wird – wer einmal recherchiert, tut es meist mehrfach.
    */
   const [webAn, setWebAn] = React.useState(false);
+  /* ---- Übersetzung des Transkripts: eigener Zustand, eigener Abbruch ---- */
+  const [uebersetzung, setUebersetzung] = React.useState<TranscriptTranslation | null>(null);
+  const [zeigeUebersetzung, setZeigeUebersetzung] = React.useState(false);
+  const [downloadAnteil, setDownloadAnteil] = React.useState(0);
+  const abbruchRef = React.useRef<AbortController | null>(null);
   const [tab, setTab] = React.useState<Tab>("chat");
 
   const [transcript, setTranscript] = React.useState<Transcript | null>(null);
@@ -213,6 +222,28 @@ export function Sidebar({
       messages,
     });
   }, [messages, videoId, videoTitle]);
+
+  /*
+   * Eine gespeicherte Übersetzung gehört zu Video, Spursprache und Zielsprache. Passt
+   * eine davon nicht, gibt es keine – angezeigt wird dann das Original. So sieht man nie
+   * die Übersetzung von etwas anderem.
+   */
+  React.useEffect(() => {
+    setUebersetzung(null);
+    setZeigeUebersetzung(false);
+    if (!transcript || !settings) return;
+    const target = languageToCode(settings.translationTarget);
+    let abgebrochen = false;
+    void loadTranslation(videoId, transcript.lang ?? "?", target).then((tr) => {
+      if (!abgebrochen && tr && tr.texts.length === transcript.cues.length) setUebersetzung(tr);
+    });
+    return () => {
+      abgebrochen = true;
+    };
+  }, [videoId, transcript, settings?.translationTarget]);
+
+  // Ein Videowechsel beendet einen laufenden Übersetzungslauf.
+  React.useEffect(() => () => abbruchRef.current?.abort(), [videoId]);
 
   const presetsVisible = messages.length === 0 || presetsOpen;
 
@@ -443,83 +474,112 @@ export function Sidebar({
    * @param nurTranskript Aus dem Transkript-Tab: dort ist das Transkript gemeint, auch
    *   wenn im Chat eine Antwort steht.
    */
-  function translate(nurTranskript = false) {
-    if (!settings) return;
+  /* ---- Übersetzung des Transkripts – bleibt im Transkript-Tab ---- */
 
-    const letzteAntwort = nurTranskript
-      ? undefined
-      : [...messages].reverse().find((m) => m.role === "assistant" && !m.error);
-    const quelle = letzteAntwort?.content?.trim();
+  /**
+   * Ein Knopf, vier Zustände: läuft → abbrechen, fertig → zwischen Original und
+   * Übersetzung umschalten, unvollständig → fortsetzen, sonst → übersetzen.
+   *
+   * Das Ergebnis landet zeilenweise in `texts[]` und nicht als Chat-Antwort: der
+   * Transkript-Tab ist der Ort des Transkripts, die Zeitspalte bleibt erhalten, und ein
+   * Abbruch verliert nichts.
+   */
+  function transkriptUebersetzen() {
+    if (!settings || !transcript) return;
+    const n = transcript.cues.length;
+
+    if (uebersetzung?.status === "running") {
+      abbruchRef.current?.abort();
+      return;
+    }
+    if (uebersetzung?.status === "done") {
+      setZeigeUebersetzung((v) => !v);
+      return;
+    }
+
+    const from = uebersetzung?.status === "partial" ? uebersetzung.done : 0;
     const target = languageToCode(settings.translationTarget);
-
-    if (settings.preferLocalTranslate) {
-      if (!localTranslateOk) {
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: t("localTranslateUnavailable"), error: true },
-        ]);
-        return;
-      }
-
-      const source = baseLang(transcript?.lang) || "en";
-      setStreaming(true);
-      setTab("chat");
-      setMessages((m) => [
-        ...m,
-        { role: "user", content: quelle ? t("translateAnswer") : t("translateTranscriptLabel") },
-        { role: "assistant", content: `${t("localTranslateDownloading")} …` },
-      ]);
-
-      const setLast = (content: string, error = false) =>
-        setMessages((m) => {
-          const copy = [...m];
-          const last = copy.at(-1);
-          if (last?.role === "assistant") {
-            last.content = content;
-            last.error = error;
-          }
-          return copy;
-        });
-
-      const optionen = {
-        source,
+    const route: "chrome" | "openrouter" = settings.preferLocalTranslate
+      ? "chrome"
+      : "openrouter";
+    if (route === "chrome" && !localTranslateOk) {
+      setUebersetzung({
         target,
-        // Der Modell-Download blockiert create() – gemessen 160 s. Ohne diese Anzeige
-        // sieht die Sidebar in der Zeit aus, als hinge sie.
-        onDownload: (loaded: number) =>
-          setLast(`${t("localTranslateDownloading")} … ${Math.round(loaded * 100)} %`),
-        onProgress: (done: number, total: number) =>
-          setLast(`${t("presetTranslate")} … ${done}/${total}`),
-      };
-
-      // Kein await vor diesem Aufruf: die Nutzergeste des Klicks muss bis zu
-      // Translator.create() durchhalten, sonst NotAllowedError.
-      const lauf = quelle
-        ? translateMarkdown(quelle, optionen)
-        : transcript
-          ? translateTranscript(transcript, optionen).then(transcriptToText)
-          : Promise.reject(new Error(t("noCaptions")));
-
-      lauf
-        .then((text) => setLast(text))
-        .catch((e) => setLast(String((e as Error)?.message ?? e), true))
-        .finally(() => setStreaming(false));
+        targetName: settings.translationTarget,
+        route,
+        texts: new Array<string | null>(n).fill(null),
+        done: 0,
+        status: "error",
+        error: t("localTranslateUnavailable"),
+      });
+      setZeigeUebersetzung(true);
       return;
     }
 
-    if (quelle) {
-      void send(
-        `${t("translateAnswer")} → ${settings.translationTarget}`,
-        answerTranslationPrompt(settings.translationTarget, uiLang),
-        quelle,
-      );
-      return;
-    }
+    const controller = new AbortController();
+    abbruchRef.current = controller;
+    setUebersetzung({
+      target,
+      targetName: settings.translationTarget,
+      route,
+      texts: from ? [...uebersetzung!.texts] : new Array<string | null>(n).fill(null),
+      done: from,
+      status: "running",
+    });
+    setZeigeUebersetzung(true);
 
-    void send(
-      `${t("translateTranscriptLabel")} → ${settings.translationTarget}`,
-      translationPrompt(settings.translationTarget, uiLang),
-    );
+    const onCue = (i: number, text: string) =>
+      setUebersetzung((u) => {
+        if (!u) return u;
+        const texts = [...u.texts];
+        texts[i] = texts[i] ? `${texts[i]} ${text}` : text;
+        return { ...u, texts, done: Math.max(u.done, i + 1) };
+      });
+
+    const abschluss = (r: { done: number; aborted: boolean }) =>
+      setUebersetzung((u) => {
+        if (!u) return u;
+        const fertig = {
+          ...u,
+          done: r.done,
+          status: (r.aborted ? "partial" : "done") as "partial" | "done",
+        };
+        void saveTranslation(videoId, transcript.lang ?? "?", fertig);
+        return fertig;
+      });
+
+    // Kein await vor translateTranscript: die Nutzergeste muss bis create() halten.
+    const lauf =
+      route === "chrome"
+        ? translateTranscript(transcript, {
+            source: baseLang(transcript.lang) || "en",
+            target,
+            from,
+            signal: controller.signal,
+            onCue,
+            onDownload: (loaded) => setDownloadAnteil(loaded),
+          })
+        : translateCuesViaOpenRouter(transcript.cues, {
+            model: activeModel,
+            supportsReasoning: modelInfo?.supportsReasoning ?? true,
+            reasoning: settings.reasoning,
+            targetName: settings.translationTarget,
+            from,
+            signal: controller.signal,
+            onCue,
+          });
+
+    lauf
+      .then(abschluss)
+      .catch((e) =>
+        setUebersetzung(
+          (u) => u && { ...u, status: "error", error: String((e as Error)?.message ?? e) },
+        ),
+      )
+      .finally(() => {
+        abbruchRef.current = null;
+        setDownloadAnteil(0);
+      });
   }
 
   /* ---- Audio-Fallback (nur Build "full") ---- */
@@ -705,10 +765,6 @@ export function Sidebar({
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetLongHint")} onClick={() => preset("summary_long")}>
                 {t("presetLong")}
               </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => translate()}>
-                {t("presetTranslate")}
-                {settings?.preferLocalTranslate ? " ⌂" : ""}
-              </Button>
             </div>
             {/*
               Der Zusatz zum Prompt gehört zu den Schnellbefehlen: er ergänzt einen
@@ -882,9 +938,16 @@ export function Sidebar({
           tracks={tracks}
           activeTrack={activeTrack}
           onSwitchTrack={(tr) => void switchTrack(tr)}
-          onTranslate={() => translate(true)}
+          onTranslate={transkriptUebersetzen}
           translationTarget={settings?.translationTarget ?? ""}
+          onTargetChange={(name) => void speichereSettings({ translationTarget: name })}
           uiLang={uiLang}
+          translation={uebersetzung}
+          showTranslation={zeigeUebersetzung}
+          downloadShare={downloadAnteil}
+          mode={settings?.transcriptMode ?? "cues"}
+          onMode={(m) => void speichereSettings({ transcriptMode: m })}
+          getVideo={getVideo}
           onForceAudio={__FALLBACK__ ? () => runFallbackJob("audio") : undefined}
           busy={fallbackState}
         />

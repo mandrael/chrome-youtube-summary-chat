@@ -28,8 +28,10 @@ export interface StreamArgs {
 export function startChat(args: StreamArgs): StreamHandle {
   const port = chrome.runtime.connect({ name: "chat" });
   let finished = false;
+  let beenden: () => void = () => {};
 
   const done = new Promise<void>((resolve, reject) => {
+    beenden = resolve;
     port.onMessage.addListener((msg: any) => {
       switch (msg?.type) {
         case "delta":
@@ -70,12 +72,17 @@ export function startChat(args: StreamArgs): StreamHandle {
 
   return {
     stop: () => {
+      if (finished) return;
       finished = true;
       try {
         port.disconnect();
       } catch {
         /* schon getrennt */
       }
+      // `onDisconnect` feuert laut Chrome-Doku nur am **anderen** Ende. Wer selbst
+      // trennt, bekommt kein Ereignis – ohne diese Zeile hängt `await handle.done`
+      // für immer, `setStreaming(false)` läuft nie, und der Knopf bleibt Stopp.
+      beenden();
     },
     done,
   };

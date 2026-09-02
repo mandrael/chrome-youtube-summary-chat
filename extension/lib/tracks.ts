@@ -47,26 +47,6 @@ export function langcode(lang: string): string {
 }
 
 /**
- * Kürzel für den geschlossenen Zustand: „de", „pt-BR".
- * Die Region steht nur da, wo sie unterscheidet – hat das Video nur eine
- * portugiesische Spur, ist „pt" eindeutig genug.
- */
-export function kurzcode(track: CaptionTrack, alle: CaptionTrack[] = []): string {
-  const code = langcode(track.lang);
-  const basis = code.split("-")[0];
-  const mehrdeutig = alle.some((tr) => {
-    const anderer = langcode(tr.lang);
-    return anderer !== code && anderer.split("-")[0] === basis;
-  });
-  return mehrdeutig ? code : (basis ?? code);
-}
-
-/** „de (auto)" – der Zusatz kommt genau einmal, aus dem Flag, nie aus dem Namen. */
-export function kurzname(track: CaptionTrack, alle: CaptionTrack[] = []): string {
-  return track.auto ? `${kurzcode(track, alle)} (auto)` : kurzcode(track, alle);
-}
-
-/**
  * Ausgeschriebener Name in der Sprache der Oberfläche – „Deutsch" statt „German".
  * `Intl.DisplayNames` kennt die Sprachcodes; YouTubes Rohname bleibt der Rückfall für
  * exotische Tags.

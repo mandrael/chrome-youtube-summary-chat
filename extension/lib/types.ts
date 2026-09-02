@@ -122,6 +122,28 @@ export interface Settings {
   uiScale: number;
   /** Breite der rechten YouTube-Spalte in Pixeln; der Player weicht entsprechend. */
   columnWidth: number;
+  /** Wie das Transkript gelesen wird: Zeile je Untertitel oder Fliesstext in Absätzen. */
+  transcriptMode: "cues" | "text";
+}
+
+/**
+ * Eine Übersetzung des Transkripts, zeilenweise und mit Stand.
+ *
+ * Sie liegt bewusst nicht als Chat-Antwort vor: sie gehört in den Transkript-Tab, sie
+ * überlebt einen Abbruch (`partial` plus `done`), und sie lässt sich fortsetzen.
+ */
+export interface TranscriptTranslation {
+  /** Sprachcode der Zielsprache, "de". */
+  target: string;
+  /** Anzeigename, "Deutsch". */
+  targetName: string;
+  route: "chrome" | "openrouter";
+  /** In Cue-Reihenfolge; null = noch nicht übersetzt. */
+  texts: (string | null)[];
+  /** Zusammenhängend übersetzte Zeilen ab Anfang. */
+  done: number;
+  status: "running" | "done" | "partial" | "error";
+  error?: string;
 }
 
 /** Nachrichten zwischen Content-Script/Options und Service Worker. */

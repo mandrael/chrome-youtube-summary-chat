@@ -219,6 +219,7 @@ async function mount(ctx: ContentScriptContext, videoId: string) {
           videoTitle={currentTitle()}
           channel={currentChannel()}
           onSeek={seek}
+          getVideo={currentVideo}
         />,
       );
       return { root, themeObserver };
@@ -281,6 +282,15 @@ function applyPendingSeek(): void {
 function seek(seconds: number): void {
   const video = currentVideo();
   if (!video) return;
+
+  // Läuft gerade eine Anzeige, gehört das <video>-Element ihr – ein Sprung würde die
+  // Werbung spulen statt das Video. Also vormerken und nachholen, sobald sie vorbei ist.
+  if (document.getElementById("movie_player")?.classList.contains("ad-showing")) {
+    pendingSeek = seconds;
+    video.addEventListener("durationchange", applyPendingSeek);
+    video.addEventListener("loadedmetadata", applyPendingSeek);
+    return;
+  }
 
   video.currentTime = seconds;
 

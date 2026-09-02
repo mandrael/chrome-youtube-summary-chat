@@ -143,7 +143,19 @@ interface PlayerResponse {
 }
 
 
-/** Wählt die Spur nach Einstellung: "auto" = erste nicht-automatische, sonst Sprachcode. */
+/**
+ * Wählt die Spur: "auto" heisst „nimm die beste", sonst gilt der Sprachcode.
+ *
+ * Die Rangfolge stammt aus einem realen Fall: ein Video mit englischer ASR-Spur und
+ * einer **redigierten deutschen** Spur. Die automatische Spur war deutlich schlechter,
+ * und YouTubes eigene Vorauswahl (`defaultCaptionTrackIndex`) zeigte auf die deutsche –
+ * sie ist damit das beste verfügbare Qualitätssignal, das die Seite hergibt.
+ *
+ * Eine Feinheit steht darüber: ist die Vorauswahl selbst automatisch und gibt es
+ * **dieselbe Sprache noch einmal von Hand**, gewinnt die Handarbeit. Das ist der Fall
+ * „Kanal hat nachträglich korrigierte Untertitel hochgeladen", und dort ist die
+ * ASR-Spur nie die bessere.
+ */
 export function pickTrack(tracks: CaptionTrack[], want: string): CaptionTrack | null {
   if (!tracks.length) return null;
   if (want !== "auto") {
@@ -152,11 +164,21 @@ export function pickTrack(tracks: CaptionTrack[], want: string): CaptionTrack | 
     const any = tracks.find((t) => t.lang === want);
     if (any) return any;
   }
-  // YouTubes eigene Vorauswahl zuerst – bei 31 Community-Spuren ist alles andere Raten.
-  // Danach: eine vom Kanal hochgeladene Spur schlägt die ASR-Spur.
-  return (
-    tracks.find((t) => t.standard) ?? tracks.find((t) => !t.auto) ?? tracks[0] ?? null
-  );
+
+  const standard = tracks.find((t) => t.standard);
+  if (standard?.auto) {
+    // Erst dieselbe Sprache von Hand (der Kanal hat korrigierte Untertitel
+    // nachgereicht), dann irgendeine Handarbeit: eine redigierte Spur ist auch in einer
+    // anderen Sprache besser als eine automatische – gemessen an einem Video mit
+    // redigierter deutscher und automatischer englischer Spur, wo die automatische
+    // deutlich schlechter war und das Modell ohnehin übersetzt.
+    return (
+      tracks.find((t) => !t.auto && t.lang.split("-")[0] === standard.lang.split("-")[0]) ??
+      tracks.find((t) => !t.auto) ??
+      standard
+    );
+  }
+  return standard ?? tracks.find((t) => !t.auto) ?? tracks[0] ?? null;
 }
 
 export async function fetchCues(track: CaptionTrack): Promise<Cue[]> {

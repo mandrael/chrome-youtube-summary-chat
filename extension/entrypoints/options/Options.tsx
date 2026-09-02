@@ -1,5 +1,6 @@
 import * as React from "react";
 import { ZIELSPRACHEN } from "@/lib/tracks";
+import { availability as localAvailability, baseLang, downloadModel, isSupported } from "@/lib/translate-local";
 import { Check, Copy, Loader2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -51,6 +52,30 @@ export function Options() {
     setTimeout(() => setCacheMeldung(null), 2500);
   }
 
+  /*
+   * Ob Chromes Übersetzung überhaupt zur Verfügung steht, lässt sich nur messen, nicht
+   * annehmen: die API kommt aus Chromium, aber das Modell liefert Google aus. Ein
+   * Chromium-Browser wie Vivaldi oder Brave kann dieselbe Version haben und die
+   * Übersetzung trotzdem nicht anbieten – deshalb wird hier der echte Zustand abgefragt
+   * und der Schalter bleibt sonst gesperrt.
+   */
+  const [lokalZustand, setLokalZustand] = React.useState<
+    "unavailable" | "downloadable" | "downloading" | "available" | "unbekannt"
+  >("unbekannt");
+  const [lokalLaeuft, setLokalLaeuft] = React.useState<string | null>(null);
+
+  const zielCode = React.useMemo(
+    () => ZIELSPRACHEN.find(([n]) => n === s?.translationTarget)?.[1] ?? "de",
+    [s?.translationTarget],
+  );
+
+  React.useEffect(() => {
+    void (async () => {
+      if (!isSupported()) return setLokalZustand("unavailable");
+      setLokalZustand(await localAvailability("en", baseLang(zielCode)));
+    })();
+  }, [zielCode]);
+
   React.useEffect(() => {
     void getSettings().then(setS);
 
@@ -84,6 +109,33 @@ export function Options() {
     setS({ ...s, ...p });
     void setSettings(p);
   };
+
+
+  const lokalText =
+    lokalZustand === "available"
+      ? `Verfügbar für Englisch → ${s.translationTarget}.`
+      : lokalZustand === "downloadable"
+        ? "Vorhanden, aber das Sprachmodell fehlt noch – rund 160 Sekunden Download."
+        : lokalZustand === "downloading"
+          ? "Das Sprachmodell wird gerade geladen."
+          : lokalZustand === "unbekannt"
+            ? "Wird geprüft …"
+            : "In diesem Browser nicht verfügbar. Die API steckt in Chromium, das Modell liefert aber Google aus – Vivaldi, Brave und andere Chromium-Browser bekommen es nicht zwangsläufig.";
+
+  async function modellLaden() {
+    setLokalLaeuft("Lädt …");
+    try {
+      // Ohne await davor: `create()` verlangt bei „downloadable" eine Nutzergeste.
+      await downloadModel("en", baseLang(zielCode), (anteil) =>
+        setLokalLaeuft(`Lädt … ${Math.round(anteil * 100)} %`),
+      );
+      setLokalZustand(await localAvailability("en", baseLang(zielCode)));
+    } catch (e) {
+      setLokalLaeuft(String((e as Error)?.message ?? e).slice(0, 80));
+      return;
+    }
+    setLokalLaeuft(null);
+  }
 
   const selected =
     models?.find((m) => m.id === s.model) ??
@@ -291,10 +343,19 @@ export function Options() {
           label="Übersetzen mit Chrome statt OpenRouter"
           hint="Nutzt Chromes eingebaute Translator API (ab Chrome 138). Läuft auf dem Gerät, kostet nichts und lässt Zeitstempel unangetastet, weil nur der Text jeder Zeile übersetzt wird. Trifft Fachbegriffe schlechter als ein Sprachmodell."
         >
-          <Switch
-            checked={s.preferLocalTranslate}
-            onCheckedChange={(v) => patch({ preferLocalTranslate: v })}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Switch
+              checked={s.preferLocalTranslate && lokalZustand === "available"}
+              disabled={lokalZustand !== "available"}
+              onCheckedChange={(v) => patch({ preferLocalTranslate: v })}
+            />
+            <span className="text-xs text-muted-foreground">{lokalText}</span>
+            {lokalZustand === "downloadable" && (
+              <Button size="sm" variant="outline" disabled={!!lokalLaeuft} onClick={() => void modellLaden()}>
+                {lokalLaeuft ?? "Sprachmodell laden"}
+              </Button>
+            )}
+          </div>
         </Field>
 
         <Field

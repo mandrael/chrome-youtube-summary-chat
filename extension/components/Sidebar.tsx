@@ -587,22 +587,6 @@ export function Sidebar({
                 {t("presetTranslate")}
                 {settings?.preferLocalTranslate ? " ⌂" : ""}
               </Button>
-              {messages.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto"
-                  disabled={streaming}
-                  title={t("newChatHint")}
-                  onClick={() => {
-                    setMessages([]);
-                    void deleteConversation(videoId);
-                  }}
-                >
-                  <BrushCleaning />
-                  {t("newChat")}
-                </Button>
-              )}
             </div>
           </div>
 
@@ -690,12 +674,13 @@ export function Sidebar({
                 className="max-h-40 min-h-9 text-sm [field-sizing:content]"
               />
               {streaming ? (
-                <Button size="icon" variant="destructive" onClick={() => stopRef.current?.()} title={t("stop")}>
+                <Button size="icon" variant="destructive" className="h-[38px] w-[38px] shrink-0" onClick={() => stopRef.current?.()} title={t("stop")}>
                   <Square />
                 </Button>
               ) : (
                 <Button
                   size="icon"
+                  className="h-[38px] w-[38px] shrink-0"
                   disabled={!transcript || !input.trim()}
                   onClick={() => {
                     const v = input.trim();
@@ -716,6 +701,18 @@ export function Sidebar({
                 </Button>
                 <Button size="iconSm" variant="ghost" title={t("exportMd")} onClick={() => download(`chat-${videoId}.md`, chatMarkdown())}>
                   <Download />
+                </Button>
+                <Button
+                  size="iconSm"
+                  variant="ghost"
+                  disabled={streaming}
+                  title={t("newChatHint")}
+                  onClick={() => {
+                    setMessages([]);
+                    void deleteConversation(videoId);
+                  }}
+                >
+                  <BrushCleaning />
                 </Button>
 
               </div>

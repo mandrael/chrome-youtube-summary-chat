@@ -252,7 +252,7 @@ export function Options() {
 
         <Field
           label="Breite der Spalte auf YouTube"
-          hint="Wie breit die rechte Spalte mit der Sidebar sein darf. Der Player weicht entsprechend zurück; bei schmalem Fenster greift eine Obergrenze von 46 % der Fensterbreite. YouTubes eigener Wert liegt je nach Fenster bei rund 400 bis 490 px."
+          hint="Wie breit die rechte Spalte mit der Sidebar sein darf; der Player weicht entsprechend zurück. Bei schmalem Fenster schrumpft die Spalte von selbst wieder, YouTubes Mindestbreite für den Player bleibt gewahrt. YouTubes eigener Wert liegt je nach Fenster bei rund 400 bis 490 px."
         >
           <div className="flex items-center gap-2">
             <input

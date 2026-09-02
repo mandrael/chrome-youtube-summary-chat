@@ -19,8 +19,21 @@ bekommt eine Lücke; wer nur die Spalte setzt, bekommt Überlappung. Beide zusam
 904/804/654 px, kein Überlauf). Danach muss einmal ein `resize`-Event gefeuert werden,
 weil YouTube die Player-Grösse nur auf Anlass hin neu rechnet.
 
-Neue Einstellung `columnWidth` (Default 620, Regler 400–900), Obergrenze `46vw` gegen
-schmale Fenster, ausgenommen sind Theater- und Vollbild-Layout.
+**Korrigiert nach Fables Prüfung, erneut gemessen:** Die Spaltenbreite allein genügt,
+`--ytd-watch-flexy-max-player-width` wird nicht mehr angefasst. Sie ist keine Breiten-,
+sondern eine **Höhendeckelung** (`calc((100vh - Kopf - Ränder) * 16/9)`); eine eigene
+`100vw`-Formel hebt sie auf. Gemessen bei 1600x600: mit meiner Doppelregel stand der
+Player 884x663 px gross und ragte aus dem Fenster, mit der einfachen Regel sind es
+645x484 px. Den Rest erledigt Flexbox – bei 1010 px Fensterbreite schrumpft die Spalte
+von selbst auf 498 px und der Player hält seine Mindestbreite von 480 px.
+
+Auch `min(…, 46vw)` ist weg. Der Selektor lautet jetzt
+`ytd-watch-flexy[is-two-columns_]:not([theater]):not([fullscreen]):not([fixed-panels])`:
+unter rund 1000 px Fensterbreite gibt es keine rechte Spalte (gemessen bei 990 px:
+`#secondary` verschwindet samt Sidebar), und bei `fixed-panels` – Live-Chat als
+fixiertes Panel – ginge die Breite doppelt in Padding und Panel ein.
+
+Neue Einstellung `columnWidth` (Default 620, Regler 400–900).
 
 ### Der Chat hatte 141 px Platz
 

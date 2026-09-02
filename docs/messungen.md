@@ -173,3 +173,33 @@ längere und konkretere Text. Form gehört seither ausschliesslich in die Preset
 System-Prompt sagt nur noch, was inhaltlich gilt. **Der ursprüngliche System-Prompt kam
 wörtlich aus Michaels Auftrag – die Änderung ist bewusst und hier offengelegt.**
 
+
+
+## Breite der rechten Spalte (02.09.2026)
+
+YouTube schreibt `--ytd-watch-flexy-sidebar-width` als Inline-Custom-Property auf
+`ytd-watch-flexy` und rechnet sie bei jedem Resize neu (Basis 402 px, darüber ein
+prozentualer Anteil der Fensterbreite). Eine Autorenregel mit `!important` gewinnt
+trotzdem, auch nach jedem Resize.
+
+`--ytd-watch-flexy-max-player-width` ist **keine Breiten-, sondern eine
+Höhendeckelung**: `calc((100vh - 56px - 12px - 48px) * 16/9)`. Wer sie durch eine eigene
+`100vw`-Formel ersetzt, hebt den Deckel auf. Gemessen bei 1600x600 Fenster:
+
+| Regel | Spalte | Player |
+|---|---|---|
+| YouTube unverändert | 489 px | 1063 x 598 |
+| beide Variablen gesetzt | 636 px | 884 x 663 (ragt aus dem Fenster) |
+| nur Spaltenbreite gesetzt | 636 px | 645 x 484 |
+
+Weitere Messwerte mit gesetzter Spaltenbreite 620 px: bei 1010 px Fensterbreite schrumpft
+`#secondary` auf 498 px und der Player hält seine Mindestbreite 480 px; bei 990 px fällt
+YouTube ins Ein-Spalten-Layout, `#secondary` und damit die Sidebar verschwinden ganz
+(Attribut `is-two-columns_` fehlt dann).
+
+Echte Werte der Hilfsvariablen (headless, ohne sichtbare Scrollbar):
+`--ytd-watch-flexy-horizontal-page-margin: 16px`, `--ytd-watch-flexy-scrollbar-width: 0px`,
+`--ytd-watch-flexy-non-player-height: calc(56px + 12px + 48px)`.
+
+`--ytd-watch-flexy-sidebar-min-width` (300 px) ist das Sicherheitsventil und bleibt
+unangetastet.

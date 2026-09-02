@@ -109,27 +109,34 @@ export default defineContentScript({
 });
 
 /**
- * Gibt der rechten Spalte mehr Platz, indem der Player gedeckelt wird.
+ * Gibt der rechten Spalte mehr Platz.
  *
- * Beide Variablen sind nötig, gemessen am 02.09.2026: `--ytd-watch-flexy-sidebar-width`
- * rechnet YouTube beim Laden einmal aus (im Test 489 px) und fasst sie danach nicht mehr
- * an – wer nur den Player deckelt, bekommt eine Lücke statt einer breiteren Spalte.
- * Umgekehrt genügt die Spaltenbreite allein nicht, weil der Player seine Grösse aus
- * `--ytd-watch-flexy-max-player-width` zieht.
+ * Es genügt, `--ytd-watch-flexy-sidebar-width` zu überschreiben – YouTube schreibt den
+ * Wert per Inline-Custom-Property auf den Host, eine Autorenregel mit `!important`
+ * gewinnt also auch nach jedem Resize. `#columns` und `#primary` hängen an derselben
+ * Variablen, den Rest erledigt Flexbox: `#secondary` schrumpft bis
+ * `--ytd-watch-flexy-sidebar-min-width`, `#primary` bis zur Mindestbreite des Players.
  *
- * `min(…, 46vw)` statt eines festen Werts: bei schmalem Fenster bliebe sonst kein Video
- * übrig. Das Theater-Layout ist ausgenommen, dort liegt die Spalte ohnehin unter dem
- * Player.
+ * `--ytd-watch-flexy-max-player-width` wird bewusst **nicht** angefasst. Sie ist keine
+ * Breiten-, sondern eine Höhendeckelung – `calc((100vh - Kopf - Ränder) * 16/9)`. Eine
+ * eigene Formel aus `100vw` hebt diesen Deckel auf: gemessen am 02.09.2026 stand der
+ * Player bei 1600x600 dann 884x663 px gross und ragte aus dem Fenster; ohne die Regel
+ * sind es 645x484 px.
+ *
+ * Der Selektor schliesst drei Fälle aus, in denen die Spalte nicht neben dem Player
+ * liegt: Theater, Vollbild und `fixed-panels` (Live-Chat als fixiertes Panel, dort geht
+ * die Breite doppelt in Padding und Panel ein). `[is-two-columns_]` ist die Bedingung
+ * dafür, dass es überhaupt eine rechte Spalte gibt – unter rund 1000 px Fensterbreite
+ * blendet YouTube `#secondary` samt Sidebar aus.
  */
 async function breiteAnwenden(ctx: ContentScriptContext): Promise<void> {
   const style = document.createElement("style");
   style.id = "yt-summary-chat-breite";
   const setzen = (px: number) => {
-    style.textContent = `ytd-watch-flexy:not([theater]):not([fullscreen]) {
-      --ytd-watch-flexy-sidebar-width: min(${px}px, 46vw) !important;
-      --ytd-watch-flexy-max-player-width: calc(100vw - min(${px}px, 46vw) - 96px) !important;
+    style.textContent = `ytd-watch-flexy[is-two-columns_]:not([theater]):not([fullscreen]):not([fixed-panels]) {
+      --ytd-watch-flexy-sidebar-width: ${px}px !important;
     }`;
-    // YouTube berechnet die Player-Grösse in JavaScript und nur auf Anlass hin.
+    // YouTube meldet dem Player seine Grösse in JavaScript und nur auf Anlass hin.
     window.dispatchEvent(new Event("resize"));
   };
   setzen((await getSettings()).columnWidth);

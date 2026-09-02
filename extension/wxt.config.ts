@@ -57,7 +57,7 @@ export default defineConfig({
       open_in_tab: true,
     },
     action: {
-      default_title: "YouTube Summary Chat",
+      default_title: "Sidebar ein-/ausblenden (sonst: Einstellungen)",
       // Ohne default_icon zeigt Vivaldi kein Symbol in der Werkzeugleiste, obwohl
       // `icons` gesetzt ist – Chrome fällt dort auf `icons` zurück, Vivaldi nicht.
       default_icon: {

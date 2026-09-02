@@ -788,7 +788,12 @@ export function Sidebar({
             )}
 
             {loadState === "no-captions" && (
-              <NoCaptions t={t} busy={fallbackState} onStart={runFallbackJob} />
+              <NoCaptions
+                t={t}
+                busy={fallbackState}
+                onStart={runFallbackJob}
+                spurenVorhanden={tracks.length > 0}
+              />
             )}
 
             {loadState === "error" && (
@@ -806,7 +811,12 @@ export function Sidebar({
                 </Button>
                 {/* Der Helfer kommt auch dann an die Untertitel, wenn die Seite
                     selbst nichts liefert – deshalb hier dieselben Knöpfe. */}
-                <NoCaptions t={t} busy={fallbackState} onStart={runFallbackJob} />
+                <NoCaptions
+                t={t}
+                busy={fallbackState}
+                onStart={runFallbackJob}
+                spurenVorhanden={tracks.length > 0}
+              />
               </div>
             )}
 
@@ -1035,14 +1045,26 @@ function NoCaptions({
   t,
   busy,
   onStart,
+  spurenVorhanden,
 }: {
   t: T;
   busy: string | null;
   onStart: (job: HelperJob) => void;
+  /**
+   * Ob YouTube überhaupt eine Untertitelspur meldet. Zwei verschiedene Lagen, die
+   * bisher gleich aussahen: gibt es gar keine Spur, kann auch yt-dlp keine holen –
+   * gemessen an vier Videos liest yt-dlp dieselbe Player-Antwort wie der Browser und
+   * findet keine Spur, die hier fehlt. Dann bleibt nur die Tonspur.
+   */
+  spurenVorhanden: boolean;
 }) {
   // Im Store-Build endet es hier: klare Meldung, kein Platzhalter, keine erfundene Ausgabe.
   if (!__FALLBACK__) {
-    return <p className="py-4 text-sm text-destructive">{t("noCaptionsStore")}</p>;
+    return (
+      <p className="py-4 text-sm text-destructive">
+        {spurenVorhanden ? t("noCaptionsStore") : t("noTracksAtAll")}
+      </p>
+    );
   }
 
   if (busy) {
@@ -1054,20 +1076,33 @@ function NoCaptions({
     );
   }
 
-  // Zwei Wege, billig zuerst. Beide starten ausschliesslich auf Klick, nie automatisch.
+  // Beide Wege starten ausschliesslich auf Klick, nie automatisch.
   return (
     <div className="text-sm">
-      <p className="mb-3 text-destructive">{t("noCaptionsFull")}</p>
+      <p className="mb-3 text-destructive">
+        {spurenVorhanden ? t("noCaptionsFull") : t("noTracksAtAll")}
+      </p>
 
-      <Button size="sm" className="mb-1" onClick={() => onStart("subtitles")}>
-        {t("startSubtitles")}
-      </Button>
-      <p className="mb-4 text-xs text-muted-foreground">{t("subtitlesHint")}</p>
+      {spurenVorhanden && (
+        <>
+          <Button size="sm" className="mb-1" onClick={() => onStart("subtitles")}>
+            {t("startSubtitles")}
+          </Button>
+          <p className="mb-4 text-xs text-muted-foreground">{t("subtitlesHint")}</p>
+        </>
+      )}
 
-      <Button size="sm" variant="outline" className="mb-1" onClick={() => onStart("audio")}>
+      <Button
+        size="sm"
+        variant={spurenVorhanden ? "outline" : "default"}
+        className="mb-1"
+        onClick={() => onStart("audio")}
+      >
         {t("startFallback")}
       </Button>
-      <p className="text-xs text-muted-foreground">{t("audioHint")}</p>
+      <p className="text-xs text-muted-foreground">
+        {spurenVorhanden ? t("audioHint") : t("audioHintOnly")}
+      </p>
     </div>
   );
 }

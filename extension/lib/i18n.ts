@@ -63,16 +63,21 @@ const de = {
   waitingVisible:
     "Wartet, bis dieser Tab im Vordergrund ist – im Hintergrund lädt YouTube das Transkript nicht.",
   noCaptions: "Für dieses Video sind keine Untertitel verfügbar.",
+  noTracksAtAll:
+    "Dieses Video hat keine Untertitel – auch keine automatisch erzeugten. "
+    + "Es bleibt nur die Tonspur.",
+  audioHintOnly:
+    "Lädt die Tonspur und transkribiert sie über die eingestellte Route. Dauert länger und kostet je nach Route Geld; lokal mit Parakeet ist es kostenlos.",
   noCaptionsStore:
     "Für dieses Video sind keine Untertitel verfügbar. Ohne Untertitel kann dieser Build kein Transkript erzeugen.",
   noCaptionsFull:
-    "Über die Seite kam kein Transkript. Der lokale Helfer hat zwei Wege:",
+    "YouTube meldet eine Untertitelspur, liefert ihren Inhalt aber nicht. Der lokale Helfer hat zwei Wege:",
   startFallback: "Tonspur transkribieren",
-  startSubtitles: "Untertitel über den lokalen Helfer holen",
+  startSubtitles: "Untertitelspur über den lokalen Helfer holen",
   subtitlesHint:
-    "Kostenlos und mit den Zeitstempeln von YouTube. Der Helfer holt die vorhandene Untertitelspur mit yt-dlp – das gelingt auch dann, wenn die Seite selbst keine liefert.",
+    "Kostenlos und mit den Zeitstempeln von YouTube. yt-dlp liest dieselbe Spurliste wie die Seite, kommt aber an den Inhalt, wenn der Abruf im Browser leer bleibt.",
   audioHint:
-    "Nur nötig, wenn es wirklich keine Untertitel gibt. Lädt die Tonspur herunter und transkribiert sie – dauert länger und kostet je nach Route Geld.",
+    "Nur nötig, wenn auch das nichts bringt. Lädt die Tonspur und transkribiert sie – dauert länger; lokal mit Parakeet kostenlos, über OpenRouter kostet es Geld.",
   fallbackRunning: "Wird verarbeitet …",
   noKey:
     "Es ist kein OpenRouter-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
@@ -162,6 +167,10 @@ const en: Record<Keys, string> = {
   waitingVisible:
     "Waiting for this tab to come to the front – YouTube does not load the transcript in a background tab.",
   noCaptions: "No captions are available for this video.",
+  noTracksAtAll:
+    "This video has no captions at all, not even auto-generated ones. Only the audio track is left.",
+  audioHintOnly:
+    "Downloads the audio track and transcribes it with the configured route. Takes longer and may cost money; locally with Parakeet it is free.",
   noCaptionsStore:
     "No captions are available for this video. Without captions this build cannot produce a transcript.",
   noCaptionsFull: "The page returned no transcript. The local helper has two ways:",

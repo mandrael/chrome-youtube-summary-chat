@@ -7,6 +7,29 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, achter Durchgang) – Kopieren mit zwei Formaten
+
+Der Kopier-Knopf legt jetzt **Markdown und HTML nebeneinander** in die Zwischenablage
+(`ClipboardItem` mit `text/plain` und `text/html`). Das Zielprogramm nimmt sich, was es
+braucht: Word, Pages und Google Docs greifen zum HTML und behalten Überschriften, Listen
+und Fettdruck, ein Editor bekommt den Markdown-Text.
+
+**Das ist keine Mac-Besonderheit.** Chromium bildet die beiden MIME-Typen auf die nativen
+Formate ab – `CF_HTML` plus `CF_UNICODETEXT` unter Windows, `NSPasteboard` unter macOS,
+MIME-Targets unter X11/Wayland. Derselbe Aufruf, dieselbe Wirkung auf allen drei Systemen.
+Gemessen in Chrome 152: nach dem Klick liegen beide Typen in der Zwischenablage,
+`text/plain` 140 Zeichen und `text/html` 193 Zeichen desselben Inhalts.
+
+Das HTML kommt aus dem **bereits gerenderten Markup**, nicht aus einem zweiten
+Markdown-Umwandler – was auf dem Schirm steht, landet unverändert in der Zwischenablage.
+Zwei Eingriffe dabei: die Zeitstempel sind im Chat `<button>`-Elemente und werden durch
+ihren Text ersetzt (ein Knopf in Word ist sinnlos, seine Zeitangabe nicht), und
+Klassenattribute fallen weg, weil ihre Stile im Shadow DOM bleiben. Ein `<meta charset>`
+davor, sonst kommen Umlaute in manchen Zielen als Fragezeichen an.
+
+Das Transkript kopiert weiterhin nur Text – dort gibt es keine Formatierung, die ein
+zweites Format tragen würde.
+
 ## Stand 02.09.2026 (nachts, siebter Durchgang) – Eingabefeld, Rot, Schriftmasse
 
 **Das Eingabefeld beginnt einzeilig und wächst mit dem Text**, bei acht Zeilen ist

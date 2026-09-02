@@ -29,6 +29,7 @@ import {
   wideItem,
 } from "@/lib/storage";
 import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
+import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
 import { transcriptToText } from "@/lib/timestamps";
 import { NoCaptionsError } from "@/lib/transcript";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
@@ -496,8 +497,27 @@ export function Sidebar({
 
   const chatMarkdown = () =>
     messages
-      .map((m) => `## ${m.role === "user" ? "Frage" : "Antwort"}\n\n${m.content}`)
+      .map((m) => `## ${m.role === "user" ? "Frage" : "Antwort"}\n\n${m.label ?? m.content}`)
       .join("\n\n");
+
+  /**
+   * Dieselbe Unterhaltung als HTML – genommen wird das bereits gerenderte Markup, kein
+   * zweiter Markdown-Umwandler. Was auf dem Schirm steht, landet damit unverändert in
+   * der Zwischenablage.
+   */
+  const chatHtml = () => {
+    const wurzel = scrollRef.current;
+    if (!wurzel) return "";
+    const teile: string[] = [];
+    for (const el of wurzel.querySelectorAll("[data-frage], .md-body")) {
+      teile.push(
+        el.hasAttribute("data-frage")
+          ? `<h2>Frage</h2><p>${(el.textContent ?? "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]!)}</p>`
+          : `<h2>Antwort</h2>${elementZuHtml(el)}`,
+      );
+    }
+    return teile.join("\n");
+  };
 
   function download(name: string, content: string) {
     const url = URL.createObjectURL(new Blob([content], { type: "text/markdown" }));
@@ -696,7 +716,7 @@ export function Sidebar({
 
             {messages.length > 0 && (
               <div className="mt-1 flex gap-1">
-                <Button size="iconSm" variant="ghost" title={t("copy")} onClick={() => void navigator.clipboard.writeText(chatMarkdown())}>
+                <Button size="iconSm" variant="ghost" title={t("copy")} onClick={() => void kopiereMitFormat(chatMarkdown(), chatHtml())}>
                   <Copy />
                 </Button>
                 <Button size="iconSm" variant="ghost" title={t("exportMd")} onClick={() => download(`chat-${videoId}.md`, chatMarkdown())}>
@@ -854,17 +874,21 @@ function MessageBubble({
   onDownload: () => void;
 }) {
   const [copied, setCopied] = React.useState(false);
+  const inhalt = React.useRef<HTMLDivElement>(null);
 
   if (message.role === "user") {
     return (
-      <div className="mb-2 rounded-lg bg-secondary px-2.5 py-1.5 text-sm text-secondary-foreground whitespace-pre-wrap">
+      <div
+        data-frage=""
+        className="mb-2 rounded-lg bg-secondary px-2.5 py-1.5 text-sm text-secondary-foreground whitespace-pre-wrap"
+      >
         {message.label ?? message.content}
       </div>
     );
   }
 
   return (
-    <div className="group mb-3">
+    <div className="group mb-3" ref={inhalt}>
       {message.error ? (
         <p className="text-sm text-destructive whitespace-pre-wrap">{message.content}</p>
       ) : (
@@ -880,7 +904,8 @@ function MessageBubble({
               className="opacity-0 group-hover:opacity-100"
               title={copied ? t("copied") : t("copy")}
               onClick={() => {
-                void navigator.clipboard.writeText(message.content);
+                const md = inhalt.current?.querySelector(".md-body");
+                void kopiereMitFormat(message.content, md ? elementZuHtml(md) : "");
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1200);
               }}

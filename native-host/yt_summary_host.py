@@ -176,7 +176,7 @@ def fetch_subtitles(video_id: str, language: str | None, workdir: Path) -> dict[
         # yt-dlp meldet den Grund oft nur auf stderr; der gehoert in die Fehlermeldung.
         detail = (res.stderr or res.stdout or "").strip()[-400:]
         raise HostError(
-            "Fuer dieses Video liefert auch yt-dlp keine Untertitel."
+            "Für dieses Video liefert auch yt-dlp keine Untertitel."
             + (f"\n{detail}" if detail else "")
         )
 
@@ -372,7 +372,7 @@ def transcribe_parakeet_mlx(audio: Path, workdir: Path) -> dict[str, Any]:
             "parakeet-mlx wurde nicht gefunden. Installation: uv tool install parakeet-mlx -U"
         )
 
-    progress("transcribe", "Lokale Transkription laeuft …")
+    progress("transcribe", "Lokale Transkription läuft …")
     res = run([cli, str(audio), "--output-dir", str(workdir),
                "--output-format", "json", "--output-template", "out"],
               cwd=str(workdir))
@@ -430,7 +430,7 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
     # Die ID landet in einer URL und in einer Kommandozeile. Ein strenger Filter
     # ist hier billiger als jedes Escaping weiter unten.
     if not VIDEO_ID.match(video_id):
-        raise HostError(f"Ungueltige Video-ID: {video_id!r}")
+        raise HostError(f"Ungültige Video-ID: {video_id!r}")
 
     route = str(msg.get("route", "parakeet-mlx"))
     if route not in STT_MODELS and route not in ("parakeet-mlx", "subtitles"):
@@ -438,7 +438,7 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
 
     api_key = msg.get("apiKey") or ""
     if route in STT_MODELS and not api_key:
-        raise HostError("Fuer diese Route wird ein OpenRouter-API-Key benoetigt.")
+        raise HostError("Für diese Route wird ein OpenRouter-Schlüssel gebraucht.")
 
     with tempfile.TemporaryDirectory(prefix="yt-summary-") as tmp:
         workdir = Path(tmp)

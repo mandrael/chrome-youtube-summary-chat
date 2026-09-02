@@ -11,7 +11,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { formatTs, transcriptToText, tsToSeconds, TS_PATTERN } from "../lib/timestamps.ts";
+import {
+  formatTs,
+  transcriptToText,
+  tsToSeconds,
+  TS_GROUP_PATTERN,
+  TS_PATTERN,
+  TS_SINGLE,
+} from "../lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
 import { toTranscript } from "../lib/fallback.ts";
@@ -225,6 +232,24 @@ check("Kein React-Hook hinter dem Lade-Guard der Options-Seite", () => {
     false,
     "Hook steht hinter dem frühen Return",
   );
+});
+
+check("TS_GROUP_PATTERN fasst mehrere Zeiten in einer Klammer", () => {
+  // Genau das kam aus dem Modell und blieb stummer Text: „[18:46, 21:03, 34:44]".
+  const text = "Nacharbeit nötig [18:46, 21:03, 34:44] und einzeln [01:02:03].";
+  TS_GROUP_PATTERN.lastIndex = 0;
+  const treffer = [...text.matchAll(TS_GROUP_PATTERN)].map((m) => m[1]);
+  assert.deepEqual(treffer, ["18:46, 21:03, 34:44", "01:02:03"]);
+
+  TS_SINGLE.lastIndex = 0;
+  const zeiten = [...(treffer[0] ?? "").matchAll(TS_SINGLE)].map((m) =>
+    tsToSeconds(m[1], m[2], m[3]),
+  );
+  assert.deepEqual(zeiten, [18 * 60 + 46, 21 * 60 + 3, 34 * 60 + 44]);
+
+  // Zahlen ohne Klammern bleiben in Ruhe.
+  TS_GROUP_PATTERN.lastIndex = 0;
+  assert.equal(TS_GROUP_PATTERN.test("Preise 3,55 bis 11,587 Dollar"), false);
 });
 
 console.log(`\n${checks} Prüfungen bestanden.`);

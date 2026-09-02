@@ -17,6 +17,17 @@ export function formatTs(seconds: number, withHours: boolean): string {
  */
 export const TS_PATTERN = /\[(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\]/g;
 
+/**
+ * Eine Klammer mit mehreren Zeiten: „[18:46, 21:03, 34:44]“. Das Modell belegt damit
+ * eine Aussage, die an mehreren Stellen fällt – bisher blieb so eine Gruppe stummer
+ * Text, weil das Einzelmuster am ersten Komma abbrach.
+ */
+export const TS_GROUP_PATTERN =
+  /\[(\d{1,2}:[0-5]\d(?::[0-5]\d)?(?:\s*,\s*\d{1,2}:[0-5]\d(?::[0-5]\d)?)*)\]/g;
+
+/** Die einzelnen Zeiten aus einer Gruppe, ohne Klammern. */
+export const TS_SINGLE = /(\d{1,2}):([0-5]\d)(?::([0-5]\d))?/g;
+
 /** Wandelt einen Treffer von TS_PATTERN in Sekunden. Gibt null bei Unsinn zurück. */
 export function tsToSeconds(
   a: string | undefined,

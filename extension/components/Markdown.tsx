@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { TS_PATTERN, tsToSeconds } from "@/lib/timestamps";
+import { TS_GROUP_PATTERN, TS_SINGLE, tsToSeconds } from "@/lib/timestamps";
 import { cn } from "@/lib/utils";
 
 /* Minimal-Typen für den hast-Baum – ein Paket dafür wäre hier Ballast. */
@@ -50,26 +50,46 @@ function walk(node: HNode): void {
 
 /** null, wenn der Text keinen Zeitstempel enthält – dann bleibt der Knoten unangetastet. */
 function splitTimestamps(text: string): HNode[] | null {
-  TS_PATTERN.lastIndex = 0;
+  TS_GROUP_PATTERN.lastIndex = 0;
   const out: HNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
 
-  while ((m = TS_PATTERN.exec(text)) !== null) {
-    const seconds = tsToSeconds(m[1], m[2], m[3]);
-    if (seconds === null) continue;
+  while ((m = TS_GROUP_PATTERN.exec(text)) !== null) {
+    const knoepfe = zeitKnoepfe(m[1] ?? "");
+    if (!knoepfe.length) continue;
     if (m.index > last) out.push({ type: "text", value: text.slice(last, m.index) });
-    out.push({
-      type: "element",
-      tagName: "button",
-      properties: { dataTs: String(seconds), type: "button" },
-      children: [{ type: "text", value: m[0] }],
-    });
+    // Die Klammern bleiben Text, jede Zeit darin wird ein eigener Knopf.
+    out.push({ type: "text", value: "[" });
+    out.push(...knoepfe);
+    out.push({ type: "text", value: "]" });
     last = m.index + m[0].length;
   }
 
   if (!out.length) return null;
   if (last < text.length) out.push({ type: "text", value: text.slice(last) });
+  return out;
+}
+
+/** Aus „18:46, 21:03“ werden zwei Knöpfe mit dem Komma dazwischen. */
+function zeitKnoepfe(inhalt: string): HNode[] {
+  TS_SINGLE.lastIndex = 0;
+  const out: HNode[] = [];
+  let last = 0;
+  let t: RegExpExecArray | null;
+  while ((t = TS_SINGLE.exec(inhalt)) !== null) {
+    const seconds = tsToSeconds(t[1], t[2], t[3]);
+    if (seconds === null) continue;
+    if (t.index > last) out.push({ type: "text", value: inhalt.slice(last, t.index) });
+    out.push({
+      type: "element",
+      tagName: "button",
+      properties: { dataTs: String(seconds), type: "button" },
+      children: [{ type: "text", value: t[0] }],
+    });
+    last = t.index + t[0].length;
+  }
+  if (last < inhalt.length) out.push({ type: "text", value: inhalt.slice(last) });
   return out;
 }
 

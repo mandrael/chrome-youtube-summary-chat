@@ -108,6 +108,12 @@ weggelassen.
 
 ## Sprache
 
-Doku, UI-Texte und Kommentare auf Deutsch mit echten Umlauten. Ausnahme: der
-Native-Host-Quelltext kommt ohne Umlaute aus, weil er in Umgebungen mit ungewisser
-Zeichensatz-Einstellung läuft. Technische Begriffe im Original.
+Doku, UI-Texte und Kommentare auf Deutsch mit echten Umlauten. Technische Begriffe im
+Original.
+
+**Auch im Native-Host gilt das für jeden Text, den der Nutzer zu sehen bekommt** – die
+Meldungen aus `progress()` und `HostError` landen in der Sidebar. Sie sind sicher, weil
+`json.dumps` sie standardmässig nach `\uXXXX` escapet und die Nachricht als reines ASCII
+über Native Messaging geht; keine Konsolen-Kodierung kann daran etwas verderben. Ohne
+Umlaute bleiben nur die Ausgaben, die der Host selbst auf ein Terminal schreibt
+(`selfcheck.py`, Logzeilen) – dort ist die Zeichensatz-Einstellung tatsächlich ungewiss.

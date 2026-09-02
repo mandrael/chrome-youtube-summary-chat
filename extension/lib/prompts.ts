@@ -42,6 +42,9 @@ Zeitstempel:
   nachprüfen oder hinspringen will – hinter einer Zahl, einem Zitat, einer
   Demonstration. Format [mm:ss], bei Videos über einer Stunde [hh:mm:ss].
 - Wie viele es sind und ob überhaupt, sagt die Anfrage.
+- Eine Marke in der ersten Minute belegt nichts: dort beginnt der Zuschauer ohnehin.
+  Für eine Aussage, die nur am Anfang fällt, steht keine Marke. Mehrere Stellen zur
+  selben Aussage kommen in eine Klammer: [18:46, 21:03, 34:44].
 - Liegen im Transkript keine Zeitstempel vor, lass sie weg und erfinde
   keine. Dass keine vorliegen, sagt die Oberfläche dem Nutzer selbst.
 

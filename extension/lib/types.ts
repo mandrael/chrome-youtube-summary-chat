@@ -109,7 +109,6 @@ export type AnswerLang = "auto" | "de" | "en";
 export interface Settings {
   apiKey: string;
   model: string;
-  customModel: string;
   reasoning: ReasoningEffort;
   systemPrompt: string;
   answerLang: AnswerLang;
@@ -126,6 +125,8 @@ export interface Settings {
   columnWidth: number;
   /** Wie das Transkript gelesen wird: Zeile je Untertitel oder Fliesstext in Absätzen. */
   transcriptMode: "cues" | "text" | "read";
+  /** Wörterbuch als Text, eine Zeile je Eintrag. Siehe parseWoerterbuch. */
+  dictionary: string;
 }
 
 /**

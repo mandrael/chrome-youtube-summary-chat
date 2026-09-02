@@ -2,12 +2,88 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Fazit-Prompt schärfen**: unsichere Angaben weglassen statt in Klammern raten
-   (gemessen am Video `9D-xzper0wQ`, siehe unten).
-2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-3. Optional: Store-Build einreichen.
-4. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+1. **Store-Audioweg bauen** – entschieden, noch nicht gebaut: `captureStream()` im
+   Content-Script, Faktor 4 als Standard, Stücke an OpenRouter. Architektur und
+   Fallstricke stehen unten unter „Store-Audioweg".
+2. **Michaels Vivaldi-Profil**: der `systemPrompt` ist auf einem alten Stand eingefroren.
+   Ein Klick auf „Auf Standard zurücksetzen" in den Optionen genügt; von aussen ist die
+   LevelDB des laufenden Vivaldi nicht sicher beschreibbar.
+3. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+4. Optional: Store-Build einreichen.
+5. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+
+## Stand 02.09.2026 (siebzehnter Durchgang) – Modellauswahl, acht Schnellbefehle, Wörterbuch
+
+### Empfohlene Modelle stehen oben, das Slug-Feld ist weg
+
+`EMPFEHLUNG` in [lib/openrouter.ts](extension/lib/openrouter.ts) führt elf Modelle mit
+einer Marke (Standard, Sweet Spot, günstig, schnell, schlau); sie bilden die erste Gruppe
+des Auswahlfelds, darunter folgt die vollständige Liste nach Anbietern. Die Gruppe
+„Zuletzt erschienen" ist entfallen, das Feld „Eigener Modell-Slug" ebenfalls – wer ein
+seltenes Modell will, findet es über das Filterfeld.
+
+Am 02.09.2026 gegen die Live-Liste geprüft: alle elf Slugs existieren und überstehen den
+Filter (Kontext ≥ 128k, Ausgabe nur Text). Preise je Anfrage, gerechnet mit 30.000 Token
+Eingabe und 2.000 Ausgabe: 0,0012 $ (Qwen3.7 Flash) bis 0,2000 $ (Claude Opus 5).
+Standardmodell ist jetzt `openai/gpt-5.6-luna` (0,0084 $) statt Gemini 3.5 Flash Lite.
+
+Nicht aufgenommen, weil sie je Anfrage das Hundert- bis Siebenhundertfache kosten, ohne
+hier besser zu antworten: `openai/o1-pro` (5,70 $), `openai/gpt-5.4-pro` und
+`gpt-5.5-pro` (je 1,26 $), `openai/o3-pro` (0,76 $), `anthropic/claude-fable-5.1`
+(0,40 $), `openai/gpt-4-turbo` (0,36 $).
+
+Preise unter einem Cent stehen jetzt in Cent (`0,84 ¢`) statt als „< 0,01 $" – acht der
+elf Empfehlungen lagen sonst preisgleich da.
+
+### Acht Schnellbefehle in zwei Reihen
+
+```
+Fazit · Kernaussagen · Ausführlich · Kapitel      das ganze Video, in vier Formen
+Fakten · Behauptungen · Anleitung · Pro/Contra    ein Ausschnitt für einen Zweck
+```
+
+Neu sind **Behauptungen** (bis zu 15 Behauptungen, je mit Belegart: Gemessen, Quelle,
+Gezeigt, Erfahrung, Unbelegt – der Vorlauf zur Weltkugel), **Anleitung** (nummerierte
+Schritte mit Befehlen, Werten und Zeitstempel) und **Pro/Contra** (zwei Listen, dazu
+„Für wen", „Alternativen", „Nicht geprüft"). Prompts von Fable, deutsch und englisch.
+
+Gemessen im Browser: zwei Reihen à vier Knöpfen, je 31 px hoch, nötige Breite 339 und
+366 px – bei der Standardbreite von 500 px bricht nichts um. Ausgeblendet wird kein
+Knopf: passt er nicht zum Video, sagt sein Prompt das in einem Satz.
+
+### Wörterbuch gegen verhörte Eigennamen
+
+In den Optionen ein Textfeld, eine Zeile je Eintrag:
+`Cloud Code => Claude Code` ersetzt, `DiktaGo` setzt nur die Schreibweise durch, `#`
+leitet einen Kommentar ein. Gespeichert wird der Text, nicht die geparste Liste – so
+bleiben Reihenfolge und Kommentare erhalten.
+
+Angewendet wird auf **jedes** Transkript, egal woher es kommt, und zwar zeilenweise beim
+Übernehmen: dadurch steht die richtige Schreibweise auch im Export, im Prompt und in der
+Übersetzung, und kein Begriff wird über eine Zeilengrenze hinweg ersetzt. Zusätzlich
+nennt der System-Prompt die Begriffe, die im Transkript tatsächlich vorkommen.
+
+Übernommen sind nur DiktaGos Stufen 1 und 2. Die Fuzzy-Stufen (ein vertauschter
+Buchstabe, Kölner Phonetik) brauchen das Realwort-Veto über NSSpellChecker; im Browser
+gibt es keine Rechtschreibprüfung als API. Ohne dieses Veto wurde in DiktaGos eigener
+Messung an 25.193 Wörtern aus „Kind" ein „Contao" und aus „Bild" ein „Build".
+
+Die kanonische Schreibweise ist am Wortanfang verankert, nicht am Wortende – sonst
+scheitert sie an jeder deutschen Endung. Am echten Transkript geprüft: aus
+„Neuroenergetische" wird „NeuroEnergetische", die Endung bleibt stehen. Bei den
+Ersetzungspaaren bleibt die Verankerung an beiden Enden, sonst griffe „the" in „theater".
+
+### Store-Audioweg (entschieden, noch nicht gebaut)
+
+- `video.captureStream()` im Content-Script, **nicht** `chrome.tabCapture`: letzteres
+  verlangt eine Extension-Invocation per Toolbar-Klick, ein Klick in der Sidebar zählt
+  nicht.
+- Faktor 4 beim Abspielen (`preservesPitch = false`), das Ergebnis ist rückrechenbar.
+  Faktor 8 ist gemessen ausgeschieden (siehe [docs/messungen.md](docs/messungen.md)).
+- Transkribiert wird über OpenRouter, nicht über Whisper-WASM.
+- Vier Fälle abzufangen: `ratechange` durch den Nutzer, Werbung (`.ad-showing`),
+  SPA-Navigation, und Widevine-Stille bei geschützten Inhalten.
 
 ## Stand 02.09.2026 (nachts, sechzehnter Durchgang) – drei Lesestufen
 

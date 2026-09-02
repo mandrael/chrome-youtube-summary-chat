@@ -78,7 +78,12 @@ export function korrigiere(text: string, eintraege: Woerterbucheintrag[]): strin
     // Ein Muster, das den Begriff auch mit Leerzeichen oder Bindestrichen dazwischen
     // findet: aus „DiktaGo" wird d[\s-]*i[\s-]*k…
     const teile = [...begriff.replace(/[\s\-_]/g, "")].map((c) => escape(c));
-    const muster = new RegExp(`\\b${teile.join("[\\s\\-]?")}\\b`, "gi");
+    // Nur am Wortanfang verankert, nicht am Ende: „Neuroenergetische“ soll zu
+    // „NeuroEnergetische“ werden, „DiktaGos“ zu „DiktaGos“. Das Suffix ist nicht Teil
+    // des Treffers und bleibt deshalb stehen. Bei den Ersetzungspaaren oben wäre das
+    // gefährlich – dort würde „the“ in „theater“ greifen –, hier nicht: geändert wird
+    // nur die Schreibung derselben Buchstaben.
+    const muster = new RegExp(`\\b${teile.join("[\\s\\-]?")}`, "gi");
     out = out.replace(muster, (treffer) => (presse(treffer) === gepresst ? begriff : treffer));
   }
 
@@ -111,4 +116,41 @@ export function schreibweisenHinweis(
   }
   if (!treffer.length) return "";
   return `\n\nSchreibe diese Namen exakt so:\n${treffer.map((w) => `- ${w}`).join("\n")}`;
+}
+
+/**
+ * Das Wörterbuch steht in den Einstellungen als Text, eine Zeile je Eintrag:
+ *
+ *     Cloud Code => Claude Code     Ersetzung
+ *     DiktaGo                       nur die Schreibweise
+ *     # Zeile mit Raute             Kommentar
+ *
+ * Gespeichert wird der Text, nicht die geparste Liste: dann bleiben Reihenfolge,
+ * Kommentare und Tippfehler des Nutzers erhalten, und die Einstellung lässt sich
+ * kopieren wie jede andere.
+ */
+export function parseWoerterbuch(text: string): Woerterbucheintrag[] {
+  const out: Woerterbucheintrag[] = [];
+  for (const zeile of text.split("\n")) {
+    const z = zeile.trim();
+    if (!z || z.startsWith("#")) continue;
+    const [links, rechts] = z.split(/\s*(?:=>|→)\s*/, 2);
+    const begriff = links?.trim();
+    if (!begriff) continue;
+    out.push(rechts?.trim() ? { begriff, ersatz: rechts.trim() } : { begriff });
+  }
+  return out;
+}
+
+/**
+ * Wendet das Wörterbuch auf jede Untertitelzeile an. Zeilenweise statt auf den
+ * Fliesstext, weil ein Begriff sonst über eine Zeilengrenze hinweg gefunden würde und
+ * die Ersetzung die Zuordnung zum Zeitstempel zerstörte.
+ */
+export function korrigiereTranskript<T extends { cues: { text: string }[] }>(
+  tr: T,
+  eintraege: Woerterbucheintrag[],
+): T {
+  if (!eintraege.length) return tr;
+  return { ...tr, cues: tr.cues.map((c) => ({ ...c, text: korrigiere(c.text, eintraege) })) };
 }

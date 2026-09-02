@@ -43,6 +43,7 @@ import { transcriptToText } from "@/lib/timestamps";
 import { translateCuesViaOpenRouter } from "@/lib/translate-cues";
 import { NoCaptionsError } from "@/lib/transcript";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
+import { korrigiereTranskript, parseWoerterbuch, schreibweisenHinweis } from "@/lib/korrektur";
 import {
   availability as localAvailability,
   baseLang,
@@ -111,6 +112,20 @@ export function Sidebar({
   const [tab, setTab] = React.useState<Tab>("chat");
 
   const [transcript, setTranscript] = React.useState<Transcript | null>(null);
+
+  const woerterbuch = React.useMemo(
+    () => parseWoerterbuch(settings?.dictionary ?? ""),
+    [settings?.dictionary],
+  );
+  /*
+   * Jedes Transkript geht durch das Wörterbuch, egal woher es kommt – YouTubes
+   * automatische Untertitel verhören Eigennamen genauso wie Parakeet. Korrigiert wird
+   * einmal beim Übernehmen, nicht bei jeder Anzeige: so steht die richtige Schreibweise
+   * auch im Export, im Prompt und in der Übersetzung.
+   */
+  function uebernimmTranskript(tr: Transcript | null) {
+    setTranscript(tr ? korrigiereTranskript(tr, woerterbuch) : null);
+  }
   const [tracks, setTracks] = React.useState<CaptionTrack[]>([]);
   const [activeTrack, setActiveTrack] = React.useState<CaptionTrack | null>(null);
   const [loadState, setLoadState] = React.useState<LoadState>("loading");
@@ -176,7 +191,7 @@ export function Sidebar({
     let cancelled = false;
 
     setLoadState("loading");
-    setTranscript(null);
+    uebernimmTranskript(null);
     setTracks([]);
     setActiveTrack(null);
     setFallbackState(null);
@@ -189,7 +204,7 @@ export function Sidebar({
       try {
         const res = await loadTranscript(videoId, settings.captionLang);
         if (cancelled) return;
-        setTranscript(res.transcript);
+        uebernimmTranskript(res.transcript);
         setTracks(res.tracks);
         setActiveTrack(res.active ?? null);
         setLoadState("ready");
@@ -253,9 +268,7 @@ export function Sidebar({
 
   /* ---- Senden ---- */
 
-  const activeModel = settings?.customModel?.trim()
-    ? settings.customModel.trim()
-    : (settings?.model ?? "");
+  const activeModel = settings?.model ?? "";
 
   const modelInfo = models.find((m) => m.id === activeModel);
 
@@ -277,6 +290,11 @@ export function Sidebar({
           : "Note: this transcript has no timestamps. Do not give any and do not invent any.",
       );
     }
+
+    // Nur die Begriffe, die im Transkript vorkommen – der Prompt bleibt klein, egal wie
+    // gross das Wörterbuch ist.
+    const hinweis = schreibweisenHinweis(transcriptToText(tr), woerterbuch);
+    if (hinweis) parts.push(hinweis.trim());
 
     parts.push(
       "--- TRANSKRIPT ---\n" +
@@ -381,6 +399,9 @@ export function Sidebar({
     summary_long: "presetLong",
     summary_facts: "presetFacts",
     chapters: "presetChapters",
+    claims: "presetClaims",
+    howto: "presetHowto",
+    pro_contra: "presetProContra",
   } as const;
 
   /**
@@ -599,7 +620,7 @@ export function Sidebar({
     );
     job.promise
       .then((tr) => {
-        setTranscript(tr);
+        uebernimmTranskript(tr);
         setLoadState("ready");
         setFallbackState(null);
       })
@@ -618,7 +639,7 @@ export function Sidebar({
     setLoadError("");
     try {
       const res = await loadTranscript(videoId, settings.captionLang);
-      setTranscript(res.transcript);
+      uebernimmTranskript(res.transcript);
       setTracks(res.tracks);
       setActiveTrack(res.active ?? null);
       setLoadState("ready");
@@ -641,7 +662,7 @@ export function Sidebar({
       const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
       const res = isPanelTrack(track) ? await switchPanelTrack(track) : await loadTrack(track);
       if (!res) throw new Error("Die Spur liess sich nicht laden.");
-      setTranscript(res.transcript);
+      uebernimmTranskript(res.transcript);
       setActiveTrack(res.active ?? track);
       setLoadState("ready");
     } catch (e) {
@@ -756,23 +777,44 @@ export function Sidebar({
         <>
           {presetsVisible && (
           <div className="border-b border-border px-2 py-2">
-            <div className="flex flex-wrap items-center gap-1">
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetShortHint")} onClick={() => preset("summary_short")}>
-                {t("presetShort")}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetChaptersHint")} onClick={() => preset("chapters")}>
-                {t("presetChapters")}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetMediumHint")} onClick={() => preset("summary_medium")}>
-                {t("presetMedium")}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetFactsHint")} onClick={() => preset("summary_facts")}>
-                {t("presetFacts")}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetLongHint")} onClick={() => preset("summary_long")}>
-                {t("presetLong")}
-              </Button>
-            </div>
+            {/*
+              Zwei Reihen mit je einem Zweck: oben das ganze Video in vier Formen, von
+              kurz nach lang, dann die Zeitachse. Unten der Ausschnitt für einen Zweck,
+              nach Reichweite geordnet – Fakten passen auf jedes Video, Anleitung und
+              Pro/Contra nur auf ihren Typ. Eine einzige Reihe aus acht Knöpfen bricht
+              dreimal um und wird nicht mehr gelesen; mehr als acht bräuchte ein Menü,
+              und das wäre das Zeichen, wieder zu streichen. Ausgeblendet wird nichts:
+              passt ein Knopf nicht zum Video, sagt sein Prompt das in einem Satz.
+            */}
+            {[
+              [
+                ["summary_short", "presetShort", "presetShortHint"],
+                ["summary_medium", "presetMedium", "presetMediumHint"],
+                ["summary_long", "presetLong", "presetLongHint"],
+                ["chapters", "presetChapters", "presetChaptersHint"],
+              ],
+              [
+                ["summary_facts", "presetFacts", "presetFactsHint"],
+                ["claims", "presetClaims", "presetClaimsHint"],
+                ["howto", "presetHowto", "presetHowtoHint"],
+                ["pro_contra", "presetProContra", "presetProContraHint"],
+              ],
+            ].map((reihe, n) => (
+              <div key={n} className={`flex flex-wrap items-center gap-1${n ? " mt-1" : ""}`}>
+                {reihe.map(([key, label, hinweis]) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant="secondary"
+                    disabled={!transcript || streaming}
+                    title={t(hinweis as Parameters<typeof t>[0])}
+                    onClick={() => preset(key as keyof (typeof PRESETS)["de"])}
+                  >
+                    {t(label as Parameters<typeof t>[0])}
+                  </Button>
+                ))}
+              </div>
+            ))}
             {/*
               Der Zusatz zum Prompt gehört zu den Schnellbefehlen: er ergänzt einen
               Knopfdruck. Unten stand er dauerhaft im Weg, obwohl er selten gebraucht wird.

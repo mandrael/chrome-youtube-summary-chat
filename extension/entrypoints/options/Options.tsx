@@ -15,12 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ask } from "@/lib/chat-client";
-import {
-  FALLBACK_MODELS,
-  isValidSlug,
-  ONE_M_CONTEXT,
-} from "@/lib/openrouter";
+import { EMPFEHLUNG, FALLBACK_MODELS, ONE_M_CONTEXT } from "@/lib/openrouter";
 import { clearCache, DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
+import { parseWoerterbuch } from "@/lib/korrektur";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/prompts";
 import type {
   KeyStatus,
@@ -69,6 +66,7 @@ export function Options() {
   >("unbekannt");
   const [lokalLaeuft, setLokalLaeuft] = React.useState<string | null>(null);
   const [modellSuche, setModellSuche] = React.useState("");
+  const filterRef = React.useRef<HTMLInputElement>(null);
 
   const zielCode = React.useMemo(
     () => ZIELSPRACHEN.find(([n]) => n === s?.translationTarget)?.[1] ?? "de",
@@ -92,14 +90,12 @@ export function Options() {
   }, [models, modellSuche]);
 
   /*
-   * Zwei Zugänge zur selben Liste, weil es zwei Arten von Suche gibt: „was ist neu"
-   * beantwortet die Gruppe oben, „was hat Anbieter X" die Gruppen darunter. Die
-   * Anbietergruppen stehen in der Reihenfolge ihres jeweils neuesten Modells, damit
-   * auch dort das Aktuelle vorne liegt. Der Anbieter steht im Namen vor dem
-   * Doppelpunkt – das einzige Feld, aus dem er sich ohne gepflegte Liste ergibt.
+   * Unter der Empfehlung die vollständige Liste nach Anbietern, in der Reihenfolge
+   * ihres jeweils neuesten Modells – so liegt auch dort das Aktuelle vorne. Der
+   * Anbieter steht im Namen vor dem Doppelpunkt, dem einzigen Feld, aus dem er sich
+   * ohne gepflegte Liste ergibt.
    */
   const gruppen = React.useMemo(() => {
-    const neueste = gefilterteModelle.slice(0, 8);
     const nachAnbieter = new Map<string, ModelInfo[]>();
     for (const m of gefilterteModelle) {
       const anbieter = m.name.includes(":") ? m.name.split(":")[0]!.trim() : "Weitere";
@@ -116,8 +112,23 @@ export function Options() {
       else klein.push(...liste);
     }
     if (klein.length) gross.push(["Weitere", klein]);
-    return { neueste, anbieter: gross };
+    return gross;
   }, [gefilterteModelle]);
+
+  /*
+   * Die Empfehlung steht immer oben und ist bewusst nicht gefiltert: sie ist der
+   * Einstieg für alle, die kein bestimmtes Modell suchen. Wer filtert, sucht gezielt
+   * und bekommt nur die Anbietergruppen.
+   */
+  const eintraege = React.useMemo(() => parseWoerterbuch(s?.dictionary ?? ""), [s?.dictionary]);
+
+  const empfohlen = React.useMemo(() => {
+    const liste = models ?? FALLBACK_MODELS;
+    return EMPFEHLUNG.flatMap(([id, marke]) => {
+      const m = liste.find((k) => k.id === id);
+      return m ? [[m, marke] as const] : [];
+    });
+  }, [models]);
 
   React.useEffect(() => {
     void getSettings().then(setS);
@@ -183,7 +194,6 @@ export function Options() {
   const selected =
     models?.find((m) => m.id === s.model) ??
     FALLBACK_MODELS.find((m) => m.id === s.model);
-  const customValid = !s.customModel.trim() || isValidSlug(s.customModel);
 
   /** „Zurücksetzen" erscheint nur, wo tatsächlich vom Standard abgewichen wird. */
   const reset = <K extends keyof Settings>(feld: K) =>
@@ -252,6 +262,13 @@ export function Options() {
         >
           <Select
             value={s.model}
+            // Radix legt den Fokus beim Öffnen auf die Liste – dann tippt man ins Leere
+            // statt ins Filterfeld. Einen Öffnen-Hook gibt es beim Select nicht, also
+            // nach dem Rendern selbst fokussieren.
+            onOpenChange={(offen) => {
+              if (offen) setTimeout(() => filterRef.current?.focus(), 40);
+              else setModellSuche("");
+            }}
             onValueChange={(v) =>
               patch({
                 model: v,
@@ -285,7 +302,7 @@ export function Options() {
               header={
                 <div className="border-b border-border bg-card px-2 py-1.5">
                   <Input
-                    autoFocus
+                    ref={filterRef}
                     value={modellSuche}
                     placeholder="Filtern – Name oder Slug"
                     onChange={(e) => setModellSuche(e.target.value)}
@@ -301,22 +318,21 @@ export function Options() {
                 </p>
               ) : (
                 <>
-                  {/* Nur ohne Filter: wer tippt, sucht gezielt und will kein Modell doppelt sehen. */}
-                  {!modellSuche.trim() && (
-                  <SelectGroup>
-                    <SelectLabel>Zuletzt erschienen</SelectLabel>
-                    {gruppen.neueste.map((m) => (
-                      <SelectItem
-                        key={`neu-${m.id}`}
-                        value={m.id}
-                        textValue={`${m.name} ${m.id}`}
-                      >
-                        <ModelRow m={m} />
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
+                  {!modellSuche.trim() && empfohlen.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Empfohlen</SelectLabel>
+                      {empfohlen.map(([m, marke]) => (
+                        <SelectItem
+                          key={`tipp-${m.id}`}
+                          value={m.id}
+                          textValue={`${m.name} ${m.id}`}
+                        >
+                          <ModelRow m={m} marke={marke} />
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   )}
-                  {gruppen.anbieter.map(([anbieter, liste]) => (
+                  {gruppen.map(([anbieter, liste]) => (
                     <SelectGroup key={anbieter}>
                       <SelectLabel>{anbieter}</SelectLabel>
                       {liste.map((m) => (
@@ -330,25 +346,6 @@ export function Options() {
               )}
             </SelectContent>
           </Select>
-        </Field>
-
-        <Field
-          label="Eigener Modell-Slug"
-          onReset={reset("customModel")}
-          hint="Überschreibt die Auswahl oben. Läuft ebenfalls über OpenRouter, deshalb ist das Provider-Präfix Pflicht."
-        >
-          <Input
-            value={s.customModel}
-            placeholder="z. B. anthropic/claude-sonnet-4.5"
-            onChange={(e) => patch({ customModel: e.target.value })}
-            className={customValid ? "" : "border-destructive"}
-          />
-          {!customValid && (
-            <p className="mt-1 text-xs text-destructive">
-              Ein Slug ohne Provider-Präfix wird von OpenRouter nicht aufgelöst. Format:
-              anbieter/modell
-            </p>
-          )}
         </Field>
 
         <Field
@@ -623,6 +620,42 @@ export function Options() {
         </Button>
       </Section>
 
+      {/* ---------- Wörterbuch ---------- */}
+      <Section title="Wörterbuch">
+        <p className="mb-2 text-sm text-muted-foreground">
+          Eigennamen, die die automatische Untertitelung regelmässig verhört. Wird auf
+          jedes Transkript angewendet, bevor es angezeigt, exportiert oder an das Modell
+          geschickt wird – eine Zeile je Eintrag:
+        </p>
+        <ul className="mb-2 space-y-0.5 text-sm text-muted-foreground">
+          <li>
+            <code className="font-mono text-xs">Cloud Code =&gt; Claude Code</code> –
+            ersetzt das Linke durch das Rechte.
+          </li>
+          <li>
+            <code className="font-mono text-xs">DiktaGo</code> – setzt nur diese
+            Schreibweise durch, auch über Leerzeichen und Bindestriche hinweg („Dikta Go").
+          </li>
+          <li>
+            <code className="font-mono text-xs"># …</code> – Kommentar.
+          </li>
+        </ul>
+        <Textarea
+          value={s.dictionary}
+          rows={8}
+          placeholder={"Cloud Code => Claude Code\nDiktaGo\nOpenRouter"}
+          onChange={(e) => patch({ dictionary: e.target.value })}
+          className="font-mono text-xs leading-relaxed"
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          {eintraege.length === 0
+            ? "Kein Eintrag – das Transkript bleibt unverändert."
+            : `${eintraege.length} ${eintraege.length === 1 ? "Eintrag" : "Einträge"}: ` +
+              `${eintraege.filter((e) => e.ersatz).length} Ersetzung(en), ` +
+              `${eintraege.filter((e) => !e.ersatz).length} Schreibweise(n).`}
+        </p>
+      </Section>
+
       {/* ---------- Anzeige ---------- */}
       <Section title="Anzeige">
         <Field
@@ -759,11 +792,14 @@ export function preisProAnfrage(m: ModelInfo): number | null {
 
 function formatPreis(usd: number): string {
   if (usd === 0) return "gratis";
-  if (usd < 0.01) return "< 0,01 $";
+  // Unter einem Cent in Cent, sonst stünde bei 0,0012 $ und 0,0084 $ dasselbe „< 0,01 $"
+  // – gerade in der Empfehlung liegen fast alle Werte dort. Zwei Nachkommastellen, weil
+  // drei sich als Tausender lesen lassen.
+  if (usd < 0.01) return `${(usd * 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} ¢`;
   return `${usd.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 }
 
-function ModelRow({ m }: { m: ModelInfo }) {
+function ModelRow({ m, marke }: { m: ModelInfo; marke?: string }) {
   // Zwei Zeilen: oben, was man sucht (Name, Kontextgrösse, fehlendes Reasoning), unten
   // die Kennung mit dem Preis je Anfrage dahinter. Der Auslöser zeigt nur die obere.
   const preis = preisProAnfrage(m);
@@ -772,6 +808,11 @@ function ModelRow({ m }: { m: ModelInfo }) {
       <span className="flex items-center gap-1.5">
         {m.name}
         <KontextMarke n={m.contextLength} />
+        {marke && (
+          <span className="shrink-0 rounded bg-accent px-1 text-xs text-accent-foreground">
+            {marke}
+          </span>
+        )}
         {!m.supportsReasoning && (
           <span
             className="shrink-0 rounded border border-border px-1 text-xs text-muted-foreground"
@@ -788,7 +829,7 @@ function ModelRow({ m }: { m: ModelInfo }) {
             title={`Eingabe $${((m.pricePrompt ?? 0) * 1e6).toFixed(2)} / Ausgabe $${((m.priceCompletion ?? 0) * 1e6).toFixed(2)} je Mio. Token`}
           >
             {" "}
-            ({preis < 0.01 && preis > 0 ? "" : "≈ "}
+            ({preis > 0 ? "≈ " : ""}
             {formatPreis(preis)} je Anfrage)
           </span>
         )}

@@ -446,3 +446,47 @@ Gemessen an drei Videos:
 
 Die ganze Kette (Download, ffmpeg auf 16 kHz Mono, parakeet-mlx) an einem kurzen Video
 gegengeprüft: das Transkript kommt sauber heraus.
+
+## Chrome Web Store: Was mit dem Ton erlaubt ist (02.09.2026)
+
+Nachgelesen in den Programmrichtlinien, nicht vermutet:
+
+- **Download ist verboten.** Wörtlich untersagt ist, *„unauthorized access, download, or
+  streaming of copyrighted content or media"* zu ermöglichen oder zu erleichtern. Das
+  trifft den `yt-dlp`-Weg des full-Builds – er bleibt deshalb dort und kommt nie in den
+  Store-Build.
+- **Verarbeitung im Arbeitsspeicher ist erlaubt.** `chrome.tabCapture` und
+  `captureStream()` erzeugen keine Datei; der Ton wird gelesen, transkribiert und
+  verworfen.
+- **Ein Verweis auf die andere Fassung wäre ein Bann.** Auch ein Hinweistext, wo man die
+  Fassung mit Download bekommt, gilt als Erleichterung der Umgehung. Der Store-Build
+  erwähnt den full-Build nicht.
+
+## Parakeet läuft nur auf Apple Silicon (02.09.2026)
+
+`parakeet-mlx` setzt auf MLX auf und braucht damit einen Mac mit Apple Silicon. Windows
+und Intel-Macs haben ausschliesslich die OpenRouter-Routen; die ONNX-Route war schon
+vorher ausgeschieden, weil `achetronic/parakeet` nur Linux-Binaries veröffentlicht. Eine
+betriebssystemspezifische Ansteuerung bringt darüber hinaus nichts – MLX ist bereits die
+plattformspezifische Fassung.
+
+## Modellauswahl: Filterfeld, Klapprichtung, Nicht-Chat-Modelle (02.09.2026)
+
+Im Browser gemessen, nicht angenommen:
+
+- Nach dem Öffnen liegt der Fokus im Filterfeld (`document.activeElement` ist das Input
+  mit dem Platzhalter „Filtern – Name oder Slug").
+- Die Liste klappt nur nach unten: der Auslöser endet bei 415 px, die Liste beginnt bei
+  419 px. Beim Aufklappen nach oben lag die Kopfzeile mit dem Filterfeld ausserhalb des
+  sichtbaren Bereichs.
+- Nach dem Modalitätsfilter bleiben 278 bis 281 Modelle. Sieben fielen erst durch die
+  verschärfte Regel „Ausgabe **nur** Text" heraus: Bildgeneratoren (Ausgabe „image,
+  text"), `gpt-audio` und `gpt-audio-mini` (Ausgabe „text, audio"). `llama-guard-4-12b`
+  und `gpt-oss-safeguard-20b` geben zwar nur Text aus, liefern aber Sicherheitsurteile
+  statt Antworten – sie sind nur am Namen zu erkennen.
+
+## YouTube drosselt je Video, nicht je Werkzeug (02.09.2026)
+
+Derselbe Aufruf, zwei Videos: 15,19 MiB in 13 Sekunden bei `9D-xzper0wQ`, 34 KiB/s bei
+`M4Tw_3SmNXg`. Am lokalen Weg wurde nichts geändert – die Drosselung liegt bei YouTube
+und trifft einzelne Videos.

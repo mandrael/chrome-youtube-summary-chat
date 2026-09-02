@@ -32,6 +32,35 @@ const MIN_CONTEXT = 128_000;
 export const ONE_M_CONTEXT = 1_000_000;
 
 /**
+ * Kuratierte Auswahl, Stand 02.09.2026. Der zweite Wert ist die Marke in der Liste,
+ * die Reihenfolge hier ist die Reihenfolge dort.
+ *
+ * Massstab ist diese Aufgabe, nicht die Bestenliste: ein langes Transkript lesen,
+ * Fragen dazu beantworten, nichts erfinden. Denkmodelle wie o1-pro (5,70 $ je Anfrage)
+ * oder GPT-5.5 Pro (1,26 $) kosten hier das Hundert- bis Siebenhundertfache der
+ * Empfehlung, ohne besser zu antworten – sie stehen deshalb nicht oben, sind über den
+ * Filter aber weiter erreichbar. Ebenso fällt jede ältere Generation heraus, deren
+ * Nachfolger dasselbe kostet: Gemini 3.6 Flash und 3.7 Flash liegen beide bei
+ * 0,0300 $ mit gleichem Kontextfenster.
+ *
+ * Ein Eintrag, den OpenRouter nicht mehr führt, verschwindet von selbst – gerendert
+ * wird nur, was auch in der geladenen Liste steht.
+ */
+export const EMPFEHLUNG: [id: string, marke: string][] = [
+  ["openai/gpt-5.6-luna", "Standard"],
+  ["qwen/qwen3.7-plus", "Sweet Spot"],
+  ["google/gemini-3.7-flash", "Sweet Spot"],
+  ["openai/gpt-5-nano", "günstig"],
+  ["deepseek/deepseek-v4-flash", "günstig"],
+  ["qwen/qwen3.8-flash", "günstig"],
+  ["qwen/qwen3.7-flash", "schnell"],
+  ["google/gemini-3.5-flash-lite", "schnell"],
+  ["openai/gpt-5.6-sol", "schlau"],
+  ["anthropic/claude-sonnet-5", "schlau"],
+  ["anthropic/claude-opus-5", "schlau"],
+];
+
+/**
  * Rückfallliste, wenn /models nicht erreichbar ist. Ohne Preise – geraten wird hier
  * nichts, lieber eine Lücke in der Anzeige als eine falsche Zahl.
  */
@@ -79,7 +108,17 @@ export async function listModels(): Promise<ModelInfo[]> {
 
   const passend = data
     .filter((m) => (m.context_length ?? 0) >= MIN_CONTEXT)
-    .filter((m) => m.architecture?.output_modalities?.includes("text"));
+    // Ausgabe **nur** Text. „text" allein zu verlangen liess Bildgeneratoren durch
+    // (gemini-3.1-flash-image gibt „image, text" aus) und ebenso Sprachmodelle mit
+    // Tonausgabe (gpt-audio: „text, audio"). Für einen Transkript-Chat ist beides
+    // sinnlos.
+    .filter((m) => {
+      const aus = m.architecture?.output_modalities ?? [];
+      return aus.length === 1 && aus[0] === "text";
+    })
+    // Moderationsmodelle geben zwar Text aus, aber Sicherheitsurteile statt Antworten.
+    // Sie sind nur am Namen zu erkennen.
+    .filter((m) => !/guard|safeguard|moderation/i.test(m.id));
 
   // Dubletten raus, sonst steht dasselbe Modell drei- bis viermal in der Liste.
   // Gemessen am 02.09.2026: 378 passende Einträge, nach dieser Regel 283.

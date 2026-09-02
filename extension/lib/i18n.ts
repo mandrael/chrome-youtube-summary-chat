@@ -56,6 +56,15 @@ const de = {
   presetFactsHint: "Bis zu 20 nachprüfbare Zahlen, Namen und Daten, je mit Zeitstempel.",
   presetChapters: "Kapitel",
   presetChaptersHint: "Zum Springen: die Abschnitte des Videos mit Zeitstempel und einem Satz.",
+  presetClaims: "Behauptungen",
+  presetClaimsHint:
+    "Bis zu 15 Behauptungen, je mit dem, was sie belegt – oder „Unbelegt“.",
+  presetHowto: "Anleitung",
+  presetHowtoHint:
+    "Zum Nachmachen: Schritte in Reihenfolge, mit Befehlen, Werten und Zeitstempel.",
+  presetProContra: "Pro/Contra",
+  presetProContraHint:
+    "Zum Entscheiden: Argumente dafür und dagegen, für wen, Alternativen.",
   extraPrecedence: "Zusatz des Nutzers – gilt vor allem Obigen, wo er ihm widerspricht:",
   presetTranslate: "Übersetzen",
   tabChat: "Chat",
@@ -162,6 +171,12 @@ const en: Record<Keys, string> = {
   presetFactsHint: "Figures, names, dates and quotes as a list, one timestamp per item as evidence – no judgement.",
   presetChapters: "Chapters",
   presetChaptersHint: "For jumping: the sections of the video with timestamp and one sentence.",
+  presetClaims: "Claims",
+  presetClaimsHint: "Up to 15 claims, each with what backs it – or \"unsupported\".",
+  presetHowto: "How-to",
+  presetHowtoHint: "To follow along: the steps in order, with commands, values and timestamps.",
+  presetProContra: "Pros/cons",
+  presetProContraHint: "To decide: arguments for and against, who it suits, alternatives.",
   extraPrecedence: "User addition – takes precedence over the above wherever it conflicts:",
   presetTranslate: "Translate",
   tabChat: "Chat",

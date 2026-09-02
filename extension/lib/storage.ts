@@ -2,12 +2,13 @@ import { storage } from "wxt/utils/storage";
 import { DEFAULT_SYSTEM_PROMPT } from "./prompts";
 import type { Conversation, Settings, TranscriptTranslation } from "./types";
 
-export const DEFAULT_MODEL = "google/gemini-3.5-flash-lite";
+// Beste Mischung aus Preis und Antwortqualität für lange Transkripte; siehe
+// EMPFEHLUNG in openrouter.ts.
+export const DEFAULT_MODEL = "openai/gpt-5.6-luna";
 
 export const DEFAULT_SETTINGS: Settings = {
   apiKey: "",
   model: DEFAULT_MODEL,
-  customModel: "",
   reasoning: "minimal",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   answerLang: "auto",
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   // Platz als ohne Erweiterung, ohne dass das Video sichtbar schrumpft.
   columnWidth: 500,
   transcriptMode: "cues",
+  dictionary: "",
 };
 
 /**

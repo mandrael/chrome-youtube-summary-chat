@@ -26,7 +26,12 @@ import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
 import { bildeAbsaetze, bildeLeseabsaetze } from "../lib/absaetze.ts";
-import { korrigiere, schreibweisenHinweis } from "../lib/korrektur.ts";
+import {
+  korrigiere,
+  korrigiereTranskript,
+  parseWoerterbuch,
+  schreibweisenHinweis,
+} from "../lib/korrektur.ts";
 
 let checks = 0;
 const check = (name: string, fn: () => void) => {
@@ -285,6 +290,13 @@ check("Wörterbuch ersetzt und setzt Schreibweisen durch", () => {
   assert.equal(korrigiere("Ich nutze Dikta Go täglich.", wb), "Ich nutze DiktaGo täglich.");
   assert.equal(korrigiere("Ich nutze Dikta-Go täglich.", wb), "Ich nutze DiktaGo täglich.");
 
+  // Deutsche Flexion: die Endung bleibt stehen, nur die Schreibung wird gesetzt.
+  assert.equal(korrigiere("kinesiologische Arbeit", [{ begriff: "Kinesiologie" }]),
+               "kinesiologische Arbeit"); // „…logische“ ist nicht „…logie“ plus Endung
+  assert.equal(korrigiere("Neuroenergetische Kinesiologie", [{ begriff: "NeuroEnergetisch" }]),
+               "NeuroEnergetische Kinesiologie");
+  assert.equal(korrigiere("diktagos Ausgabe", wb), "DiktaGos Ausgabe");
+
   // Was nicht im Wörterbuch steht, bleibt unangetastet – auch Wörter, die einem
   // Eintrag ähneln. Genau hier liegt die Grenze zu DiktaGos Fuzzy-Stufen.
   assert.equal(korrigiere("Das Bild hängt schief.", wb), "Das Bild hängt schief.");
@@ -295,6 +307,30 @@ check("Wörterbuch ersetzt und setzt Schreibweisen durch", () => {
   assert.ok(hinweis.includes("Kinesiologie"));
   assert.ok(!hinweis.includes("Claude Code"));
   assert.equal(schreibweisenHinweis("Nichts davon hier.", wb), "");
+});
+
+check("Wörterbuchtext wird zu Einträgen und wirkt zeilenweise", () => {
+  const wb = parseWoerterbuch(
+    "# Kommentar\nCloud Code => Claude Code\n\n  DiktaGo  \nkaputt =>   \n",
+  );
+  assert.deepEqual(wb, [
+    { begriff: "Cloud Code", ersatz: "Claude Code" },
+    { begriff: "DiktaGo" },
+    // Ein Pfeil ohne Ersatzwort ist keine Ersetzung, sondern eine Schreibweise.
+    { begriff: "kaputt" },
+  ]);
+
+  // Zeilenweise, damit die Zuordnung zum Zeitstempel erhalten bleibt.
+  const tr = { hasTimestamps: true, cues: [{ start: 0, text: "cloud code" }, { start: 9, text: "egal" }] };
+  const korrigiert = korrigiereTranskript(tr, wb);
+  assert.deepEqual(korrigiert.cues, [
+    { start: 0, text: "Claude Code" },
+    { start: 9, text: "egal" },
+  ]);
+  // Das Original bleibt unangetastet: die Sidebar hält beide Stände.
+  assert.equal(tr.cues[0]!.text, "cloud code");
+  // Ohne Einträge kommt dasselbe Objekt zurück, ohne Kopie.
+  assert.equal(korrigiereTranskript(tr, []), tr);
 });
 
 console.log(`\n${checks} Prüfungen bestanden.`);

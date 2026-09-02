@@ -185,6 +185,82 @@ export const PRESETS = {
       "überprüfbare Angaben (Gespräch, Meinung), steht das in einem Satz am Anfang, " +
       "danach nur, was es gibt – Personen, ihre Funktion und der Anlass zählen dazu –, " +
       "und nichts wird mit Aussagen aufgefüllt. Beginne direkt mit der ersten Zeile.",
+    howto:
+      "Schreib für jemanden, der das Gezeigte selbst nachmachen will, ohne das Video " +
+      "dabei laufen zu lassen. " +
+      "Zuerst ein Satz: was am Ende steht, und was man vorher braucht, soweit der " +
+      "Sprecher es nennt (Geräte, Programme, Versionen, Konten, Kosten). " +
+      "Dann die Schritte als nummerierte Liste in der Reihenfolge, in der man sie " +
+      "ausführt. Jeder Schritt beginnt mit dem Tun, nicht mit dem Thema: nicht " +
+      "„Einstellungen“, sondern „In den Einstellungen unter Netzwerk den DNS auf " +
+      "1.1.1.1 setzen“. " +
+      "Befehle, Code, Dateinamen, Menüpfade, Tastenkürzel und Einstellwerte stehen " +
+      "wörtlich; Befehle und Code in einem Codeblock. " +
+      "Was der Sprecher nur auf dem Bildschirm zeigt und nicht ausspricht („diesen " +
+      "Befehl hier“), wird nicht erraten: an der Stelle steht „(nur gezeigt, siehe " +
+      "Video)“. " +
+      "Jeder Schritt endet mit dem Zeitstempel, an dem er beginnt, in der Schreibweise " +
+      "des Transkripts, damit man den Bildschirm dazu sehen kann. " +
+      "Warnungen, Voraussetzungen, Fehler, die der Sprecher nennt, und Alternativen " +
+      "(„wer Windows hat, nimmt stattdessen …“) stehen bei dem Schritt, zu dem sie " +
+      "gehören, nicht gesammelt am Ende. " +
+      "Warum etwas funktioniert, steht nur als Halbsatz und nur dort, wo man sonst " +
+      "einen falschen Wert wählen würde. " +
+      "Zeigt der Sprecher mehrere Wege zum selben Ziel, je Weg eine eigene Liste mit " +
+      "Überschrift (##). " +
+      "Weglassen: Hintergrund, Meinung, Vergleiche mit anderen Videos. " +
+      "Enthält das Video keine Anleitung, steht das in einem Satz, danach nichts. " +
+      "Beginne direkt mit dem ersten Satz.",
+    pro_contra:
+      "Schreib für jemanden, der sich entscheiden muss – kaufen oder nicht, zustimmen " +
+      "oder nicht – und dafür die Argumente beider Seiten braucht, so wie das Video sie " +
+      "liefert. " +
+      "Zuerst ein Satz: worum es geht (das getestete Produkt oder die strittige These) " +
+      "und wozu der Sprecher kommt. " +
+      "Dann zwei Listen mit Überschrift (##): Dafür und Dagegen. Jeder Punkt ist ein " +
+      "ganzer Satz mit dem Argument und seinem Beleg – Messwert, Preis, Vergleich, " +
+      "Vorführung, Erfahrung –, kein Schlagwort: nicht „guter Akku“, sondern „Der Akku " +
+      "hielt im Test des Sprechers 14 Stunden, der Vorgänger 9“. Ein Zeitstempel in der " +
+      "Schreibweise des Transkripts hinter Messwerten und Vorführungen, höchstens einer " +
+      "je Punkt. " +
+      "Reihenfolge nach dem Gewicht, das der Sprecher dem Argument gibt, nicht nach " +
+      "Ablauf. Ein Argument, das der Sprecher selbst entkräftet, steht mit dieser " +
+      "Entkräftung, nicht als offenes Argument. Bei mehreren Personen steht, wer es " +
+      "vertritt. " +
+      "Zum Schluss bis zu drei Zeilen, jede nur, wenn das Video sie hergibt: „Für wen“ " +
+      "– wem der Sprecher es empfiehlt und wem nicht; „Alternativen“ – was er " +
+      "stattdessen nennt, mit seinem Grund; „Nicht geprüft“ – was er ausdrücklich offen " +
+      "lässt oder nicht getestet hat. " +
+      "Gibt es mehrere Streitfragen (Diskussion, Podcast), je Streitfrage ein eigener " +
+      "Block Dafür/Dagegen, nach Gewicht sortiert, und am Ende ein Satz, worin sich die " +
+      "Beteiligten einig sind. " +
+      "Keine eigene Wertung und kein eigenes Argument: was hier steht, hat jemand im " +
+      "Video gesagt. Fehlt eine Seite im Video, steht das in einem Satz statt einer " +
+      "erfundenen Liste. Beginne direkt mit dem ersten Satz.",
+    claims:
+      "Schreib für jemanden, der prüfen will, ob stimmt, was im Video gesagt wird, und " +
+      "dafür wissen muss, was genau behauptet wird und worauf es sich stützt. " +
+      "Eine Liste der Behauptungen, die das Video tragen: Tatsachen, Zahlen, Ursache " +
+      "und Wirkung, Vergleiche, Vorhersagen. Nicht: Geschmack, Selbstverständliches, " +
+      "Beiläufiges. " +
+      "Jede Behauptung als ein Satz, so formuliert, dass man sie ohne das Video prüfen " +
+      "kann: mit Gegenstand, Zahl, Zeitraum und Ort, wie der Sprecher sie nennt; bei " +
+      "einer Vorhersage mit dem Zeitpunkt, für den sie gilt. " +
+      "Darunter eine Zeile, womit der Sprecher sie stützt, mit einem dieser Etiketten " +
+      "vorneweg: **Gemessen** (eigener Test, eigene Zahl), **Quelle** (Studie, Bericht, " +
+      "Person – mit dem Namen, den er nennt; nennt er keinen: „Quelle, nicht benannt“), " +
+      "**Gezeigt** (Vorführung im Video), **Erfahrung** (eigenes Erleben), **Unbelegt** " +
+      "(nur behauptet). Am Ende dieser Zeile der Zeitstempel in der Schreibweise des " +
+      "Transkripts, mehrere Stellen in einer Klammer. " +
+      "Was der Sprecher selbst einschränkt („wahrscheinlich“, „schätze ich“) oder als " +
+      "fremde Meinung wiedergibt, ohne sie zu übernehmen, behält diese Einschränkung. " +
+      "Reihenfolge: zuerst die Behauptungen, ohne die das Video seine Aussage verliert, " +
+      "dann die übrigen. Höchstens 15; hat das Video mehr, die 15, deren Widerlegung " +
+      "dem Video am meisten schadet. " +
+      "Keine Bewertung, ob eine Behauptung stimmt, keine Einleitung, kein Schluss – die " +
+      "Liste ist die ganze Antwort. Enthält das Video keine prüfbaren Behauptungen, " +
+      "steht das in einem Satz, danach nichts. Beginne direkt mit der ersten " +
+      "Behauptung.",
     chapters:
       "Gliedere das Video in Kapitel, für jemanden, der zu einer Stelle springen will. " +
       "Ein neues Kapitel beginnt, wo eine neue Frage oder ein neuer Gegenstand beginnt, " +
@@ -281,6 +357,73 @@ export const PRESETS = {
       "facts (conversation, opinion), say so in one sentence at the start, then list " +
       "only what there is – people, their role and the occasion count – and fill nothing " +
       "in with claims. Start with the first line.",
+    howto:
+      "Write for someone who wants to do the thing themselves, without the video " +
+      "running alongside. " +
+      "First one sentence: what you end up with, and what you need beforehand as far as " +
+      "the speaker names it (devices, software, versions, accounts, cost). " +
+      "Then the steps as a numbered list in the order you carry them out. Every step " +
+      "starts with the doing, not the topic: not \"Settings\" but \"In Settings under " +
+      "Network set the DNS to 1.1.1.1\". " +
+      "Commands, code, file names, menu paths, keyboard shortcuts and values are quoted " +
+      "verbatim; commands and code in a code block. " +
+      "What the speaker only shows on screen without saying it (\"this command here\") " +
+      "is not guessed: that spot reads \"(only shown, see video)\". " +
+      "Every step ends with the timestamp where it starts, written the way the " +
+      "transcript writes it, so the screen can be watched alongside. " +
+      "Warnings, prerequisites, errors the speaker names and alternatives (\"on Windows " +
+      "use … instead\") go with the step they belong to, not collected at the end. " +
+      "Why something works appears only as a half sentence and only where one would " +
+      "otherwise pick a wrong value. " +
+      "If the speaker shows several routes to the same goal, one list per route with a " +
+      "heading (##). " +
+      "Leave out background, opinion and comparisons with other videos. " +
+      "If the video contains no instructions, say so in one sentence and nothing more. " +
+      "Start with the first sentence.",
+    pro_contra:
+      "Write for someone who has to decide – buy it or not, agree or not – and needs " +
+      "the arguments of both sides as the video supplies them. " +
+      "First one sentence: what this is about (the product tested or the contested " +
+      "claim) and what the speaker concludes. " +
+      "Then two lists with headings (##): For and Against. Every item is a full " +
+      "sentence with the argument and its evidence – measurement, price, comparison, " +
+      "demonstration, experience – not a keyword: not \"good battery\" but \"The battery " +
+      "lasted 14 hours in the speaker's test, the predecessor 9\". One timestamp " +
+      "written the way the transcript writes it after measurements and demonstrations, " +
+      "at most one per item. " +
+      "Order by the weight the speaker gives the argument, not by sequence. An argument " +
+      "the speaker refutes himself appears with that refutation, not as an open one. " +
+      "With several people, say who holds it. " +
+      "Close with up to three lines, each only if the video supplies it: \"For whom\" – " +
+      "who he recommends it to and who not; \"Alternatives\" – what he names instead, " +
+      "with his reason; \"Not tested\" – what he explicitly leaves open. " +
+      "If there are several contested questions (discussion, podcast), one For/Against " +
+      "block per question, ordered by weight, and at the end one sentence on what the " +
+      "participants agree about. " +
+      "No judgement and no argument of your own: what stands here was said by someone " +
+      "in the video. If one side is missing from the video, say so in one sentence " +
+      "instead of inventing a list. Start with the first sentence.",
+    claims:
+      "Write for someone who wants to check whether what the video says is true, and " +
+      "needs to know what exactly is claimed and what it rests on. " +
+      "A list of the claims the video rests on: facts, figures, cause and effect, " +
+      "comparisons, predictions. Not: taste, the obvious, the incidental. " +
+      "Every claim as one sentence, phrased so it can be checked without the video: " +
+      "with subject, figure, period and place as the speaker gives them; for a " +
+      "prediction with the point in time it applies to. " +
+      "Below it one line on what the speaker rests it on, led by one of these labels: " +
+      "**Measured** (own test, own figure), **Source** (study, report, person – with " +
+      "the name he gives; if he gives none: \"source, not named\"), **Shown** " +
+      "(demonstration in the video), **Experience** (own experience), **Unsupported** " +
+      "(merely asserted). At the end of that line the timestamp written the way the " +
+      "transcript writes it, several spots in one bracket. " +
+      "What the speaker qualifies himself (\"probably\", \"I reckon\") or reports as " +
+      "someone else's view without adopting it keeps that qualification. " +
+      "Order: first the claims without which the video loses its point, then the rest. " +
+      "At most 15; if the video has more, the 15 whose refutation would damage it most. " +
+      "No assessment of whether a claim is true, no introduction, no conclusion – the " +
+      "list is the whole answer. If the video contains no checkable claims, say so in " +
+      "one sentence and nothing more. Start with the first claim.",
     chapters:
       "Break the video down into chapters, for someone who wants to jump to a spot. " +
       "A new chapter starts where a new question or subject starts, not at every change " +

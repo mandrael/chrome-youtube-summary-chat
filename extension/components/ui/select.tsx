@@ -59,15 +59,25 @@ export const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       position={position}
+      /*
+       * Immer nach unten, nie nach oben: die Kopfzeile mit dem Filterfeld gehört an den
+       * oberen Rand der Liste, und beim Aufklappen nach oben landete sie ausserhalb des
+       * sichtbaren Bereichs. Damit die Liste dann nicht aus dem Fenster läuft, bindet
+       * die Höhe an den Platz, den Radix unterhalb des Auslösers misst.
+       */
+      side="bottom"
+      align="start"
+      sideOffset={4}
+      avoidCollisions={false}
       className={cn(
-        "relative z-[2147483647] max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-md",
+        "relative z-[2147483647] flex max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-[8rem] flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-md",
         position === "popper" && "w-[var(--radix-select-trigger-width)]",
         className,
       )}
       {...props}
     >
       {header}
-      <SelectPrimitive.Viewport className="p-1 max-h-96 overflow-y-auto">
+      <SelectPrimitive.Viewport className="min-h-0 flex-1 overflow-y-auto p-1">
         {children}
       </SelectPrimitive.Viewport>
     </SelectPrimitive.Content>

@@ -22,7 +22,11 @@
   :root {
     font-family: "Roboto", "Arial", "Helvetica Neue", Helvetica, sans-serif;
     line-height: 1.45;
-    -webkit-font-smoothing: antialiased;
+    /*
+     * Kein `-webkit-font-smoothing: antialiased`: YouTube rendert mit `auto` (gemessen),
+     * und auf macOS zeichnet `antialiased` die Striche dünner. Bei identischer
+     * Schriftgrösse wirkt der Text dadurch leichter – und damit kleiner.
+     */
   }
 
   /*
@@ -99,10 +103,10 @@
    *
    * Die Stufen orientieren sich an YouTube: Fliesstext 14 px, Sekundäres 13 px.
    */
-  --text-xs: 13px;
-  --text-xs--line-height: 19px;
-  --text-sm: 14px;
-  --text-sm--line-height: 21px;
+  --text-xs: 14px;
+  --text-xs--line-height: 20px;
+  --text-sm: 15px;
+  --text-sm--line-height: 23px;
   --text-base: 16px;
   --text-base--line-height: 24px;
   --text-lg: 18px;
@@ -151,7 +155,14 @@
 /* Markdown-Ausgabe. Tailwind Typography wäre ein weiteres Paket für ein Dutzend Regeln. */
 @layer components {
   .md-body {
-    font-size: 0.875rem;
+    /*
+     * Pixel, nicht rem: YouTube setzt `html { font-size: 10px }`, und `rem` bezieht sich
+     * auch im Shadow DOM auf die Dokumentwurzel. Als 0.875rem landete dieser Text – der
+     * gesamte Chatinhalt – bei 8,75 px statt 14. Das war die Ursache der „winzigen"
+     * Schrift; die Tailwind-Klassen daneben waren längst auf Pixel umgestellt.
+     * Alle Innenmasse bleiben `em`: die hängen an dieser Zeile und skalieren mit.
+     */
+    font-size: 15px;
     line-height: 1.6;
     word-break: break-word;
   }

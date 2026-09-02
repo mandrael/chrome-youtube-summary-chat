@@ -4,22 +4,21 @@ import type { ContentScriptContext } from "wxt/utils/content-script-context";
 import ReactDOM from "react-dom/client";
 import { Sidebar } from "@/components/Sidebar";
 import { loadTrack, loadTranscript, NoCaptionsError, videoIdFromUrl } from "@/lib/transcript";
-import { getSettings } from "@/lib/storage";
 import "@/assets/tailwind.css";
 
 /**
- * Zwei Aufgaben in einem Script:
+ * Die Sidebar in YouTubes rechter Spalte – die einzige Oberfläche.
  *
- *  1. **Die Sidebar in YouTubes rechter Spalte** – die ursprüngliche Oberfläche. Sie
- *     erscheint, solange die Einstellung „Wo erscheint die Oberfläche" nicht auf
- *     „nur Seitenleiste" steht.
- *  2. **Datenlieferant für die Seitenleiste** – die läuft ausserhalb der Seite. Derselbe
- *     Player-Aufruf gibt von einer Extension-Seite aus HTML statt JSON zurück, deshalb
- *     holt das Content-Script das Transkript und reicht es weiter.
+ * Es gab zwischenzeitlich zusätzlich eine Variante in Chromes Seitenleiste. Sie ist
+ * wieder entfernt: **Vivaldi trägt jede Extension, die die `sidePanel`-Permission
+ * deklariert, ungefragt in seine Panel-Leiste ein** und öffnet dort beim Installieren
+ * ein leeres Panel (Vivaldi-Bug VB-123452, in 8.1 offen). Das lässt sich nicht aus der
+ * Extension heraus verhindern – nur dadurch, dass die Permission fehlt.
  *
- * Zwei bekannte Nachteile der eingebetteten Variante, die in der Seitenleiste entfallen:
- * die Spalte gibt nur rund 400 px her, und YouTubes globale Tastaturkürzel erreichen den
- * Chat – die Leertaste pausiert beim Tippen das Video.
+ * Zwei Nachteile der Einbettung sind damit bewusst in Kauf genommen und im Code
+ * abgefangen: die Spalte gibt nur rund 400 px her (Skalierung über die Einstellung
+ * „Schriftgrösse"), und YouTubes globale Tastaturkürzel erreichen den Chat – siehe
+ * `schuetzeTastatur`.
  */
 export default defineContentScript({
   matches: ["*://www.youtube.com/*", "*://m.youtube.com/*"],
@@ -35,15 +34,6 @@ export default defineContentScript({
     let generation = 0;
 
     async function sync() {
-      // Steht die Oberfläche auf „nur Seitenleiste", wird hier nichts eingehängt.
-      const platzierung = (await getSettings()).uiPlacement;
-      if (platzierung === "panel") {
-        ui?.remove();
-        ui = null;
-        mountedVideoId = null;
-        return;
-      }
-
       const videoId = videoIdFromUrl(location.href);
       if (videoId && videoId === mountedVideoId && ui) return;
 

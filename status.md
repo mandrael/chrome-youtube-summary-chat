@@ -2,8 +2,73 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-2. Optional: Store-Build einreichen.
+1. **Neue Presets gegen ein echtes Video messen** (Fazit/Argumente/Ausführlich mit dem
+   neuen System-Prompt) – braucht einen OpenRouter-Lauf.
+2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+3. Optional: Store-Build einreichen.
+
+## Stand 02.09.2026 (nachts, später) – Schriftgrösse gefunden, Seitenleiste zurückgebaut
+
+### Die winzige Schrift: eine einzige Regel, und ich habe an ihr vorbeigemessen
+
+`.md-body` in `@layer components` stand als einzige Stelle noch auf `font-size: 0.875rem`
+– bei YouTubes `html{font-size:10px}` also **8,75 px statt 14**. Die Tailwind-Klassen
+daneben waren längst auf Pixel umgestellt; gemessen habe ich die Klassen, gerendert wurde
+der Text in `.md-body`. Michaels Schätzung „4–5 pt" war zutreffend, meine Messung nicht.
+Jetzt 15 px, im Browser bestätigt: Wurzel-Container 16 px, `textarea` 15 px, bei
+`html`-Wurzel 10 px.
+
+Zusätzlich `-webkit-font-smoothing: antialiased` entfernt – gemessen rendert YouTube mit
+`auto`. Auf macOS zeichnet antialiased die Striche dünner, der Text wirkt leichter und
+damit kleiner. Jetzt beidseitig `auto`.
+
+### Chromes Seitenleiste ist vollständig zurückgebaut
+
+Grund ist **Vivaldi-Bug VB-123452** (in 8.1 offen, per Recherche bestätigt): Vivaldi
+trägt jede Extension mit der Permission `sidePanel` ungefragt in seine Panel-Leiste ein
+und öffnet dort beim Installieren ein leeres Panel. Das ist aus der Extension heraus nicht
+abschaltbar – der einzige Weg ist, die Permission nicht zu deklarieren. Michaels Vorgabe:
+„verhindere, dass die erweiterung links in die vivaldi panes rutscht."
+
+Damit sind die Abschnitte „Was der Umzug gekostet hat" und „Symbol und Vivaldi" weiter
+oben Historie: es gibt keine `lib/transcript-bridge.ts` und keine `PanelApp` mehr, das
+Content-Script fragt YouTube wieder direkt, und das Symbol öffnet nur noch die
+Einstellungen.
+
+`uiPlacement: "both"` war zusätzlich ein echter Fehler und nicht bloss Ballast: beide
+Instanzen mounten dieselbe `Sidebar` und hören auf `chrome.storage.local.onChanged` –
+zwei Transkript-Abrufe pro Video und ein Schreibkonflikt auf `local:conv:<videoId>`.
+
+Als Ausgleich für die schmale Spalte: Regler **Schriftgrösse der Oberfläche**
+(`uiScale`, Default 110 %, 90–220 %, wirkt als `zoom` am Wurzel-Container) und ein Knopf
+**Cache leeren** in den Optionen.
+
+### Zusammenfassungen: der System-Prompt war der Verursacher
+
+„Kurz/Mittel/Lang" lieferte dreimal dasselbe Protokoll in drei Grössen. Nicht die Presets
+waren schuld, sondern der System-Prompt: er verlangte „Abschnitte in der Reihenfolge des
+Videos", Vollständigkeit und Zeitstempel-Dichte und übersteuerte jede
+Verdichtungsanweisung. Widersprechen sich beide, gewinnt der längere und konkretere Text.
+
+Form gehört seither ausschliesslich in die Presets. **Der ursprüngliche System-Prompt kam
+wörtlich aus Michaels Auftrag – diese Änderung ist bewusst und wird hier offengelegt.**
+
+Die drei Stufen unterscheiden sich jetzt im Zweck statt in der Länge, die Knöpfe heissen
+**Fazit · Argumente · Ausführlich** (mit Tooltip, was jede Stufe liefert). Techniken in
+den Prompts: Leser statt Aufgabe, Aussage statt Thema mit Kontrastpaar, Verbot der
+Nacherzähl-Wendungen („das Video behandelt"), Reihenfolge nach Gewicht statt nach Ablauf,
+Satzbudget vom Input entkoppelt, Zeitstempel an eine Funktion gebunden.
+
+**Noch nicht gemessen:** die neuen Presets gegen ein echtes Video mit dem neuen
+System-Prompt. Ein Test mit dem alten System-Prompt hätte nichts über die Presets gesagt.
+
+### Geprüft nach dem Umbau
+
+`tsc`, `pnpm run check` (12 Prüfungen), `pnpm run build`, `pnpm run build:store`,
+`verify-store-bundle.sh` (bestanden), `native-host/selfcheck.py` (6 Prüfungen) – alle
+grün. Im headless-Chrome auf einer echten Watch-Seite: Sidebar eingebettet vorhanden,
+Breite 489 px, Roboto, Transkript mit Zeitstempeln geladen, Knöpfe „Fazit · Argumente ·
+Ausführlich". Manifest ohne `side_panel`, Permissions nur `storage` und `nativeMessaging`.
 
 ## Stand 02.09.2026 (nachts) – Tastatur, Schrift, Grössen
 
@@ -64,8 +129,10 @@ transkribiert, obwohl Untertitel da sind. Nur im `full`-Build.
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-2. Optional: Store-Build einreichen.
+1. **Neue Presets gegen ein echtes Video messen** (Fazit/Argumente/Ausführlich mit dem
+   neuen System-Prompt) – braucht einen OpenRouter-Lauf.
+2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+3. Optional: Store-Build einreichen.
 
 ## Stand 02.09.2026 – Umzug in Chromes Seitenleiste, Farben, Icon
 

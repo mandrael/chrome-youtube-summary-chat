@@ -233,21 +233,6 @@ export function Options() {
         </Field>
 
         <Field
-          label="Wo die Oberfläche erscheint"
-          hint="Eingebettet steht sie wie gewohnt in YouTubes rechter Spalte und lässt sich dort einklappen. Die Seitenleiste des Browsers öffnet sich per Klick aufs Symbol, ist breiter und YouTubes Tastaturkürzel greifen dort nicht in den Chat – die Leertaste pausiert also nicht beim Tippen."
-        >
-          <Radio
-            value={s.uiPlacement}
-            onChange={(v) => patch({ uiPlacement: v as typeof s.uiPlacement })}
-            options={[
-              ["both", "Beides"],
-              ["page", "Nur eingebettet"],
-              ["panel", "Nur Seitenleiste"],
-            ]}
-          />
-        </Field>
-
-        <Field
           label="Schriftgrösse der Oberfläche"
           hint="Skaliert die ganze Sidebar – Schrift, Abstände, Knöpfe. 100 % entspricht YouTubes eigener Textgrösse; grössere Bildschirme vertragen mehr."
         >
@@ -255,7 +240,7 @@ export function Options() {
             <input
               type="range"
               min={90}
-              max={175}
+              max={220}
               step={5}
               value={s.uiScale}
               onChange={(e) => patch({ uiScale: Number(e.target.value) })}

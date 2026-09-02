@@ -111,17 +111,6 @@ export interface Settings {
   sttRoute: SttRoute;
   /** Chrome-eigene Translator API statt OpenRouter fürs Übersetzen. */
   preferLocalTranslate: boolean;
-  /**
-   * Wo die Oberfläche erscheint. "page" hängt sie wie bisher in YouTubes rechte Spalte,
-   * "panel" in die Seitenleiste des Browsers – dort ist sie breiter und YouTubes
-   * Tastaturkürzel greifen nicht in den Chat.
-   */
-  uiPlacement: "page" | "panel" | "both";
-  /**
-   * Skalierung der Oberfläche in Prozent. Wirkt über `zoom` auf den ganzen Baum, also
-   * auf Schrift, Abstände und Bedienelemente gleichermassen – kein Nachziehen einzelner
-   * Grössen nötig.
-   */
   uiScale: number;
 }
 

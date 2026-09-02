@@ -28,7 +28,6 @@ import {
 } from "@/lib/storage";
 import { transcriptToText } from "@/lib/timestamps";
 import { NoCaptionsError } from "@/lib/transcript";
-import { loadTrackViaTab, loadTranscriptViaTab } from "@/lib/transcript-bridge";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
 import {
   availability as localAvailability,
@@ -54,12 +53,6 @@ type Tab = "chat" | "transcript" | "history";
 export interface SidebarProps {
   videoId: string;
   videoTitle: string;
-  /**
-   * Tab mit der YouTube-Seite. Nur die Seitenleiste setzt das: sie läuft ausserhalb der
-   * Seite und muss das Transkript über das Content-Script holen. Steckt die Sidebar
-   * selbst in der Seite, lädt sie direkt.
-   */
-  tabId?: number;
   /** Setzt die Wiedergabeposition im Player der Seite. */
   onSeek: (seconds: number) => void;
   /** In Chromes Seitenleiste gibt es nichts einzuklappen – dort schliesst man das Panel. */
@@ -71,7 +64,6 @@ export interface SidebarProps {
 export function Sidebar({
   videoId,
   videoTitle,
-  tabId,
   onSeek,
   collapsible = true,
   fullHeight = false,
@@ -152,10 +144,7 @@ export function Sidebar({
       if (!cancelled) setMessages(conv?.messages ?? []);
 
       try {
-        const res =
-          tabId == null
-            ? await loadTranscript(videoId, settings.captionLang)
-            : await loadTranscriptViaTab(tabId, settings.captionLang);
+        const res = await loadTranscript(videoId, settings.captionLang);
         if (cancelled) return;
         setTranscript(res.transcript);
         setTracks(res.tracks);
@@ -409,10 +398,7 @@ export function Sidebar({
     setLoadState("loading");
     setLoadError("");
     try {
-      const res =
-          tabId == null
-            ? await loadTranscript(videoId, settings.captionLang)
-            : await loadTranscriptViaTab(tabId, settings.captionLang);
+      const res = await loadTranscript(videoId, settings.captionLang);
       setTranscript(res.transcript);
       setTracks(res.tracks);
       setActiveTrack(res.active ?? null);
@@ -432,16 +418,10 @@ export function Sidebar({
   async function switchTrack(track: CaptionTrack) {
     setLoadState("loading");
     try {
-      const res =
-        tabId == null
-          ? await (async () => {
-              // Panel-Spuren kennen keine URL – sie werden im DOM umgeschaltet.
-              const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
-              const r = isPanelTrack(track) ? await switchPanelTrack(track) : await loadTrack(track);
-              if (!r) throw new Error("Die Spur liess sich nicht laden.");
-              return r;
-            })()
-          : await loadTrackViaTab(tabId, track);
+      // Panel-Spuren kennen keine URL – sie werden im DOM umgeschaltet.
+      const { isPanelTrack, switchPanelTrack } = await import("@/lib/transcript-panel");
+      const res = isPanelTrack(track) ? await switchPanelTrack(track) : await loadTrack(track);
+      if (!res) throw new Error("Die Spur liess sich nicht laden.");
       setTranscript(res.transcript);
       setActiveTrack(res.active ?? track);
       setLoadState("ready");
@@ -473,7 +453,7 @@ export function Sidebar({
     return (
       <div
         className="mb-3 rounded-xl border border-border bg-card text-card-foreground"
-        style={{ zoom: (settings?.uiScale ?? 115) / 100 }}
+        style={{ zoom: (settings?.uiScale ?? 110) / 100 }}
       >
         <button
           type="button"
@@ -497,7 +477,7 @@ export function Sidebar({
         fullHeight ? "h-full" : "mb-3 max-h-[75vh]",
       )}
       // zoom skaliert den ganzen Baum – Schrift, Abstände, Knöpfe – in einem Zug.
-      style={{ zoom: (settings?.uiScale ?? 115) / 100 }}
+      style={{ zoom: (settings?.uiScale ?? 110) / 100 }}
     >
       <Header
         t={t}
@@ -517,13 +497,13 @@ export function Sidebar({
         <>
           <div className="border-b border-border px-2 py-2">
             <div className="flex flex-wrap gap-1">
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("summary_short")}>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetShortHint")} onClick={() => preset("summary_short")}>
                 {t("presetShort")}
               </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("summary_medium")}>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetMediumHint")} onClick={() => preset("summary_medium")}>
                 {t("presetMedium")}
               </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("summary_long")}>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetLongHint")} onClick={() => preset("summary_long")}>
                 {t("presetLong")}
               </Button>
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("chapters")}>

@@ -44,18 +44,18 @@ export default defineConfig({
     description:
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
     version: "0.1.0",
+    // Bewusst ohne `sidePanel`: Vivaldi trägt jede Extension, die diese Permission
+    // deklariert, ungefragt in seine Panel-Leiste ein und öffnet dort beim Installieren
+    // ein leeres Panel (Vivaldi-Bug VB-123452, Stand 8.1 offen). Verhindern lässt sich
+    // das nur, indem die Permission fehlt.
     permissions: isFull(env.mode)
-      ? ["storage", "sidePanel", "nativeMessaging"]
-      : ["storage", "sidePanel"],
+      ? ["storage", "nativeMessaging"]
+      : ["storage"],
     host_permissions: ["*://*.youtube.com/*", "https://openrouter.ai/*"],
     options_ui: {
       page: "options.html",
       open_in_tab: true,
     },
-    // Die Oberfläche liegt in Chromes Seitenleiste, nicht mehr in YouTubes rechter
-    // Spalte: dort war sie an deren ~400 px gebunden. Die Seitenleiste zieht der
-    // Nutzer selbst breit und sie überlebt die Navigation innerhalb von YouTube.
-    side_panel: { default_path: "sidepanel.html" },
     action: {
       default_title: "YouTube Summary Chat",
       // Ohne default_icon zeigt Vivaldi kein Symbol in der Werkzeugleiste, obwohl

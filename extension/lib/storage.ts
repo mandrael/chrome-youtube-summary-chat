@@ -17,8 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showCost: false,
   sttRoute: "parakeet-mlx",
   preferLocalTranslate: false,
-  uiPlacement: "both",
-  uiScale: 115,
+  uiScale: 110,
 };
 
 /**

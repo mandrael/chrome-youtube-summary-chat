@@ -18,8 +18,6 @@ interface ChatPortRequest {
 }
 
 export default defineBackground(() => {
-  richteSeitenleisteEin();
-
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "chat") return handleChatPort(port);
     if (port.name === "fallback" && __FALLBACK__) return handleFallbackPort(port);
@@ -159,21 +157,4 @@ function handleFallbackPort(port: chrome.runtime.Port) {
       }
     })();
   });
-}
-
-/**
- * Verhalten des Symbols: ein Klick öffnet oder schliesst die Seitenleiste.
- *
- * Bewusst ohne tab-weises Freigeben und Sperren, obwohl das die naheliegende Art wäre,
- * ausserhalb von YouTube die Einstellungen zu öffnen: **Vivaldi ignoriert `tabId` bei
- * `setOptions()`** und führt genau ein globales Panel – ein Sperren „nur für diesen Tab"
- * schaltet dort die Seitenleiste überall ab. Deshalb bleibt sie immer freigegeben; liegt
- * kein YouTube-Video im aktiven Tab, sagt das Panel das selbst und bietet einen Knopf zu
- * den Einstellungen an.
- *
- * `side_panel.default_path` steht statisch im Manifest, weil `setOptions()` in Vivaldi
- * bis Version 8.0 wirkungslos war.
- */
-function richteSeitenleisteEin(): void {
-  void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
 }

@@ -35,220 +35,12 @@ ausdrückliche Nutzeraktion.
 
 ---
 
-## Was gemessen ist und nicht wieder aus dem Gedächtnis beantwortet wird
+## Gemessene Befunde
 
-Diese Werte stammen aus echten Aufrufen am 01.09.2026. Sie stehen hier, damit sie nicht
-erneut geraten werden:
-
-- `openai/whisper-large-v3-turbo` **kann** Zeitstempel: `response_format: "verbose_json"`
-  plus `timestamp_granularities: ["segment"]`, 46 Segmente über fünf Minuten. Der
-  ursprüngliche Auftragsstand („Zeitstempel nicht dokumentiert“) ist überholt.
-- `nvidia/parakeet-tdt-0.6b-v3` **kann sie nicht**: HTTP 400, *„The selected model does
-  not support response_format verbose_json. Use json instead.“* Einziger Provider:
-  Together.
-- `parakeet-mlx` schreibt `{"text", "sentences": [{text, start, end, …}]}` – **start und
-  end sind Strings**, kein Zahlentyp.
-- OpenRouter weist bei STT-Modellen **keine Preiseinheit** aus. Derselbe Feldwert steht
-  je nach Provider für Sekunden, Minuten oder Stunden. Deshalb Heuristik plus Rohwert in
-  der UI, nie eine stumme Umrechnung.
-- Das komprimierte Format zählt: fünf Minuten sind als WAV 9,6 MB und als Opus 0,9 MB.
-  Der Endpunkt nimmt `format: "ogg"`.
-
-**Der Untertitel-Weg im Browser – gelöst, und wie:**
-
-Die `baseUrl` aus dem HTML der Watch-Seite ist **unbrauchbar**: HTTP 200 mit leerem Body,
-anonym wie angemeldet, bei `roh`, `fmt=json3`, `fmt=srv3`, `fmt=json3&c=WEB`. Brauchbar
-ist nur die **signierte** URL aus einer Player-Antwort des visionOS-Clients – sie trägt
-`signature=`, `expire=`, `sparams=`, `key=yt8`.
-
-Damit YouTube diese Antwort herausgibt, müssen **vier** Dinge stimmen. Fehlt eines,
-kommt `playabilityStatus: LOGIN_REQUIRED` („Melde dich an, damit wir sehen, dass du kein
-Bot bist") – auch beim angemeldeten Nutzer:
-
-1. **`playbackContext.contentPlaybackContext.signatureTimestamp`** aus YouTubes
-   `base.js` (`jsUrl` steht im HTML, darin `signatureTimestamp:20684`). Das war der
-   eigentlich fehlende Baustein.
-2. Header **`X-Goog-Visitor-Id`** mit dem `visitorData` aus dem HTML.
-3. **`userAgent` im Kontext-Objekt** – ein Safari-String. Der echte `User-Agent`-Header
-   ist für JavaScript gesperrt, wird aber auch nicht gebraucht.
-4. **Kein `key=`-Parameter** an der URL, nur `?prettyPrint=false`.
-
-Abgelesen an `yt-dlp --print-traffic`, nicht geraten. Gemessen 01.09.2026: 31 Spuren,
-signierte URL, **46.010 Zeichen** Untertitel-JSON, **mit und ohne Cookies** – also auch
-für nicht angemeldete Nutzer.
-
-**Die Spurauswahl braucht `defaultCaptionTrackIndex`.** Bei 31 Community-Spuren liefert
-„erste Spur" Arabisch statt Englisch. YouTubes eigene Vorauswahl steht in
-`audioTracks[0].defaultCaptionTrackIndex` (im Test: 6 = Englisch).
-
-**Was daran nicht die Ursache war**, jeweils gemessen und ausgeschlossen: die fehlende
-Anmeldung, der Proof-of-Origin-Token (yt-dlp läuft mit `PO Token Providers: none`), der
-`User-Agent`-Header, der Cookie-Banner.
-
-**yt-dlp ist damit nur noch für Audio zuständig** – so, wie es der Auftrag vorsah. Die
-Host-Route `"subtitles"` bleibt als Notnagel bestehen, falls YouTube wieder dichtmacht,
-wird aber nur angeboten, wenn der Browser-Weg scheitert.
-
-**Der DOM-Panel-Weg funktioniert nicht** und ist nur noch zweiter Rückfall: der Klick auf
-„Transkript anzeigen" öffnet weder programmatisch noch mit echtem Nutzerklick etwas, und
-im DOM liegen zwei Panels (`PAmodern_transcript_view`,
-`engagement-panel-searchable-transcript`), beide `HIDDEN` und leer.
-
-**Die Oberfläche gibt es zweimal**, umschaltbar über `uiPlacement` (Default „beides"):
-eingebettet in YouTubes rechter Spalte – die ursprüngliche und von Michael bevorzugte
-Variante, dort einklappbar – und in der Seitenleiste des Browsers. Die Seitenleiste war
-zwischenzeitlich der Ersatz; das war falsch, sie ist die Ergänzung. Drei gemessene
-Nachteile der eingebetteten Variante, die in der Seitenleiste entfallen:
-
-- Die Spalte ist rund 400 px breit, mehr gibt sie nicht her.
-- Tastendrücke im Chat erreichten YouTubes globale Kürzel – die **Leertaste pausierte das
-  Video beim Tippen**. Ein eigenes Dokument sieht diese Tasten nicht.
-- YouTube setzt **`html { font-size: 10px }`**. Tailwind rechnet in `rem`, und `rem`
-  bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM. Die eingebettete Sidebar
-  lief damit auf 62,5 % ihrer Grösse: `text-sm` waren 8,75 px statt 14. Deshalb stehen
-  Schriftgrössen, Abstände und Radien im `@theme`-Block in **Pixeln**.
-
-**Übersetzt wird, was gerade auf dem Tisch liegt.** Steht eine Antwort im Chat – eine
-Zusammenfassung, Kapitel –, wird die übersetzt; erst wenn keine da ist, geht es an das
-Transkript. Beides braucht einen anderen Weg: eine Zusammenfassung ist Markdown mit
-Überschriften und Listen, ein Transkript sind Zeitstempelzeilen. Bei der lokalen
-Übersetzung geht deshalb jede Zeile einzeln durch `translateMarkdown`, und der
-strukturtragende Zeilenanfang (`## `, `- `, `[02:13] `) bleibt unangetastet – wirft man
-der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
-
-**YouTubes Tastaturkürzel greifen in den Chat**, wenn man nichts dagegen tut: für einen
-Listener ausserhalb des Shadow DOM ist `event.target` nicht das `<textarea>`, sondern der
-Host `<yt-summary-chat>` – das Event wird beim Verlassen des Shadow-Baums umgeschrieben.
-YouTubes Prüfung „tippt der Nutzer gerade in ein Feld?" schlägt fehl, und jeder Buchstabe
-wird zum Kürzel: Leer und „k" pausieren, „m" schaltet stumm, Ziffern springen.
-
-Abgefangen wird am **`window` in der Capture-Phase** – die früheste Station der
-Ereigniskette, früher als jeder Listener am `document`, unabhängig von der
-Registrierungsreihenfolge. Wichtig: **nativ registrieren**, nicht über
-`ctx.addEventListener` – der Wrapper reicht das Capture-Flag nicht durch, und ohne
-Capture kommt YouTube zuerst dran. Gemessen: vorher vier Tasten pro Anschlag am
-`document`, danach null; ausserhalb der Sidebar unverändert.
-
-**Die Schrift im Shadow DOM muss am Kind gesetzt werden.** WXTs Reset ist
-`all: initial !important` auf `:host` – auf `:host` selbst lässt sich das nicht
-überschreiben, und ohne Gegenregel fällt der Browser auf seine Serifenschrift zurück.
-Deshalb steht die Regel auf `:host > *`, mit YouTubes eigenem Stack (Roboto).
-
-**Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
-einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von
-einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
-per Message an. Für den DOM-Rückfall gilt dasselbe, er braucht ohnehin einen DOM.
-
-**Das Symbol schaltet die Seitenleiste um**, mehr nicht – über
-`setPanelBehavior({openPanelOnActionClick: true})`. Der naheliegende Weg, ausserhalb von
-YouTube stattdessen die Einstellungen zu öffnen, wäre tab-weises Freigeben und Sperren
-per `setOptions({tabId, enabled})`. Der ist verbaut: **Vivaldi ignoriert `tabId` und führt
-genau ein globales Panel**, ein Sperren „nur für diesen Tab" schaltet die Seitenleiste
-dort überall ab. Liegt kein YouTube-Video im aktiven Tab, sagt das Panel das selbst und
-bietet einen Knopf zu den Einstellungen an.
-
-**Vivaldi-Eigenheiten**, recherchiert am 02.09.2026:
-
-- Die Seitenleiste erscheint in **Vivaldis Panel-Leiste** (bei Standardeinstellung links),
-  nicht rechts neben der Seite. Die Seite ist eine Browser-Einstellung: `getLayout()`
-  meldet sie nur, `setOptions({side})` wird mit *„Unexpected property"* abgewiesen.
-- **`action.default_icon` ist Pflicht.** Chrome fällt ohne es auf `icons` zurück, Vivaldi
-  zeigt dann gar kein Symbol – und ohne Symbol kommt niemand an die Seitenleiste.
-- `side_panel.default_path` steht statisch im Manifest, weil `setOptions()` in Vivaldi bis
-  Version 8.0 wirkungslos war.
-
-**Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
-Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
-still gekappt. Deshalb `pendingSeek` plus `durationchange`/`loadedmetadata`.
-
-Zwei DOM-Fallen aus der Panel-Zeit, im Code abgesichert:
-
-- YouTube hält **zwei identische Segmentlisten**, eine unsichtbar. Nur die sichtbare
-  lesen, zusätzlich nach Zeit und Text deduplizieren.
-- Im **Hintergrundtab** lädt das Panel nie. Der Code wartet auf
-  `visibilityState === "visible"` und sagt das in der UI.
-
-**Die Translator API verlangt eine Nutzergeste**, solange das Sprachmodell noch nicht
-geladen ist: *„NotAllowedError: Requires a user gesture when availability is 'downloading'
-or 'downloadable'."* Jedes `await` vor `Translator.create()` verbraucht die Geste des
-Klicks – auch ein dynamischer Import. Deshalb ist `translate()` in der Sidebar synchron
-und `create()` der erste `await` überhaupt. Gemessen: 286 Zeitstempel, 22.507 Zeichen,
-rund drei Minuten, davon 160 s Modell-Download.
-
-**Die Oberfläche gibt es zweimal**, umschaltbar über `uiPlacement` (Default „beides"):
-eingebettet in YouTubes rechter Spalte – die ursprüngliche und von Michael bevorzugte
-Variante, dort einklappbar – und in der Seitenleiste des Browsers. Die Seitenleiste war
-zwischenzeitlich der Ersatz; das war falsch, sie ist die Ergänzung. Drei gemessene
-Nachteile der eingebetteten Variante, die in der Seitenleiste entfallen:
-
-- Die Spalte ist rund 400 px breit, mehr gibt sie nicht her.
-- Tastendrücke im Chat erreichten YouTubes globale Kürzel – die **Leertaste pausierte das
-  Video beim Tippen**. Ein eigenes Dokument sieht diese Tasten nicht.
-- YouTube setzt **`html { font-size: 10px }`**. Tailwind rechnet in `rem`, und `rem`
-  bezieht sich immer auf die Dokumentwurzel, auch im Shadow DOM. Die eingebettete Sidebar
-  lief damit auf 62,5 % ihrer Grösse: `text-sm` waren 8,75 px statt 14. Deshalb stehen
-  Schriftgrössen, Abstände und Radien im `@theme`-Block in **Pixeln**.
-
-**Übersetzt wird, was gerade auf dem Tisch liegt.** Steht eine Antwort im Chat – eine
-Zusammenfassung, Kapitel –, wird die übersetzt; erst wenn keine da ist, geht es an das
-Transkript. Beides braucht einen anderen Weg: eine Zusammenfassung ist Markdown mit
-Überschriften und Listen, ein Transkript sind Zeitstempelzeilen. Bei der lokalen
-Übersetzung geht deshalb jede Zeile einzeln durch `translateMarkdown`, und der
-strukturtragende Zeilenanfang (`## `, `- `, `[02:13] `) bleibt unangetastet – wirft man
-der Translator API eine ganze Markdown-Antwort hin, kommt sie zerlegt zurück.
-
-**YouTubes Tastaturkürzel greifen in den Chat**, wenn man nichts dagegen tut: für einen
-Listener ausserhalb des Shadow DOM ist `event.target` nicht das `<textarea>`, sondern der
-Host `<yt-summary-chat>` – das Event wird beim Verlassen des Shadow-Baums umgeschrieben.
-YouTubes Prüfung „tippt der Nutzer gerade in ein Feld?" schlägt fehl, und jeder Buchstabe
-wird zum Kürzel: Leer und „k" pausieren, „m" schaltet stumm, Ziffern springen.
-
-Abgefangen wird am **`window` in der Capture-Phase** – die früheste Station der
-Ereigniskette, früher als jeder Listener am `document`, unabhängig von der
-Registrierungsreihenfolge. Wichtig: **nativ registrieren**, nicht über
-`ctx.addEventListener` – der Wrapper reicht das Capture-Flag nicht durch, und ohne
-Capture kommt YouTube zuerst dran. Gemessen: vorher vier Tasten pro Anschlag am
-`document`, danach null; ausserhalb der Sidebar unverändert.
-
-**Die Schrift im Shadow DOM muss am Kind gesetzt werden.** WXTs Reset ist
-`all: initial !important` auf `:host` – auf `:host` selbst lässt sich das nicht
-überschreiben, und ohne Gegenregel fällt der Browser auf seine Serifenschrift zurück.
-Deshalb steht die Regel auf `:host > *`, mit YouTubes eigenem Stack (Roboto).
-
-**Das Transkript holt weiterhin das Content-Script.** Derselbe Player-Aufruf gibt aus
-einer Extension-Seite heraus **HTML statt JSON** zurück – YouTube beantwortet ihn nur von
-einer eigenen Seite aus. Die Seitenleiste fragt deshalb über `lib/transcript-bridge.ts`
-per Message an. Für den DOM-Rückfall gilt dasselbe, er braucht ohnehin einen DOM.
-
-**Das Symbol schaltet die Seitenleiste um**, mehr nicht – über
-`setPanelBehavior({openPanelOnActionClick: true})`. Der naheliegende Weg, ausserhalb von
-YouTube stattdessen die Einstellungen zu öffnen, wäre tab-weises Freigeben und Sperren
-per `setOptions({tabId, enabled})`. Der ist verbaut: **Vivaldi ignoriert `tabId` und führt
-genau ein globales Panel**, ein Sperren „nur für diesen Tab" schaltet die Seitenleiste
-dort überall ab. Liegt kein YouTube-Video im aktiven Tab, sagt das Panel das selbst und
-bietet einen Knopf zu den Einstellungen an.
-
-**Vivaldi-Eigenheiten**, recherchiert am 02.09.2026:
-
-- Die Seitenleiste erscheint in **Vivaldis Panel-Leiste** (bei Standardeinstellung links),
-  nicht rechts neben der Seite. Die Seite ist eine Browser-Einstellung: `getLayout()`
-  meldet sie nur, `setOptions({side})` wird mit *„Unexpected property"* abgewiesen.
-- **`action.default_icon` ist Pflicht.** Chrome fällt ohne es auf `icons` zurück, Vivaldi
-  zeigt dann gar kein Symbol – und ohne Symbol kommt niemand an die Seitenleiste.
-- `side_panel.default_path` steht statisch im Manifest, weil `setOptions()` in Vivaldi bis
-  Version 8.0 wirkungslos war.
-
-**Werbung kappt `currentTime`.** Während einer Werbeeinblendung meldet das `<video>` die
-Dauer des Werbespots (19 bzw. 111 s statt 1120 s), und ein Sprung darüber hinaus wird
-still gekappt. Deshalb `pendingSeek` plus `durationchange`/`loadedmetadata`.
-
-Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
-
-- YouTube hält **zwei identische Segmentlisten**, eine unsichtbar. Ein Selektor über das
-  Dokument verdoppelt das Transkript still. Nur die sichtbare Liste lesen, zusätzlich
-  nach Zeit und Text deduplizieren.
-- Im **Hintergrundtab** lädt das Panel nie (zehn Anläufe über 141 s: null Segmente).
-  Deshalb wartet der Code auf `visibilityState === "visible"`.
+Alle Messwerte, die nicht erneut geraten werden dürfen – Untertitel-Weg, STT-Modelle,
+Preiseinheiten, Schrift, Tastatur, Vivaldi, Presets – stehen in
+[docs/messungen.md](docs/messungen.md). **Vor jeder Änderung an Transkript, Schrift oder
+Seitenleiste dort nachlesen**, sonst wird eine bereits widerlegte Hypothese neu geprüft.
 
 ## Gescheiterte und verworfene Ansätze
 
@@ -273,6 +65,11 @@ Zwei DOM-Fallen, die dabei aufgefallen sind und im Code abgesichert sind:
   einer angemeldeten Sitzung widerlegt. Nicht erneut prüfen.
 - **Der Proof-of-Origin-Token als Ursache**: vermutet und widerlegt – `yt-dlp` holt die
   Untertitel mit `PO Token Providers: none`.
+- **Chromes Seitenleiste als zweite Oberfläche**: gebaut, gemessen, zurückgebaut. Vivaldi
+  trägt jede Extension mit der Permission `sidePanel` ungefragt in seine Panel-Leiste ein
+  (Bug VB-123452, in 8.1 offen) – nicht abschaltbar, ausser die Permission fehlt. Dazu kam
+  der Doppel-Mount bei `uiPlacement: "both"`. Nicht erneut versuchen, solange der Bug offen
+  ist.
 - **yt-dlp als Untertitel-Route**: war die Notlösung, solange die Ursache unklar war. Der
   Browser-Weg funktioniert; yt-dlp ist wieder das, was es sein sollte – der Weg zur
   Tonspur.
@@ -286,9 +83,9 @@ build-full/           gebaute Erweiterung zum Laden (GitHub-Build)
 icon-source/          Icon-Quelle (Python/PIL) und die gerenderten Grössen
 build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
-  entrypoints/        sidepanel/ · content.tsx · background.ts · options/
-  components/         PanelApp, Sidebar, Markdown, TranscriptView, HistoryView, ui/
-  lib/                openrouter · transcript · transcript-bridge · fallback · translate-local …
+  entrypoints/        content.tsx · background.ts · options/
+  components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
+  lib/                openrouter · transcript · fallback · translate-local · prompts …
   scripts/            selfcheck.ts · verify-store-bundle.sh
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```

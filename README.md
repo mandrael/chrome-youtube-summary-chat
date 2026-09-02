@@ -34,17 +34,23 @@ den `full`-Build – sonst würde ein Test bestehen, der überhaupt nichts misst
 
 ## Bedienung
 
-Die Oberfläche liegt in der **Seitenleiste des Browsers**, nicht in der YouTube-Seite.
-Ein Klick auf das Symbol blendet sie ein oder aus. Die Breite zieht man an ihrem Rand;
-sie bleibt beim Wechsel zwischen Videos stehen und folgt YouTubes Hell/Dunkel-Einstellung.
+Die Oberfläche sitzt **in der YouTube-Seite**, in der rechten Spalte über den
+Empfehlungen. Sie lässt sich am Kopf einklappen, bleibt beim Wechsel zwischen Videos
+stehen und folgt YouTubes Hell/Dunkel-Einstellung. Ein Klick auf das Symbol in der
+Werkzeugleiste öffnet die Einstellungen.
 
-Liegt im aktiven Tab kein YouTube-Video, sagt die Seitenleiste das und bietet einen Knopf
-zu den Einstellungen an.
+Die Spalte ist rund 400 px breit. Wem das zu klein ist, stellt in den Einstellungen die
+**Schriftgrösse der Oberfläche** höher (Default 110 %, Bereich 90–220 %).
 
-**In Vivaldi** erscheint sie in der **Panel-Leiste**, die standardmäßig links sitzt – nicht
-rechts neben der Seite. Auf die rechte Seite kommt sie über Rechtsklick auf die
-Panel-Leiste bzw. Einstellungen → Darstellung → Panel-Position. Die Extension kann das
-nicht vorgeben: `chrome.sidePanel` lässt die Seite nur auslesen, nicht setzen.
+Die drei Zusammenfassungsknöpfe unterscheiden sich im Zweck, nicht in der Länge:
+
+- **Fazit** – was behauptet wird und wozu es kommt, ein bis zwei Absätze, ohne Zeitstempel.
+- **Argumente** – Hauptaussage plus die drei bis fünf tragenden Punkte mit Begründung.
+- **Ausführlich** – alle eigenständigen Punkte, nach Gewicht geordnet, mit Zeitstempeln.
+
+Eine Ausgabe in Chromes Seitenleiste gab es zwischenzeitlich; sie ist entfernt, weil
+Vivaldi jede Extension mit der Permission `sidePanel` ungefragt in seine Panel-Leiste
+einträgt (Bug VB-123452) – aus der Extension heraus nicht verhinderbar.
 
 ---
 

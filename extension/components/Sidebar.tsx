@@ -64,6 +64,8 @@ type Tab = "chat" | "transcript" | "history";
 export interface SidebarProps {
   videoId: string;
   videoTitle: string;
+  /** Kanalname, nur als Kontext für die Internetrecherche. */
+  channel?: string;
   /** Setzt die Wiedergabeposition im Player der Seite. */
   onSeek: (seconds: number) => void;
   /** In Chromes Seitenleiste gibt es nichts einzuklappen – dort schliesst man das Panel. */
@@ -75,6 +77,7 @@ export interface SidebarProps {
 export function Sidebar({
   videoId,
   videoTitle,
+  channel,
   onSeek,
   collapsible = true,
   fullHeight = false,
@@ -381,7 +384,13 @@ export function Sidebar({
    * Ohne ihn ist eine Rückfrage wie „ist das besser?" für eine Suchmaschine wertlos.
    */
   function recherchiere(frage: string) {
-    void send(webSearchPrompt(frage, videoTitle, uiLang), undefined, undefined, `${t("webSearch")}: ${frage}`, true);
+    void send(
+      webSearchPrompt(frage, videoTitle, channel ?? "", uiLang),
+      undefined,
+      undefined,
+      `${t("webSearch")}: ${frage}`,
+      true,
+    );
   }
 
   function preset(key: keyof (typeof PRESETS)["de"]) {
@@ -401,10 +410,16 @@ export function Sidebar({
    * Überschriften und Listen, ein Transkript sind Zeitstempelzeilen. Beides braucht
    * einen anderen Weg, sonst kommt die Formatierung zerlegt zurück.
    */
-  function translate() {
+  /**
+   * @param nurTranskript Aus dem Transkript-Tab: dort ist das Transkript gemeint, auch
+   *   wenn im Chat eine Antwort steht.
+   */
+  function translate(nurTranskript = false) {
     if (!settings) return;
 
-    const letzteAntwort = [...messages].reverse().find((m) => m.role === "assistant" && !m.error);
+    const letzteAntwort = nurTranskript
+      ? undefined
+      : [...messages].reverse().find((m) => m.role === "assistant" && !m.error);
     const quelle = letzteAntwort?.content?.trim();
     const target = languageToCode(settings.translationTarget);
 
@@ -666,6 +681,16 @@ export function Sidebar({
                 {settings?.preferLocalTranslate ? " ⌂" : ""}
               </Button>
             </div>
+            {/*
+              Der Zusatz zum Prompt gehört zu den Schnellbefehlen: er ergänzt einen
+              Knopfdruck. Unten stand er dauerhaft im Weg, obwohl er selten gebraucht wird.
+            */}
+            <input
+              value={extra}
+              onChange={(e) => setExtra(e.target.value)}
+              placeholder={t("extraPrompt")}
+              className="mt-1.5 h-6 w-full rounded-md border border-dashed border-input bg-transparent px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
           </div>
           )}
 
@@ -735,13 +760,6 @@ export function Sidebar({
           </div>
 
           <div className="border-t border-border p-2">
-            <input
-                value={extra}
-                onChange={(e) => setExtra(e.target.value)}
-                placeholder={t("extraPrompt")}
-                className="mb-1 h-6 w-full rounded-md border border-dashed border-input bg-transparent px-2.5 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
-
             <div className="flex items-end gap-1">
               <Textarea
                 value={input}
@@ -819,6 +837,8 @@ export function Sidebar({
           tracks={tracks}
           activeTrack={activeTrack}
           onSwitchTrack={(tr) => void switchTrack(tr)}
+          onTranslate={() => translate(true)}
+          translationTarget={settings?.translationTarget ?? ""}
           onForceAudio={__FALLBACK__ ? () => runFallbackJob("audio") : undefined}
           busy={fallbackState}
         />

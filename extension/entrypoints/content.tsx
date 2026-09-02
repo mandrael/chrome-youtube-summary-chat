@@ -217,6 +217,7 @@ async function mount(ctx: ContentScriptContext, videoId: string) {
         <Sidebar
           videoId={videoId}
           videoTitle={currentTitle()}
+          channel={currentChannel()}
           onSeek={seek}
         />,
       );
@@ -228,6 +229,14 @@ async function mount(ctx: ContentScriptContext, videoId: string) {
       mounted?.root.unmount();
     },
   });
+}
+
+/** Kanalname der Videoseite, als zusätzlicher Kontext für die Internetrecherche. */
+function currentChannel(): string {
+  const el =
+    document.querySelector("ytd-channel-name#channel-name yt-formatted-string a") ??
+    document.querySelector("ytd-video-owner-renderer #channel-name a");
+  return el?.textContent?.trim() ?? "";
 }
 
 function currentTitle(): string {

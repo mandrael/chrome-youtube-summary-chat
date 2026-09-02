@@ -276,13 +276,15 @@ export const PRESETS = {
 export function webSearchPrompt(
   frage: string,
   videoTitle: string,
+  channel: string,
   uiLang: "de" | "en",
 ): string {
+  const quelle = channel ? `„${videoTitle}" von ${channel}` : `„${videoTitle}"`;
   if (uiLang === "de") {
     return (
       `${frage}\n\n` +
-      `Kontext dieser Frage: das YouTube-Video „${videoTitle}". Beziehe den Titel und ` +
-      `seine Eigennamen in die Suche ein – die Frage allein ist ohne ihn mehrdeutig.\n\n` +
+      `Kontext dieser Frage: das YouTube-Video ${quelle}. Beziehe Titel und Kanal und ` +
+      `ihre Eigennamen in die Suche ein – die Frage allein ist ohne sie mehrdeutig.\n\n` +
       `Recherchiere im Internet und antworte auf Deutsch. Sag, was du gefunden hast und ` +
       `was offen bleibt; unterscheide dabei ausdrücklich zwischen dem, was das Video ` +
       `behauptet, und dem, was die Quellen sagen. Widersprechen sie sich, schreib das hin. ` +
@@ -291,8 +293,9 @@ export function webSearchPrompt(
   }
   return (
     `${frage}\n\n` +
-    `Context for this question: the YouTube video "${videoTitle}". Include the title and ` +
-    `its proper nouns in your search – the question alone is ambiguous without them.\n\n` +
+    `Context for this question: the YouTube video ${quelle}. Include the title, the ` +
+    `channel and their proper nouns in your search – the question alone is ambiguous ` +
+    `without them.\n\n` +
     `Search the web and answer in English. Say what you found and what remains open; ` +
     `distinguish explicitly between what the video claims and what the sources say. If ` +
     `they contradict each other, write that down. Cite the source as a link after each ` +

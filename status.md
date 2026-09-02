@@ -7,6 +7,51 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, zwölfter Durchgang) – Spurwahl, Kurznamen, Übersetzen-Symbol
+
+### „German (auto-generated) (automatisch)" ist Geschichte
+
+Der Zusatz kam doppelt: YouTube schreibt „auto-generated" in den Namen, die Extension
+hängte „(automatisch)" an. Die Wahrheit steht im Flag `auto`. Neues Modul
+`lib/tracks.ts`: geschlossen steht das Kürzel – **`de (auto)`, `en`, `pt-BR`** –, in der
+Liste Kürzel und ausgeschriebener Name in der Sprache der Oberfläche
+(**`de · Deutsch`**, nicht „German"; über `Intl.DisplayNames`, YouTubes Rohname nur als
+Rückfall). Die Region steht nur da, wo sie unterscheidet.
+
+### Gestaltetes Dropdown statt Browser-Grau
+
+Chrome kann seit Version 135 auch die aufgeklappte Liste gestalten
+(`appearance: base-select`, `::picker(select)`), im Testbrowser 152 bestätigt
+(`CSS.supports` → true). Damit bleibt es beim **nativen `select`**: Tastatur, Typ-Sprung
+und Escape bringt der Browser mit – bei einem Video mit 31 Spuren zählt das –, und die
+Liste liegt im Top Layer, also nicht im `overflow-hidden` der Karte gefangen. Eine eigene
+Listbox wären rund 120 Zeilen Fokuslogik ohne Gewinn. Wo `base-select` fehlt, greift das
+davorstehende `appearance: none`: der Kasten sieht richtig aus, nur die Liste bleibt die
+des Browsers.
+
+**Nur eine Spur:** gleiche Höhe und Stelle, aber ohne Rahmen und Pfeil. Ein ausgegrautes
+Auswahlfeld lädt zu einem Klick ein, der nichts bewirkt; ohne Rahmen liest es sich als
+Beschriftung, und das ist die Wahrheit. Die Kopfzeile steht auf fester Höhe (`h-9`,
+gemessen 40 px bei uiScale 110) und springt in keinem der beiden Fälle.
+
+### Übersetzen-Symbol im Transkript
+
+`Languages` an erster Stelle rechts, Tooltip „Transkript übersetzen → Deutsch". Es
+übersetzt **immer das Transkript**, auch wenn im Chat eine Antwort steht – im
+Transkript-Tab ist alles andere überraschend. Der Unterschied zum Spurwechsel links ist
+strukturell: links steht die Quelle, rechts stehen die Aktionen darauf; der Spurwechsel
+tauscht den Transkript-Tab aus, die Übersetzung wird eine Chat-Antwort.
+
+### Zusatz zum Prompt gehört zu den Schnellbefehlen
+
+Er steht jetzt unter den Preset-Knöpfen und erscheint mit ihnen; unten stand er dauerhaft
+im Weg, obwohl er selten gebraucht wird.
+
+### Recherche: auch der Kanal geht in die Suchanfrage
+
+Titel allein reicht nicht immer – „Fable 5.1" wird erst mit dem Kanalnamen eindeutig.
+Beides steht in der Nachricht, aus der OpenRouters Web-Plugin seine Suchanfrage bildet.
+
 ## Stand 02.09.2026 (nachts, elfter Durchgang) – Internetrecherche zur Frage
 
 Unter jeder Antwort steht jetzt eine **Weltkugel**: sie schickt dieselbe Frage noch einmal

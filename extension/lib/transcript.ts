@@ -256,7 +256,7 @@ export async function loadTrack(
     transcript: {
       cues,
       lang: track.lang,
-      source: `${track.name}${track.auto ? " (automatisch)" : ""}`,
+      source: track.name,
       hasTimestamps: true,
     },
   };

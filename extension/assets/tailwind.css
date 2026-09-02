@@ -169,6 +169,82 @@
   }
 }
 
+/*
+ * Die Spurwahl im Transkript. Chrome kann seit Version 135 auch die aufgeklappte Liste
+ * gestalten (`appearance: base-select`); wo das fehlt, greift die Zeile darüber
+ * (`appearance: none`) und der Kasten sieht trotzdem richtig aus – nur die Liste bleibt
+ * dann die des Browsers. Deshalb steht der Pfeil als Bild da und nicht als
+ * `::picker-icon`.
+ */
+@layer components {
+  .spur-select {
+    appearance: none;
+    appearance: base-select;
+    color-scheme: light;
+    padding: 0 22px 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background-color: var(--secondary);
+    color: var(--foreground);
+    font: 500 13px/22px "Roboto", "Arial", sans-serif;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23606060' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+  }
+  .spur-select:hover {
+    background-color: var(--accent);
+  }
+  .spur-select:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 1px;
+  }
+  .spur-select::picker-icon {
+    display: none;
+  }
+
+  :host(.dark) .spur-select,
+  .dark .spur-select {
+    color-scheme: dark;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aaaaaa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  /* Wirkt nur mit `base-select`, wird sonst still verworfen. */
+  .spur-select::picker(select) {
+    appearance: base-select;
+    margin-top: 4px;
+    padding: 4px;
+    min-width: 200px;
+    max-height: 288px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+    font: 400 13px/18px "Roboto", "Arial", sans-serif;
+  }
+  .spur-select option {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .spur-select option:hover,
+  .spur-select option:focus-visible {
+    background: var(--secondary);
+    outline: none;
+  }
+  .spur-select option:checked {
+    font-weight: 500;
+  }
+  .spur-select option::checkmark {
+    color: var(--primary);
+  }
+}
+
 /* Markdown-Ausgabe. Tailwind Typography wäre ein weiteres Paket für ein Dutzend Regeln. */
 @layer components {
   .md-body {

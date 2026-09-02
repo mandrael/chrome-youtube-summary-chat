@@ -1,5 +1,6 @@
 import * as React from "react";
-import { AudioLines, Copy, Download, Search, X } from "lucide-react";
+import { AudioLines, Copy, Download, Languages, Search, X } from "lucide-react";
+import { kurzname, langname } from "@/lib/tracks";
 import { Button } from "@/components/ui/button";
 import { formatTs, transcriptToText } from "@/lib/timestamps";
 import type { T } from "@/lib/i18n";
@@ -15,6 +16,8 @@ export function TranscriptView({
   activeTrack,
   onSwitchTrack,
   onForceAudio,
+  onTranslate,
+  translationTarget,
   busy,
 }: {
   t: T;
@@ -27,6 +30,9 @@ export function TranscriptView({
   activeTrack: CaptionTrack | null;
   onSwitchTrack: (track: CaptionTrack) => void;
   onForceAudio?: () => void;
+  /** Übersetzt das Transkript – nicht zu verwechseln mit dem Wechsel der Spur links. */
+  onTranslate?: () => void;
+  translationTarget?: string;
   busy?: string | null;
 }) {
   const [suche, setSuche] = React.useState("");
@@ -50,35 +56,58 @@ export function TranscriptView({
 
   return (
     <>
-      <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
-        {tracks.length > 1 && activeTrack ? (
-          // Welche Spuren es gibt, weiss erst die Seite - deshalb steht die Wahl
-          // hier und nicht in den Optionen. Natives select: im Shadow DOM kommt es
-          // ohne Portal aus.
+      {/*
+        Feste Kopfzeilenhöhe: die Spurwahl ist mal ein Auswahlfeld und mal eine
+        Beschriftung, die Zeile darf davon nicht springen.
+      */}
+      <div className="flex h-9 items-center gap-1 border-b border-border px-2">
+        {activeTrack && tracks.length > 1 ? (
+          // Welche Spuren es gibt, weiss erst die Seite – deshalb steht die Wahl hier und
+          // nicht in den Optionen. Natives select: es kommt im Shadow DOM ohne Portal aus,
+          // seine Liste liegt im Top Layer (also nicht im `overflow-hidden` der Karte
+          // gefangen), und Tastatur, Typ-Sprung und Escape bringt der Browser mit – bei
+          // einem Video mit 31 Spuren zählt das.
           <select
             value={activeTrack.url}
             onChange={(e) => {
               const next = tracks.find((tr) => tr.url === e.target.value);
               if (next) onSwitchTrack(next);
             }}
-            title={t("captionLangHint")}
-            className="min-w-0 flex-1 rounded-md border border-input bg-transparent px-1.5 py-0.5 text-xs text-foreground"
+            title={t("captionTrackYouTube")}
+            className="spur-select h-6 min-w-0 max-w-[170px] shrink"
           >
             {tracks.map((tr) => (
               <option key={tr.url} value={tr.url}>
-                {tr.name}
-                {tr.auto && !/automatisch|auto-generated/i.test(tr.name)
-                  ? " (automatisch)"
-                  : ""}
+                {`${kurzname(tr, tracks)} · ${langname(tr)}`}
               </option>
             ))}
           </select>
         ) : (
-          <span className="truncate text-xs text-muted-foreground">
-            {t("transcriptSource")}: {transcript.source}
+          // Nur eine Spur: gleiche Höhe und Stelle, aber ohne Rahmen und Pfeil. Ein
+          // ausgegrautes Auswahlfeld lädt zu einem Klick ein, der nichts bewirkt.
+          <span
+            title={
+              activeTrack
+                ? `${t("captionTrackYouTube")}: ${langname(activeTrack)}`
+                : transcript.source
+            }
+            className="inline-flex h-6 min-w-0 max-w-[170px] items-center truncate px-1 text-xs font-medium text-muted-foreground"
+          >
+            {activeTrack ? kurzname(activeTrack) : transcript.source}
           </span>
         )}
         <div className="ml-auto flex shrink-0 gap-0.5">
+          {onTranslate && (
+            <Button
+              size="iconSm"
+              variant="ghost"
+              title={`${t("translateAiHint")}${translationTarget ? ` → ${translationTarget}` : ""}`}
+              disabled={!!busy}
+              onClick={onTranslate}
+            >
+              <Languages />
+            </Button>
+          )}
           {onForceAudio && (
             <Button
               size="iconSm"

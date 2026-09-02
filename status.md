@@ -217,7 +217,9 @@ unter rund 1000 px Fensterbreite gibt es keine rechte Spalte (gemessen bei 990 p
 `#secondary` verschwindet samt Sidebar), und bei `fixed-panels` – Live-Chat als
 fixiertes Panel – ginge die Breite doppelt in Padding und Panel ein.
 
-Neue Einstellung `columnWidth` (Default 620, Regler 400–900).
+Neue Einstellung `columnWidth` (Regler 400–900). Default ist 500 px – knapp über
+YouTubes eigenem Wert von 400 bis 490 px je nach Fenster: spürbar mehr Platz, ohne dass
+das Video sichtbar schrumpft. 620 px war als Vorgabe zu wuchtig.
 
 ### Der Chat hatte 141 px Platz
 

@@ -326,7 +326,7 @@ export function Sidebar({
   function zieheBreite(e: React.PointerEvent<HTMLDivElement>) {
     e.preventDefault();
     const startX = e.clientX;
-    const startBreite = settings?.columnWidth ?? 620;
+    const startBreite = settings?.columnWidth ?? 500;
     let letzte = startBreite;
 
     // Listener am window, nicht am Griff mit `setPointerCapture`: der Griff ist nur acht

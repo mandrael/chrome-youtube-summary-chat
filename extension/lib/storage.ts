@@ -18,7 +18,9 @@ export const DEFAULT_SETTINGS: Settings = {
   sttRoute: "parakeet-mlx",
   preferLocalTranslate: false,
   uiScale: 110,
-  columnWidth: 620,
+  // Knapp über YouTubes eigenem Wert (400 bis 490 px je nach Fenster): spürbar mehr
+  // Platz als ohne Erweiterung, ohne dass das Video sichtbar schrumpft.
+  columnWidth: 500,
 };
 
 /**

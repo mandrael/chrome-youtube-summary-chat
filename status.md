@@ -2,16 +2,20 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Store-Audioweg bauen** – entschieden, noch nicht gebaut: `captureStream()` im
-   Content-Script, Faktor 4 als Standard, Stücke an OpenRouter. Architektur und
-   Fallstricke stehen unten unter „Store-Audioweg".
-2. **Michaels Vivaldi-Profil**: der `systemPrompt` ist auf einem alten Stand eingefroren.
-   Ein Klick auf „Auf Standard zurücksetzen" in den Optionen genügt; von aussen ist die
-   LevelDB des laufenden Vivaldi nicht sicher beschreibbar.
-3. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+1. **Ende-zu-Ende-Lauf des Store-Audiowegs** über den Knopf in der Seitenleiste,
+   sobald die Internetleitung frei ist. Der Kern ist gemessen (siehe unten), die
+   Verdrahtung Knopf → Transkript-Tab noch nicht.
+2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 4. Optional: Store-Build einreichen.
 5. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+
+### Der eingefrorene System-Prompt in Michaels Profil ist weg
+
+Am 02.09.2026 über den Debug-Port von Vivaldi nachgesehen: das Feld `systemPrompt` steht
+gar nicht mehr im gespeicherten Einstellungsobjekt, damit greift der aktuelle Standard.
+Der frühere Befund hat sich mit der Änderung in `storage.ts` erledigt, die den Prompt nur
+noch speichert, wenn er vom Standard abweicht.
 
 ## Stand 02.09.2026 (siebzehnter Durchgang) – Modellauswahl, acht Schnellbefehle, Wörterbuch
 

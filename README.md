@@ -397,6 +397,10 @@ Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nich
 
 - **Der DOM-Panel-Weg.** Gebaut, aber er hat in keinem Test geliefert. Er schadet nicht,
   trägt aber auch nichts.
+- **Die Spracherkennung über den Knopf in der Seitenleiste.** Der Kern ist gemessen –
+  Aufnahme, Rückrechnung und Erkennung liefen an einem echten Video, die Dauer stimmt auf
+  0,05 Sekunden (siehe [docs/messungen.md](docs/messungen.md)). Der Weg vom Knopfdruck
+  bis zum fertigen Transkript im Tab ist noch nicht am Stück durchlaufen.
 - **Windows.** `install-windows.ps1` folgt Chromes dokumentiertem Verfahren, ist aber
   mangels Windows-Rechner nie ausgeführt worden. Die lokale Route Parakeet MLX ist dort
   ohnehin nicht verfügbar (Apple Silicon).

@@ -44,6 +44,8 @@ export interface ChatMessage {
   label?: string;
   /** Nur bei Assistenten-Nachrichten und nur, wenn die Kostenanzeige an ist. */
   usage?: Usage;
+  /** Fundstellen der Internetrecherche, falls sie für diese Antwort lief. */
+  sources?: Array<{ url: string; title?: string }>;
   error?: boolean;
 }
 

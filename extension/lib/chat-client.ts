@@ -18,8 +18,11 @@ export interface StreamArgs {
   reasoning: ReasoningEffort;
   system: string;
   messages: ChatMessage[];
+  /** Internetrecherche über OpenRouters Web-Plugin. */
+  web?: boolean;
   onDelta: (text: string) => void;
   onUsage: (usage: Usage) => void;
+  onSources?: (quellen: Array<{ url: string; title?: string }>) => void;
 }
 
 export function startChat(args: StreamArgs): StreamHandle {
@@ -34,6 +37,9 @@ export function startChat(args: StreamArgs): StreamHandle {
           break;
         case "usage":
           args.onUsage(msg.usage);
+          break;
+        case "sources":
+          args.onSources?.(msg.quellen);
           break;
         case "done":
           finished = true;
@@ -59,6 +65,7 @@ export function startChat(args: StreamArgs): StreamHandle {
     reasoning: args.reasoning,
     system: args.system,
     messages: args.messages,
+    web: args.web,
   });
 
   return {

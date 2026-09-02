@@ -206,8 +206,16 @@ export interface ChatOptions {
   system: string;
   messages: ChatMessage[];
   signal: AbortSignal;
+  /**
+   * Schaltet OpenRouters Web-Plugin zu. Es sucht mit dem Inhalt der letzten
+   * Nutzernachricht als Suchanfrage und schiebt die Treffer vor die Antwort – deshalb
+   * muss der Videotitel in dieser Nachricht stehen, nicht im System-Prompt.
+   * Kostet zusätzlich rund 0,007 $ je Anfrage (Exa, fünf Treffer).
+   */
+  web?: boolean;
   onDelta: (text: string) => void;
   onUsage: (usage: Usage) => void;
+  onSources?: (quellen: Array<{ url: string; title?: string }>) => void;
 }
 
 /**
@@ -227,6 +235,7 @@ export async function streamChat(o: ChatOptions): Promise<void> {
   // Nicht unterstützte Parameter lässt OpenRouter zwar fallen, aber ein Modell ohne
   // Reasoning soll den Regler gar nicht erst gesetzt bekommen.
   if (o.supportsReasoning) body.reasoning = { effort: o.reasoning };
+  if (o.web) body.plugins = [{ id: "web", max_results: 5 }];
 
   const res = await fetch(`${BASE}/chat/completions`, {
     method: "POST",
@@ -262,7 +271,15 @@ export async function streamChat(o: ChatOptions): Promise<void> {
 
       try {
         const chunk = JSON.parse(payload) as {
-          choices?: Array<{ delta?: { content?: string } }>;
+          choices?: Array<{
+            delta?: {
+              content?: string;
+              annotations?: Array<{
+                type?: string;
+                url_citation?: { url?: string; title?: string };
+              }>;
+            };
+          }>;
           usage?: {
             prompt_tokens?: number;
             completion_tokens?: number;
@@ -274,6 +291,15 @@ export async function streamChat(o: ChatOptions): Promise<void> {
 
         const delta = chunk.choices?.[0]?.delta?.content;
         if (delta) o.onDelta(delta);
+
+        const quellen = chunk.choices?.[0]?.delta?.annotations;
+        if (quellen?.length && o.onSources) {
+          o.onSources(
+            quellen
+              .filter((a) => a.type === "url_citation" && a.url_citation?.url)
+              .map((a) => ({ url: a.url_citation!.url!, title: a.url_citation!.title })),
+          );
+        }
 
         if (chunk.usage) {
           o.onUsage({

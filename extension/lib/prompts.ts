@@ -266,6 +266,41 @@ export const PRESETS = {
 } as const;
 
 /**
+ * Auftrag für die Internetrecherche zu einer bereits gestellten Frage.
+ *
+ * Der Videotitel steht bewusst **in der Nachricht** und nicht im System-Prompt:
+ * OpenRouters Web-Plugin bildet seine Suchanfrage aus dem Inhalt der letzten
+ * Nutzernachricht. Ohne den Titel sucht es nach „Ist Fable besser in Sprache" und findet
+ * nichts Passendes; mit ihm nach dem Modell, um das es im Video geht.
+ */
+export function webSearchPrompt(
+  frage: string,
+  videoTitle: string,
+  uiLang: "de" | "en",
+): string {
+  if (uiLang === "de") {
+    return (
+      `${frage}\n\n` +
+      `Kontext dieser Frage: das YouTube-Video „${videoTitle}". Beziehe den Titel und ` +
+      `seine Eigennamen in die Suche ein – die Frage allein ist ohne ihn mehrdeutig.\n\n` +
+      `Recherchiere im Internet und antworte auf Deutsch. Sag, was du gefunden hast und ` +
+      `was offen bleibt; unterscheide dabei ausdrücklich zwischen dem, was das Video ` +
+      `behauptet, und dem, was die Quellen sagen. Widersprechen sie sich, schreib das hin. ` +
+      `Nenne hinter jeder Angabe die Quelle als Link.`
+    );
+  }
+  return (
+    `${frage}\n\n` +
+    `Context for this question: the YouTube video "${videoTitle}". Include the title and ` +
+    `its proper nouns in your search – the question alone is ambiguous without them.\n\n` +
+    `Search the web and answer in English. Say what you found and what remains open; ` +
+    `distinguish explicitly between what the video claims and what the sources say. If ` +
+    `they contradict each other, write that down. Cite the source as a link after each ` +
+    `claim.`
+  );
+}
+
+/**
  * Übersetzungsauftrag. Bewusst nicht als "Zusammenfassung in Sprache X" formuliert –
  * das Modell soll übersetzen, nicht kürzen.
  */

@@ -15,6 +15,7 @@ interface ChatPortRequest {
   reasoning: ReasoningEffort;
   system: string;
   messages: ChatMessage[];
+  web?: boolean;
 }
 
 export default defineBackground(() => {
@@ -108,9 +109,11 @@ function handleChatPort(port: chrome.runtime.Port) {
           supportsReasoning: req.supportsReasoning,
           system: req.system,
           messages: req.messages,
+          web: req.web,
           signal: controller.signal,
           onDelta: (text) => port.postMessage({ type: "delta", text }),
           onUsage: (usage) => port.postMessage({ type: "usage", usage }),
+          onSources: (quellen) => port.postMessage({ type: "sources", quellen }),
         });
         port.postMessage({ type: "done" });
       } catch (e) {

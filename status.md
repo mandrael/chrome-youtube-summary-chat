@@ -7,6 +7,30 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, elfter Durchgang) – Internetrecherche zur Frage
+
+Unter jeder Antwort steht jetzt eine **Weltkugel**: sie schickt dieselbe Frage noch einmal
+los, diesmal mit Internetsuche.
+
+**Der Videotitel steht dabei in der Nachricht, nicht im System-Prompt.** OpenRouters
+Web-Plugin bildet seine Suchanfrage aus dem Inhalt der letzten Nutzernachricht – eine
+Rückfrage wie „Ist Fable besser in Sprache?" ist für eine Suchmaschine ohne den Titel
+wertlos, mit ihm findet sie das Modell, um das es im Video geht. Der Auftrag verlangt
+zusätzlich, zwischen dem zu unterscheiden, was das Video behauptet, und dem, was die
+Quellen sagen.
+
+Technisch `plugins: [{ id: "web", max_results: 5 }]` an derselben Chat-Anfrage, also
+**kein zweiter Anbieter und kein eigener Suchdienst** – Projektregel 1 bleibt unberührt.
+Die Fundstellen kommen als `annotations` mit `url_citation` im Stream zurück und stehen
+als Linkliste unter der Antwort; ohne sie wäre nicht nachprüfbar, worauf die Antwort
+beruht.
+
+**Der Knopf erscheint bei jedem Modell**, nicht nur bei Gemini: OpenRouter führt die Suche
+selbst aus und reicht die Treffer an das gewählte Modell weiter. Die Kosten von rund
+0,007 $ je Anfrage stehen im Tooltip.
+
+**Nicht geprüft:** ein echter Recherchelauf – dafür braucht es den Key.
+
 ## Stand 02.09.2026 (nachts, zehnter Durchgang) – Suche und Spurwahl im Transkript
 
 Über der Transkriptliste steht jetzt eine **Suchzeile**: sie filtert die Zeilen auf die

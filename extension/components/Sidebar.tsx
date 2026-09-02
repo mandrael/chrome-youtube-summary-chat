@@ -7,6 +7,7 @@ import {
   Loader2,
   ArrowUp,
   BrushCleaning,
+  Globe,
   Settings,
   Square,
   WandSparkles,
@@ -18,7 +19,12 @@ import { TranscriptView } from "@/components/TranscriptView";
 import { HistoryView } from "@/components/HistoryView";
 import { startChat, startFallback } from "@/lib/chat-client";
 import { makeT, resolveUiLang, type T } from "@/lib/i18n";
-import { answerTranslationPrompt, PRESETS, translationPrompt } from "@/lib/prompts";
+import {
+  answerTranslationPrompt,
+  PRESETS,
+  translationPrompt,
+  webSearchPrompt,
+} from "@/lib/prompts";
 import { FALLBACK_MODELS, listModels } from "@/lib/openrouter";
 import {
   collapsedItem,
@@ -246,7 +252,13 @@ export function Sidebar({
    *   Übersetzen einer bereits erzeugten Antwort ist das diese Antwort. Ohne ihn
    *   arbeitet das Modell wie sonst auf dem Transkript im System-Prompt.
    */
-  async function send(text: string, systemOverride?: string, nutzlast?: string, label?: string) {
+  async function send(
+    text: string,
+    systemOverride?: string,
+    nutzlast?: string,
+    label?: string,
+    web?: boolean,
+  ) {
     if (!settings || !transcript || streaming) return;
     if (!settings.apiKey) {
       setMessages((m) => [...m, { role: "assistant", content: t("noKey"), error: true }]);
@@ -270,6 +282,20 @@ export function Sidebar({
       reasoning: settings.reasoning,
       system: buildSystem(settings, transcript, systemOverride),
       messages: next,
+      web,
+      onSources: (quellen) =>
+        setMessages((m) => {
+          const copy = [...m];
+          const last = copy.at(-1);
+          if (last?.role === "assistant") {
+            const bekannt = new Set((last.sources ?? []).map((q) => q.url));
+            last.sources = [
+              ...(last.sources ?? []),
+              ...quellen.filter((q) => !bekannt.has(q.url)),
+            ];
+          }
+          return copy;
+        }),
       onDelta: (d) =>
         setMessages((m) => {
           const copy = [...m];
@@ -348,6 +374,14 @@ export function Sidebar({
     window.addEventListener("pointermove", bewegen);
     window.addEventListener("pointerup", beenden);
     window.addEventListener("pointercancel", beenden);
+  }
+
+  /**
+   * Recherchiert dieselbe Frage noch einmal im Internet, mit dem Videotitel als Kontext.
+   * Ohne ihn ist eine Rückfrage wie „ist das besser?" für eine Suchmaschine wertlos.
+   */
+  function recherchiere(frage: string) {
+    void send(webSearchPrompt(frage, videoTitle, uiLang), undefined, undefined, `${t("webSearch")}: ${frage}`, true);
   }
 
   function preset(key: keyof (typeof PRESETS)["de"]) {
@@ -680,6 +714,15 @@ export function Sidebar({
                 showCost={settings?.showCost ?? false}
                 onSeek={transcript?.hasTimestamps ? onSeek : undefined}
                 onDownload={() => download(`antwort-${videoId}-${i}.md`, m.content)}
+                onWebSearch={
+                  // Recherchiert wird die Frage, die zu dieser Antwort geführt hat.
+                  !streaming && messages[i - 1]?.role === "user"
+                    ? () => {
+                        const frage = messages[i - 1];
+                        if (frage) recherchiere(frage.label ?? frage.content);
+                      }
+                    : undefined
+                }
               />
             ))}
 
@@ -906,12 +949,14 @@ function MessageBubble({
   showCost,
   onSeek,
   onDownload,
+  onWebSearch,
 }: {
   message: ChatMessage;
   t: T;
   showCost: boolean;
   onSeek?: (s: number) => void;
   onDownload: () => void;
+  onWebSearch?: () => void;
 }) {
   const [copied, setCopied] = React.useState(false);
   const inhalt = React.useRef<HTMLDivElement>(null);
@@ -961,6 +1006,17 @@ function MessageBubble({
             >
               <Download />
             </Button>
+            {onWebSearch && (
+              <Button
+                size="iconSm"
+                variant="ghost"
+                className="opacity-0 group-hover:opacity-100"
+                title={t("webSearchHint")}
+                onClick={onWebSearch}
+              >
+                <Globe />
+              </Button>
+            )}
           </>
         )}
         {showCost && message.usage && (
@@ -970,6 +1026,27 @@ function MessageBubble({
           </span>
         )}
       </div>
+
+      {/* Fundstellen der Recherche – ohne sie wäre nicht nachprüfbar, worauf sie beruht. */}
+      {!!message.sources?.length && (
+        <div className="mt-1 border-l-2 border-border pl-2">
+          <p className="mb-0.5 text-xs text-muted-foreground">{t("sources")}</p>
+          <ul className="space-y-0.5">
+            {message.sources.map((q) => (
+              <li key={q.url} className="truncate text-xs">
+                <a
+                  href={q.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-primary hover:underline"
+                >
+                  {q.title || q.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

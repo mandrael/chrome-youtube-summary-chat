@@ -16,6 +16,7 @@ import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts"
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
+import { bildeAbsaetze, bildeLeseabsaetze } from "../lib/absaetze.ts";
 
 let checks = 0;
 const check = (name: string, fn: () => void) => {
@@ -183,6 +184,30 @@ check("toTranscript nimmt Segmente und blanken Text", () => {
   assert.equal(plain.cues.length, 1);
 
   assert.throws(() => toTranscript({ type: "result", text: "   " } as never));
+});
+
+console.log("absaetze");
+
+check("Leseabsätze fassen Absätze zusammen und behalten die Grenzen", () => {
+  // 60 Cues à 3 s mit je 5 Wörtern; nach jedem vierten eine Pause von 2,5 s. Das
+  // beendet den Absatz der Stufe 2 (Schwelle 2 s), reicht aber nicht für den
+  // vorzeitigen Schnitt der Stufe 3 (Schwelle 3 s) – die sammelt also bis 150 Wörter.
+  const cues = Array.from({ length: 60 }, (_, i) => ({
+    start: i * 3 + Math.floor(i / 4) * 2.5,
+    dur: 3,
+    text: Array.from({ length: 5 }, (_, w) => `w${w}`).join(" "),
+  }));
+  const abs = bildeAbsaetze(cues);
+  const lese = bildeLeseabsaetze(cues, abs);
+
+  assert.ok(lese.length < abs.length, "Leseabsätze müssen gröber sein als Absätze");
+  // Lückenlos und in der Reihenfolge: sonst fehlt Text oder er kommt doppelt.
+  assert.equal(lese[0]?.von, 0);
+  assert.equal(lese.at(-1)?.bis, cues.length - 1);
+  for (let i = 1; i < lese.length; i++) assert.equal(lese[i]!.von, lese[i - 1]!.bis + 1);
+  // Jede Leseabsatzgrenze liegt auf einer Absatzgrenze.
+  const enden = new Set(abs.map((a) => a.bis));
+  for (const a of lese) assert.ok(enden.has(a.bis));
 });
 
 console.log(`\n${checks} Prüfungen bestanden.`);

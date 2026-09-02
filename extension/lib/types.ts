@@ -123,7 +123,7 @@ export interface Settings {
   /** Breite der rechten YouTube-Spalte in Pixeln; der Player weicht entsprechend. */
   columnWidth: number;
   /** Wie das Transkript gelesen wird: Zeile je Untertitel oder Fliesstext in Absätzen. */
-  transcriptMode: "cues" | "text";
+  transcriptMode: "cues" | "text" | "read";
 }
 
 /**

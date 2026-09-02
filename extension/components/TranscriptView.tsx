@@ -2,6 +2,7 @@ import * as React from "react";
 import {
   AlignLeft,
   AudioLines,
+  BookOpenText,
   Captions,
   Copy,
   Download,
@@ -11,11 +12,12 @@ import {
   Play,
   Search,
   Square,
+  Subtitles,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatTs } from "@/lib/timestamps";
-import { bildeAbsaetze } from "@/lib/absaetze";
+import { bildeAbsaetze, bildeLeseabsaetze } from "@/lib/absaetze";
 import { useFollow } from "@/lib/use-follow";
 import { ZIELSPRACHEN, langcode, langname } from "@/lib/tracks";
 import type { T } from "@/lib/i18n";
@@ -37,7 +39,7 @@ import { cn } from "@/lib/utils";
  * zeigt und beim Klick dorthin springt.
  */
 
-export type TranscriptMode = "cues" | "text";
+export type TranscriptMode = "cues" | "text" | "read";
 
 export function TranscriptView({
   t,
@@ -129,6 +131,10 @@ export function TranscriptView({
     () => cues.map((_, i) => i).filter(passt),
     [cues, passt],
   );
+  const leseabsaetze = React.useMemo(
+    () => bildeLeseabsaetze(cues, absaetze),
+    [cues, absaetze],
+  );
   const absaetzeGefiltert = React.useMemo(
     () =>
       absaetze.filter((a) => {
@@ -138,20 +144,35 @@ export function TranscriptView({
       }),
     [absaetze, suchbegriff, passt],
   );
+  const leseGefiltert = React.useMemo(
+    () =>
+      leseabsaetze.filter((a) => {
+        if (!suchbegriff) return true;
+        for (let i = a.von; i <= a.bis; i++) if (passt(i)) return true;
+        return false;
+      }),
+    [leseabsaetze, suchbegriff, passt],
+  );
+  const sichtbareAbsaetze = mode === "read" ? leseGefiltert : absaetzeGefiltert;
 
   /** Was Kopieren und Herunterladen liefern: genau das, was zu sehen ist. */
-  const sichtbarerText = () =>
-    mode === "cues"
-      ? cues
-          .map((c, i) => `[${formatTs(c.start, withHours)}] ${textVon(i)}`)
-          .join("\n")
-      : absaetze
-          .map((a) => {
-            const teile: string[] = [];
-            for (let i = a.von; i <= a.bis; i++) teile.push(textVon(i));
-            return `[${formatTs(a.start, withHours)}] ${teile.join(" ")}`;
-          })
-          .join("\n\n");
+  const sichtbarerText = () => {
+    if (mode === "cues") {
+      return cues
+        .map((c, i) => `[${formatTs(c.start, withHours)}] ${textVon(i)}`)
+        .join("\n");
+    }
+    const quelle = mode === "read" ? leseabsaetze : absaetze;
+    return quelle
+      .map((a) => {
+        const teile: string[] = [];
+        for (let i = a.von; i <= a.bis; i++) teile.push(textVon(i));
+        // Stufe 3 ist der Lesetext – ohne Zeitmarke, das ist ihr ganzer Zweck.
+        const rumpf = teile.join(" ");
+        return mode === "read" ? rumpf : `[${formatTs(a.start, withHours)}] ${rumpf}`;
+      })
+      .join("\n\n");
+  };
 
   if (!transcript) {
     return <p className="p-3 text-sm text-muted-foreground">{t("loadingTranscript")}</p>;
@@ -179,6 +200,8 @@ export function TranscriptView({
         Spurwahl mal ein Auswahlfeld und mal eine Beschriftung ist.
       */}
       <div className="relative flex h-9 items-center gap-1 border-b border-border px-2">
+        {/* Untertitelsymbol als Beschriftung: sonst stehen zwei Sprachnamen ohne Bezug nebeneinander. */}
+        <Subtitles className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         {activeTrack && tracks.length > 1 ? (
           <select
             value={activeTrack.url}
@@ -211,26 +234,6 @@ export function TranscriptView({
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
-          {/*
-            Zielsprache der Übersetzung. Sitzt hier und nicht nur in den Einstellungen,
-            weil sie zur Sache gehört: ein deutsches Transkript ins Englische zu
-            übersetzen war sonst gar nicht erreichbar. Die Wahl schreibt in die
-            Einstellungen zurück und ist damit auch der neue Standard.
-          */}
-          {onTranslate && onTargetChange && !laeuft && (
-            <select
-              value={translationTarget}
-              onChange={(e) => onTargetChange(e.target.value)}
-              title={t("translationTargetTitle")}
-              className="spur-select h-6 min-w-0 max-w-[110px] shrink"
-            >
-              {ZIELSPRACHEN.map(([name]) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          )}
           {onTranslate && (
             <Button
               size="iconSm"
@@ -266,6 +269,26 @@ export function TranscriptView({
               )}
             </Button>
           )}
+          {/*
+            Zielsprache der Übersetzung. Sitzt hier und nicht nur in den Einstellungen,
+            weil sie zur Sache gehört: ein deutsches Transkript ins Englische zu
+            übersetzen war sonst gar nicht erreichbar. Die Wahl schreibt in die
+            Einstellungen zurück und ist damit auch der neue Standard.
+          */}
+          {onTranslate && onTargetChange && !laeuft && (
+            <select
+              value={translationTarget}
+              onChange={(e) => onTargetChange(e.target.value)}
+              title={t("translationTargetTitle")}
+              className="spur-select h-6 min-w-0 max-w-[110px] shrink"
+            >
+              {ZIELSPRACHEN.map(([name]) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
           {onForceAudio && (
             <Button
               size="iconSm"
@@ -280,7 +303,9 @@ export function TranscriptView({
           <Button
             size="iconSm"
             variant="ghost"
-            title={t("copy")}
+            title={
+              mode === "cues" ? t("copyCues") : mode === "text" ? t("copyParas") : t("copyRead")
+            }
             onClick={() => void navigator.clipboard.writeText(sichtbarerText())}
           >
             <Copy />
@@ -330,6 +355,16 @@ export function TranscriptView({
               onClick={() => onMode("text")}
             >
               <AlignLeft />
+            </Button>
+            <Button
+              size="iconSm"
+              variant="ghost"
+              aria-pressed={mode === "read"}
+              className={cn(mode === "read" && "bg-secondary")}
+              title={t("viewRead")}
+              onClick={() => onMode("read")}
+            >
+              <BookOpenText />
             </Button>
           </div>
           <Search className="size-3.5 shrink-0 text-muted-foreground" />
@@ -410,21 +445,29 @@ export function TranscriptView({
               </React.Fragment>
             ))
           )
-        ) : absaetzeGefiltert.length === 0 ? (
+        ) : sichtbareAbsaetze.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("noHits")}</p>
         ) : (
-          absaetzeGefiltert.map((a) => (
-            <p key={a.von} className="mb-2 flex gap-2 leading-relaxed">
-              <button
-                type="button"
-                onClick={() => onSeek(a.start)}
-                className={cn(
-                  "shrink-0 cursor-pointer self-start pt-[3px] font-mono text-xs tabular-nums text-primary hover:underline",
-                  withHours ? "w-[8ch]" : "w-[5ch]",
-                )}
-              >
-                {formatTs(a.start, withHours)}
-              </button>
+          sichtbareAbsaetze.map((a) => (
+            <p
+              key={a.von}
+              className={cn(
+                "leading-relaxed",
+                mode === "read" ? "mb-3" : "mb-2 flex gap-2",
+              )}
+            >
+              {mode !== "read" && (
+                <button
+                  type="button"
+                  onClick={() => onSeek(a.start)}
+                  className={cn(
+                    "shrink-0 cursor-pointer self-start pt-[3px] font-mono text-xs tabular-nums text-primary hover:underline",
+                    withHours ? "w-[8ch]" : "w-[5ch]",
+                  )}
+                >
+                  {formatTs(a.start, withHours)}
+                </button>
+              )}
               <span className="min-w-0">
                 {Array.from({ length: a.bis - a.von + 1 }, (_, k) => a.von + k).map((i) => (
                   <span

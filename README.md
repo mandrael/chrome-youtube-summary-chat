@@ -39,14 +39,39 @@ Empfehlungen. Sie lässt sich am Kopf einklappen, bleibt beim Wechsel zwischen V
 stehen und folgt YouTubes Hell/Dunkel-Einstellung. Ein Klick auf das Symbol in der
 Werkzeugleiste öffnet die Einstellungen.
 
-Die Spalte ist rund 400 px breit. Wem das zu klein ist, stellt in den Einstellungen die
-**Schriftgrösse der Oberfläche** höher (Default 110 %, Bereich 90–220 %).
+**Breite:** Die Spalte ist ab Werk 500 px breit statt YouTubes 400 bis 490. Ziehen am
+linken Rand der Sidebar verstellt sie, der Player weicht entsprechend zurück; eingeklappt
+bekommt YouTube seine eigene Breite zurück. Der Regler in den Einstellungen tut dasselbe.
+Wem die Schrift zu klein ist, stellt dort die **Schriftgrösse der Oberfläche** höher
+(Default 110 %, Bereich 90–220 %).
 
-Die drei Zusammenfassungsknöpfe unterscheiden sich im Zweck, nicht in der Länge:
+**Das Symbol in der Werkzeugleiste** holt die Sidebar auf einer Videoseite hervor oder
+klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
+die Einstellungen.
+
+Die fünf Knöpfe unterscheiden sich im Zweck, nicht in der Länge:
 
 - **Fazit** – was behauptet wird und wozu es kommt, ein bis zwei Absätze, ohne Zeitstempel.
+- **Kapitel** – Sprungmarken entlang des Videos, mit Aussage statt Themennamen.
 - **Argumente** – Hauptaussage plus die drei bis fünf tragenden Punkte mit Begründung.
-- **Ausführlich** – alle eigenständigen Punkte, nach Gewicht geordnet, mit Zeitstempeln.
+- **Fakten** – Zahlen, Namen, Daten und Zitate als Liste, je Angabe ein Zeitstempel als Beleg.
+- **Ausführlich** – jede Sachfrage als eigener Abschnitt, mit Zahlen, Namen, Zeitstempeln.
+
+Die Leiste weicht, sobald etwas im Chat steht; das Zauberstab-Symbol in der Kopfzeile holt
+sie zurück.
+
+**Unter jeder Antwort** stehen Kopieren, Herunterladen und eine **Weltkugel**: sie
+recherchiert dieselbe Frage im Internet, mit dem Videotitel als Kontext – eine Rückfrage
+wie „ist das besser?" wäre für eine Suchmaschine sonst wertlos. Das kostet rund 0,007 $
+je Anfrage zusätzlich, die Fundstellen stehen als Links unter der Antwort.
+
+**Kopieren legt zwei Formate ab:** Markdown als Text und dasselbe als formatiertes HTML.
+Word, Pages und Google Docs nehmen das HTML und behalten Überschriften, Listen und
+Fettdruck, ein Editor nimmt den Markdown-Text. Das gilt auf allen drei Systemen, nicht nur
+auf dem Mac.
+
+**Im Transkript-Tab** filtert eine Suchzeile die Zeilen und hebt den Begriff hervor; hat
+das Video mehrere Untertitelspuren, steht darüber die Sprachwahl.
 
 Eine Ausgabe in Chromes Seitenleiste gab es zwischenzeitlich; sie ist entfernt, weil
 Vivaldi jede Extension mit der Permission `sidePanel` ungefragt in seine Panel-Leiste

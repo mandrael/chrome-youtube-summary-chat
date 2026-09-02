@@ -41,7 +41,14 @@ export async function getSettings(): Promise<Settings> {
 
 export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
   const next = { ...(await getSettings()), ...patch };
-  await settingsItem.setValue(next);
+  // Den unveränderten System-Prompt nicht mitschreiben: sonst friert die erste
+  // beliebige Einstellungsänderung den damaligen Wortlaut ein, und jede spätere
+  // Verbesserung am Default erreicht dieses Profil nie mehr. Gemessen an einem
+  // Testprofil, das noch eine ältere Fassung trug.
+  const { systemPrompt, ...ohnePrompt } = next;
+  await settingsItem.setValue(
+    systemPrompt === DEFAULT_SYSTEM_PROMPT ? (ohnePrompt as Settings) : next,
+  );
   return next;
 }
 

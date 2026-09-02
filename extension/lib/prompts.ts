@@ -17,6 +17,12 @@ Harte Regeln:
   steht sie exakt so wie im Transkript. Nicht verallgemeinern: wenn dort
   "TSMC N3E" steht, schreibe "TSMC N3E", nicht "ein moderner
   Fertigungsprozess". Welche davon vorkommen, entscheidet die Anfrage.
+- Zeiträume und Mengen behalten die Einheit des Transkripts. Aus "vier
+  Wochenenden" wird weder "vier Wochen" noch "viermonatig". Zwei
+  verschiedene Zahlen zur selben Sache werden nicht zu einer Spanne
+  zusammengezogen: aus "80 geschrieben, auf 54 verdichtet" wird nicht
+  "54 bis 80". Lässt sich eine Angabe nicht sicher wiedergeben, bleibt
+  sie weg – eine Klammer mit Alternativen ist keine Lösung.
 - Kommt ein Verfahren in der Antwort vor und erklärt der Sprecher, wie es
   funktioniert, gib seine Erklärung wieder, nicht nur das Schlagwort. Ob es
   vorkommt, entscheidet die Anfrage.

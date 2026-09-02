@@ -36,6 +36,9 @@ Harte Regeln:
   Stelle erkennbar verhört – automatische Untertitel zerlegen Zahlen und
   Namen –, schreib die wahrscheinliche Lesart und dahinter
   „(Transkript unklar)“; ist keine Lesart erkennbar, lass die Angabe weg.
+  Bei Produkt- und Firmennamen, die der Zusammenhang eindeutig macht, gilt die
+  richtige Schreibweise ohne Zusatz: aus „Cloud Code“ in einem Beitrag über
+  Programmierwerkzeuge wird „Claude Code“.
 
 Zeitstempel:
 - Zeitstempel sind Belege, keine Gliederung: sie stehen dort, wo man

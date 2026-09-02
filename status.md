@@ -74,7 +74,43 @@ scheitert sie an jeder deutschen Endung. Am echten Transkript geprüft: aus
 „Neuroenergetische" wird „NeuroEnergetische", die Endung bleibt stehen. Bei den
 Ersetzungspaaren bleibt die Verankerung an beiden Enden, sonst griffe „the" in „theater".
 
-### Store-Audioweg (entschieden, noch nicht gebaut)
+### Store-Audioweg: gebaut und in Michaels Chrome belegt
+
+`lib/audio-live.ts` erzeugt ein Transkript aus dem laufenden Ton, ohne Download – der
+Knopf „Transkript per Spracherkennung erstellen" steht in **beiden** Builds und ist im
+Store-Build der einzige Weg, wenn Untertitel fehlen.
+
+Belegt am 02.09.2026 in einer Kopie von Michaels angemeldetem Chrome-Profil (Zahlen in
+[docs/messungen.md](docs/messungen.md)): 30 Sekunden Aufnahme deckten 85,2 Videosekunden
+ab, Whisper meldete 85,15 Sekunden – die Rückrechnung über den WAV-Kopf trifft auf
+0,05 Sekunden. Sprache korrekt erkannt, 13 Segmente, sauberer Fachtext.
+
+**Codex hat den Aufbau gegengelesen und fünf Löcher gefunden, alle behoben:**
+
+1. Die WAV-Rate wurde gerechnet statt gemessen. Bei einem Stocker oder einem Rate-Reset
+   enthält ein „120-Sekunden-Stück" weniger Videozeit, und alles verschiebt sich – ohne
+   Fehlermeldung. Jetzt entsteht die Rate aus Abtastwerten je tatsächlich vergangener
+   Videosekunde. In der Probe wurden statt der gerechneten 11.025 Hz tatsächlich
+   15.489 Hz gebraucht.
+2. Nach einer Werbung wurde das Tempo nicht neu gesetzt, und der Stückbeginn blieb auf
+   der Laufzeit der Werbung stehen – die folgenden Sprungmarken hätten um deren Länge
+   danebengezeigt.
+3. Ein Stück ohne Segmente verlor seinen Text, sobald ein anderes Stück welche lieferte:
+   ein lückenhaftes Transkript, das vollständig aussieht.
+4. Die vom Modell erkannte Sprache wurde weggeworfen; sie steht jetzt in
+   `Transcript.lang` und damit auch der Übersetzung zur Verfügung.
+5. Endet die Tonspur mitten im Lauf, kam nur noch Stille an. Jetzt sagt die Meldung, was
+   passiert ist, statt „geschützt oder stumm" zu behaupten.
+
+Dazu aus der Probe selbst: Whisper läuft am Stückende über (letztes Segment bei 114,9 s
+in einem 85,2-Sekunden-Stück) – die Zeiten werden geklemmt.
+
+### Was am Store-Weg noch aussteht
+
+Der Ende-zu-Ende-Lauf über den Knopf in der Seitenleiste, also Knopfdruck bis fertiges
+Transkript im Tab. Er braucht eine freie Internetleitung und wurde deshalb verschoben.
+
+### Ursprüngliche Architekturentscheidung (Fable)
 
 - `video.captureStream()` im Content-Script, **nicht** `chrome.tabCapture`: letzteres
   verlangt eine Extension-Invocation per Toolbar-Klick, ein Klick in der Sidebar zählt

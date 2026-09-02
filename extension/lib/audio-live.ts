@@ -107,7 +107,7 @@ async function erkenne(
   sprache: string | undefined,
   zeitstempel: boolean,
   signal: AbortSignal,
-): Promise<{ segments: Segment[]; text: string }> {
+): Promise<{ segments: Segment[]; text: string; sprache?: string }> {
   const body: Record<string, unknown> = {
     model,
     input_audio: { data: zuBase64(wav), format: "wav" },
@@ -132,8 +132,16 @@ async function erkenne(
   if (!res.ok) {
     throw new Error(`Spracherkennung fehlgeschlagen: HTTP ${res.status} ${await res.text()}`);
   }
-  const data = (await res.json()) as { segments?: Segment[]; text?: string };
-  return { segments: data.segments ?? [], text: data.text ?? "" };
+  const data = (await res.json()) as {
+    segments?: Segment[];
+    text?: string;
+    language?: string;
+  };
+  // `language` steht nur in verbose_json und ist die einzige Rückmeldung darüber, was
+  // das Modell zu hören glaubte. Sie wandert in `Transcript.lang` und damit in die
+  // Übersetzung – ohne sie hielte die Oberfläche jedes erkannte Transkript für
+  // sprachlos.
+  return { segments: data.segments ?? [], text: data.text ?? "", sprache: data.language };
 }
 
 export function starteLiveTranskription(opts: {
@@ -171,9 +179,20 @@ export function starteLiveTranskription(opts: {
     const werbungLaeuft = () => !!document.querySelector(".ad-showing");
 
     video.muted = true;
-    await video.play().catch(() => {
-      throw new Error("Das Video liess sich nicht abspielen.");
-    });
+    /*
+     * `play()` bricht mit AbortError ab, wenn YouTube im selben Moment eine neue Quelle
+     * lädt – gemessen am 02.09.2026: „The play() request was interrupted by a new load
+     * request." Das ist kein Fehlschlag, sondern ein Rennen; entscheidend ist allein, ob
+     * danach gespielt wird. Deshalb mehrere Versuche und ein Urteil am Ende.
+     */
+    for (let i = 0; i < 10 && video.paused; i++) {
+      try {
+        await video.play();
+      } catch {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+    if (video.paused) throw new Error("Das Video liess sich nicht abspielen.");
 
     if (werbungLaeuft()) {
       // Zehn Minuten. Gemessen am 02.09.2026 in einem frischen Profil ohne Anmeldung:
@@ -206,6 +225,32 @@ export function starteLiveTranskription(opts: {
     // Die Videospur sofort stoppen, sonst kopiert Chrome jedes Bild mit.
     for (const spur of stream.getVideoTracks()) spur.stop();
 
+    /*
+     * Der Strom kann leer beginnen: gemessen am 02.09.2026 warf
+     * `createMediaStreamSource` ein „MediaStream has no audio track", weil YouTube die
+     * Tonspur erst kurz nach dem Start des Elements anhängt. Zehn Sekunden Geduld statt
+     * einer Fehlermeldung, die nur ein Rennen beschreibt.
+     */
+    for (let i = 0; i < 40 && !stream.getAudioTracks().length; i++) {
+      if (abbruch.signal.aborted) throw new Error("Abgebrochen.");
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (!stream.getAudioTracks().length) {
+      throw new Error("Dieses Video liefert keine Tonspur, die sich mitlesen lässt.");
+    }
+
+    /*
+     * `createMediaStreamSource` wählt seine Spur einmal beim Erzeugen aus. Tauscht
+     * YouTube die Tonspur (Qualitätswechsel, Werbung, Sprachwahl), endet die alte, und
+     * ab da käme Stille an, ohne dass irgendetwas fehlschlüge. Der Stille-Wächter unten
+     * würde das nach 15 Sekunden bemerken – diese Meldung sagt sofort, woran es lag.
+     */
+    for (const spur of stream.getAudioTracks()) {
+      spur.addEventListener("ended", () => {
+        if (!fertig) fehler = new Error("Die Tonspur des Videos wurde mitten im Lauf gewechselt.");
+      });
+    }
+
     const quelle = ctx.createMediaStreamSource(stream);
     // ponytail: ScriptProcessorNode ist als veraltet markiert, läuft aber überall ohne
     // eigene Worklet-Datei (die im Content-Script an der Seiten-CSP scheitern kann).
@@ -217,18 +262,21 @@ export function starteLiveTranskription(opts: {
     let pufferLaenge = 0;
     let stueckStart = 0; // Videozeit, an der das aktuelle Stück beginnt
     let stilleSeit: number | null = null;
+    let werbungZuletzt = false;
     let fehler: Error | null = null;
     let fertig = false;
 
     const segmente: Segment[] = [];
     const texte: string[] = [];
+    let sprache: string | undefined;
     // Uploads laufen der Aufnahme hinterher, aber nacheinander: zwei parallele
     // Anfragen bringen nichts, weil die Aufnahme ohnehin die langsamere Seite ist.
     let kette: Promise<void> = Promise.resolve();
 
-    // Abtastrate des aufgenommenen Signals, zurückgerechnet auf Videozeit.
-    const videoRate = Math.round(ctx.sampleRate / TEMPO);
-    const samplesJeStueck = STUECK_SEKUNDEN * videoRate;
+    // Erwartete Zahl der Abtastwerte je Stück. Nur ein Richtwert für den Schnitt – die
+    // Rate, mit der das Stück deklariert wird, entsteht weiter unten aus der wirklich
+    // vergangenen Videozeit.
+    const samplesJeStueck = (STUECK_SEKUNDEN * ctx.sampleRate) / TEMPO;
 
     // Gedrosselt: der Audio-Rückruf feuert etwa zwölfmal je Sekunde, die Anzeige
     // braucht das nicht.
@@ -255,15 +303,29 @@ export function starteLiveTranskription(opts: {
         pos += teil.length;
       }
       const offset = stueckStart;
+      const spanne = video!.currentTime - offset;
       puffer = [];
       pufferLaenge = 0;
       stueckStart = video!.currentTime;
 
-      const wav = baueWav(daten, videoRate);
+      /*
+       * Die Abtastrate wird nicht gerechnet, sondern gemessen: so viele Abtastwerte für
+       * so viel Videozeit. Die Rechnung „Aufnahmerate durch vier" stimmt nur, solange
+       * wirklich lückenlos mit vierfachem Tempo gespielt wird – bei einem Nachladestocker
+       * zählt der Audiograph Stille weiter, während `currentTime` steht, und bei einem
+       * Rate-Reset auf 1x steckt in einem „120-Sekunden-Stück" nur eine Videohalbminute.
+       * Beides würde jedes folgende Wort zeitlich verschieben. Die gemessene Rate
+       * korrigiert das von selbst.
+       */
+      const gemessen = spanne > 1 ? daten.length / spanne : ctx.sampleRate / TEMPO;
+      // Ein Wert ausserhalb dieses Bereichs wäre kein Messwert mehr, sondern ein Fehler
+      // (Videosprung des Nutzers, negative Spanne). Dann gilt der Nennwert.
+      const plausibel = gemessen > ctx.sampleRate / 16 && gemessen < ctx.sampleRate;
+      const wav = baueWav(daten, Math.round(plausibel ? gemessen : ctx.sampleRate / TEMPO));
       kette = kette.then(async () => {
         if (abbruch.signal.aborted || fehler) return;
         try {
-          const { segments, text } = await erkenne(
+          const { segments, text, sprache: antwortSprache } = await erkenne(
             wav,
             opts.model,
             opts.apiKey,
@@ -271,15 +333,28 @@ export function starteLiveTranskription(opts: {
             opts.zeitstempel,
             abbruch.signal,
           );
-          for (const s of segments) {
-            if (typeof s.start !== "number") continue;
+          const mitZeit = segments.filter((s) => typeof s.start === "number");
+          /*
+           * Whisper läuft am Ende eines Stücks über die tatsächliche Länge hinaus –
+           * gemessen am 02.09.2026: letztes Segmentende bei 114,9 s in einem Stück von
+           * 85,2 s. Ohne Klemmung zeigte die Sprungmarke in das nächste Stück hinein.
+           */
+          const klemme = (t: number) => Math.max(0, Math.min(t, spanne)) + offset;
+          for (const s of mitZeit) {
             segmente.push({
-              start: s.start + offset,
-              end: typeof s.end === "number" ? s.end + offset : undefined,
+              start: klemme(s.start!),
+              end: typeof s.end === "number" ? klemme(s.end) : undefined,
               text: s.text,
             });
           }
           if (text.trim()) texte.push(text.trim());
+          if (!mitZeit.length && text.trim()) {
+            // Ein Stück ohne Segmente würde sonst spurlos verschwinden, sobald irgendein
+            // anderes Stück welche liefert – das Ergebnis sähe vollständig aus und wäre
+            // es nicht. Sein Text bekommt deshalb den Beginn des Stücks als Marke.
+            segmente.push({ start: offset, text: text.trim() });
+          }
+          if (!sprache && antwortSprache) sprache = antwortSprache;
         } catch (e) {
           if (!abbruch.signal.aborted) fehler = e as Error;
         }
@@ -293,9 +368,20 @@ export function starteLiveTranskription(opts: {
       if (werbungLaeuft()) {
         // Das laufende Stück abschliessen, statt Ton von vor und nach der Werbung
         // zusammenzukleben – sonst stimmt jede folgende Zeitangabe nicht mehr.
-        schneide(true);
-        stueckStart = video.currentTime;
+        if (!werbungZuletzt) schneide(true);
+        werbungZuletzt = true;
         return;
+      }
+      if (werbungZuletzt) {
+        /*
+         * Zurück im Beitrag. Beides muss hier passieren: `stueckStart` steht sonst auf
+         * der Laufzeit der Werbung – die folgenden Sprungmarken zeigten dann um deren
+         * Länge daneben –, und YouTube setzt beim Werbewechsel die Geschwindigkeit auf
+         * 1x zurück, ohne dass danach zwingend ein `ratechange` folgt.
+         */
+        werbungZuletzt = false;
+        stueckStart = video.currentTime;
+        setzeTempo();
       }
       const eingang = e.inputBuffer.getChannelData(0);
       puffer.push(new Float32Array(eingang));
@@ -397,13 +483,14 @@ export function starteLiveTranskription(opts: {
       }));
 
     if (cues.length) {
-      return { cues, source: `Spracherkennung (${TEMPO}x)`, hasTimestamps: true };
+      return { cues, lang: sprache, source: `Spracherkennung (${TEMPO}x)`, hasTimestamps: true };
     }
 
     const text = texte.join(" ").trim();
     if (!text) throw new Error("Die Spracherkennung hat nichts zurückgeliefert.");
     return {
       cues: [{ start: 0, dur: 0, text }],
+      lang: sprache,
       source: `Spracherkennung (${TEMPO}x)`,
       hasTimestamps: false,
     };

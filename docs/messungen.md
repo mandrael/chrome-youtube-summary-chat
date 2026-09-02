@@ -490,3 +490,64 @@ Im Browser gemessen, nicht angenommen:
 Derselbe Aufruf, zwei Videos: 15,19 MiB in 13 Sekunden bei `9D-xzper0wQ`, 34 KiB/s bei
 `M4Tw_3SmNXg`. Am lokalen Weg wurde nichts geändert – die Drosselung liegt bei YouTube
 und trifft einzelne Videos.
+
+## Spracherkennung aus dem laufenden Ton: was die Probe ergab (02.09.2026)
+
+Gemessen in Michaels eigenem Chrome (Kopie des angemeldeten Profils, Debug-Port,
+`--mute-audio`), Video `9D-xzper0wQ` ab Sekunde 60, Aufnahme 30 Sekunden Realzeit bei
+`playbackRate = 4` und `preservesPitch = false`:
+
+| Grösse | Wert |
+|---|---|
+| Abtastwerte | 1.318.912 (44.100 Hz Aufnahmerate) |
+| abgedeckte Videozeit | 85,2 s |
+| daraus gemessene Rate | 15.489 Hz |
+| Dauer laut Whisper | 85,15 s |
+| Segmente | 13, Sprache korrekt als Englisch erkannt |
+| Grösse der Anfrage | 3,4 MB base64 |
+
+**Die Rückrechnung stimmt auf 0,05 Sekunden** – die Dauer, die das Modell im WAV liest,
+entspricht der Videozeit, die wirklich vergangen ist.
+
+**Die Rate darf nicht gerechnet werden.** 30 Sekunden bei vierfachem Tempo müssten 120
+Videosekunden sein; es waren 85,2, effektiv also 2,8x. Die Ursache lag hier an der stark
+belegten Internetleitung und sagt nichts über Chrome; entscheidend ist, dass es
+vorkommt. Wäre die WAV-Rate als „Aufnahmerate durch vier" (11.025 Hz) deklariert worden,
+hätte das Modell alles um Faktor 1,4 zeitverschoben ausgegeben – ohne Fehlermeldung, mit
+plausibel aussehendem Text. Deshalb wird die Rate aus Abtastwerten je tatsächlich
+vergangener Videosekunde bestimmt.
+
+**Whisper läuft am Stückende über:** letztes Segmentende bei 114,92 s in einem Stück von
+85,15 s. Die Zeiten werden deshalb auf die Stückdauer geklemmt.
+
+## Werbung ist kein Randfall, sondern der Normalfall im Testprofil (02.09.2026)
+
+In einem frischen, nicht angemeldeten Chrome-Profil lieferte YouTube vor jedem Video
+Werbeblöcke von 80, 111, 149, 180 und 305 Sekunden; teils lief die Werbung nicht einmal
+ab (`currentTime` blieb bei 0 von 149 s). Drei Befunde daraus, die den Code betreffen:
+
+- **Werbung läuft im selben `<video>`-Element.** Sie meldet ihre eigene `duration` – im
+  Test 79 s statt 46 Minuten. Ein Ende-Test gegen `duration` hielt die Erkennung für
+  fertig, bevor der Beitrag begonnen hatte.
+- **Die Klasse steht am Player, nicht irgendwo.** Geprüft wird
+  `#movie_player.ad-showing`.
+- **Nach der Werbung setzt YouTube die Geschwindigkeit auf 1x zurück**, ohne dass
+  zwingend ein `ratechange` folgt. Beim Übergang zurück in den Beitrag muss das Tempo
+  neu gesetzt und der Stückbeginn auf die Beitragszeit gezogen werden.
+
+## Zwei Rennen beim Start (02.09.2026)
+
+- `video.play()` bricht mit `AbortError` ab, wenn YouTube im selben Moment eine neue
+  Quelle lädt: *„The play() request was interrupted by a new load request."* Das ist kein
+  Fehlschlag – entscheidend ist, ob danach gespielt wird.
+- `video.captureStream()` kann einen Strom **ohne Audiospur** liefern, wenn er zu früh
+  geholt wird: `InvalidStateError: MediaStream has no audio track`. Der Strom wird
+  deshalb so lange erneut geholt, bis eine Tonspur darin liegt.
+
+## Chrome 136+ sperrt den Debug-Port am Standardprofil (02.09.2026)
+
+Chromes eigene Meldung im Wortlaut: *„DevTools remote debugging requires a non-default
+data directory. Specify this using --user-data-dir."* Tests mit Michaels Anmeldung
+laufen deshalb auf einer **Kopie** des Profils. Der frühere Fehlschlag dieses Wegs lag
+daran, dass Chrome beim Kopieren noch lief; nach sauberem Beenden meldete die Kopie
+`angemeldet: true` und lieferte keine Werbung.

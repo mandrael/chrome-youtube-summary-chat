@@ -673,7 +673,7 @@ export function Sidebar({
             <div className="flex items-end gap-1">
               <Textarea
                 value={input}
-                rows={2}
+                rows={1}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -687,7 +687,7 @@ export function Sidebar({
                 }}
                 placeholder={t("ask")}
                 disabled={!transcript}
-                className="min-h-9 text-sm"
+                className="max-h-40 min-h-9 text-sm [field-sizing:content]"
               />
               {streaming ? (
                 <Button size="icon" variant="destructive" onClick={() => stopRef.current?.()} title={t("stop")}>

@@ -52,7 +52,7 @@
     --foreground: #141413;        /* Überschriften */
     --card: #ffffff;              /* erhöhte Flächen, Textfelder */
     --card-foreground: #2e2a24;   /* Fliesstext */
-    --primary: #c4302b;           /* YouTube-Rot, abgedunkelt für Weiss darauf */
+    --primary: #e1002d;           /* YouTubes eigenes Badge-Rot */
     --primary-foreground: #ffffff;
     --secondary: #ede4d3;         /* Hover-Füllung */
     --secondary-foreground: #2e2a24;
@@ -64,7 +64,7 @@
     --destructive-foreground: #ffffff;
     --border: #ddd4c2;
     --input: #ddd4c2;
-    --ring: #c4302b;
+    --ring: #e1002d;
     --radius: 0.625rem;
   }
 
@@ -85,7 +85,7 @@
     --foreground: #f1f1f1;
     --card: #0f0f0f;              /* wie die Seite, abgegrenzt nur durch den Rand */
     --card-foreground: #f1f1f1;
-    --primary: #ff4438;           /* auf dunklem Grund heller als das Marken-Rot */
+    --primary: #e1002d;           /* YouTubes eigenes Badge-Rot, hell wie dunkel */
     --primary-foreground: #ffffff;
     --secondary: #272727;         /* YouTubes Chip- und Knopfgrund */
     --secondary-foreground: #f1f1f1;
@@ -97,7 +97,7 @@
     --destructive-foreground: #0f0f0f;
     --border: #303030;
     --input: #303030;
-    --ring: #ff4438;
+    --ring: #e1002d;
   }
 }
 
@@ -179,7 +179,7 @@
      * Alle Innenmasse bleiben `em`: die hängen an dieser Zeile und skalieren mit.
      */
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 20px;
     word-break: break-word;
   }
   .md-body > * + * {

@@ -7,6 +7,19 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, siebter Durchgang) – Eingabefeld, Rot, Schriftmasse
+
+**Das Eingabefeld beginnt einzeilig und wächst mit dem Text**, bei acht Zeilen ist
+Schluss und es scrollt. Umgesetzt mit `field-sizing: content` – seit Chrome 123 dafür
+gebaut, kein Mitzählen in JavaScript. Gemessen: leer 42 px, eine Zeile 42 px, drei Zeilen
+86 px, langer Text 176 px mit Scrollbalken.
+
+**Rot ist jetzt `#E1002D`**, YouTubes eigenes Badge-Rot, hell wie dunkel – vorher `#C4302B`
+hell und `#FF4438` dunkel. Betrifft den Sendeknopf, die Zeitstempel und den Fokusring.
+
+**Fliesstext ist Roboto 14 px auf 20 px Zeilenhöhe** – YouTubes Mass unter dem Video.
+Gemessen an `.md-body`: 14px / 20px / Roboto. Vorher 14 px auf 1.5 (= 21 px).
+
 ## Stand 02.09.2026 (nachts, sechster Durchgang) – Zustände, Farben, Spalt
 
 ### Offen und breit sind jetzt zwei Dinge

@@ -7,6 +7,35 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, fünfzehnter Durchgang) – Transkript-Tab neu
+
+Der Transkript-Tab hat jetzt **zwei Lesearten und zwei Inhalte**, jede Achse mit genau
+einem Schalter: Untertitelzeilen oder Fliesstext in Absätzen, Original oder Übersetzung.
+Ein Dreierschalter, der beides mischt, wäre der unklare Zustand, den es hier nicht geben
+soll.
+
+**Die Übersetzung läuft im Tab, nicht im Chat.** Sie landet zeilenweise in `texts[]`,
+behält die Zeitspalte, lässt sich abbrechen und danach fortsetzen (Tooltip nennt dann
+„Übersetzung fortsetzen · 37/218"). Der Übersetzen-Knopf im Chat ist weg – das war nie
+eine Chat-Funktion. Die **Zielsprache steht neben dem Knopf** und schreibt in die
+Einstellungen zurück; ein deutsches Transkript ins Englische zu übersetzen war vorher
+gar nicht erreichbar. Steht das Ziel auf der Quellsprache, ist der Knopf aus.
+
+Dazu ein **Zeit-Sync**: das Fadenkreuz springt zur laufenden Stelle und läuft mit, bis
+der Nutzer selbst scrollt. Und eine **Suche** in der Ansichtszeile, deren Trefferzahl
+Fundstellen zählt, nicht gefilterte Zeilen.
+
+Vier Fehler, die dabei ans Licht kamen und behoben sind, stehen mit ihren Messwerten in
+[docs/messungen.md](docs/messungen.md): die Spurauswahl nahm die automatische statt der
+redigierten Spur, der Stopp-Knopf hing (`port.onDisconnect` feuert nur am anderen Ende),
+die **Options-Seite rendete gar nichts** (vier Hooks hinter dem frühen Return), und ein
+Zeitstempel-Klick während einer Anzeige spulte die Werbung.
+
+Geprüft im headless-Testbrowser an `9D-xzper0wQ`: Spurwahl „Deutsch" (218 statt 364
+Zeilen), Fliesstext 36 Absätze, Suche 17 Treffer, Übersetzung Deutsch ➔ Englisch mit
+Abbruch bei 37/218, Folgemodus scrollt auf 2016 px und schaltet beim Scrollen ab,
+Options-Seite meldet `downloadable` mit gesperrtem Schalter und Ladeknopf.
+
 ## Stand 02.09.2026 (nachts, vierzehnter Durchgang) – Zielsprachen als Liste
 
 Der Tooltip des Übersetzen-Symbols nennt jetzt beide Sprachen ausgeschrieben:

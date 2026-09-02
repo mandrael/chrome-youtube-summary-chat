@@ -228,3 +228,65 @@ ist zentriert, die **Masse** aber nicht: der Papierflieger hat Ecken bei (22, 2)
 und (15, 22), Schwerpunkt rund (13, 11). Das Symbol wirkt dadurch nach oben rechts
 versetzt. `ArrowUp` ist x 5…19, y 5…19 und in beiden Achsen spiegelsymmetrisch – deshalb
 steht dort jetzt ein Pfeil, wie in allen aktuellen Chat-Eingaben.
+
+## Spurauswahl: welche Untertitelspur die richtige ist (02.09.2026)
+
+Gemessen am Video `9D-xzper0wQ`: die Watch-Seite meldet zwei Spuren, `.de` (von Hand,
+Index 0) und `a.en` (`kind: "asr"`, Index 1), dazu
+`"defaultCaptionTrackIndex":0, "hasDefaultTrack":true, "captionTrackIndices":[0,1]`.
+YouTube selbst wählt also die **deutsche, redigierte** Spur vor – die Extension nahm
+trotzdem die englische ASR-Spur und lud 364 Zeilen automatisch erzeugten Text.
+
+Die Regel lautet jetzt: ist die Vorauswahl automatisch, gewinnt eine handgemachte Spur –
+erst dieselbe Sprache (der Kanal hat korrigierte Untertitel nachgereicht), sonst
+irgendeine handgemachte. Eine redigierte Spur ist auch in einer anderen Sprache besser
+als eine automatische, weil das Modell ohnehin übersetzt. Nach der Änderung: „Deutsch",
+218 Zeilen.
+
+## `port.onDisconnect` feuert nur am anderen Ende (02.09.2026)
+
+Chromes Dokumentation ist an der Stelle eindeutig, und es war die Ursache des
+Stopp-Knopfs, der nach dem Klick als Stopp-Knopf stehenblieb: `port.disconnect()` löst
+**kein** `onDisconnect` in derselben Seite aus, das Versprechen des Chat-Clients wurde
+also nie aufgelöst. `stop()` löst es jetzt selbst.
+
+Gemessen am laufenden Übersetzungslauf: Titel „Abbrechen · 37/218", nach dem Klick binnen
+1,2 s „Original anzeigen", sechs Sekunden später unverändert – es läuft nichts weiter.
+
+## React-Hooks hinter einem frühen Return (02.09.2026)
+
+Die Options-Seite rendert gar nichts (`document.body.textContent.length === 10`), in der
+Konsole steht „Rendered more hooks than during the previous render". Vier Hooks der
+Verfügbarkeitsanzeige standen hinter `if (!s) return <Laden/>`. Der Fehler ist im DOM
+unsichtbar – ohne Auslesen der Konsole hätte man ihn für ein Ladeproblem gehalten.
+
+## Werbung besetzt das `<video>`-Element (02.09.2026)
+
+Während einer Anzeige ist `document.querySelector('video')` das Werbevideo (gemessen:
+Dauer 113 s, `.ad-showing` gesetzt, das eigentliche Video hat keine eigene Instanz). Ein
+Zeitstempel-Klick spulte damit die Werbung. `seek()` merkt den Sprung jetzt vor und holt
+ihn nach, sobald der Player umschaltet – derselbe Weg, den `applyPendingSeek` schon ging.
+
+## Chrome-Übersetzung im Options-Kontext (02.09.2026)
+
+`Translator.availability({sourceLanguage:"en", targetLanguage:<Ziel>})` antwortet auf der
+`chrome-extension://`-Options-Seite mit `downloadable`; der Ladeknopf steht da, der
+Schalter für die lokale Route ist gesperrt, solange das Modell fehlt. Der Download dauert
+rund 160 Sekunden. Die API stammt aus Chromium und ist stabil ab Chrome 138 (37
+Sprachen), Edge 148 bringt eine eigene Variante (145+ Sprachen) – Vivaldi und Brave
+müssten sie eigenständig anbieten, was **nicht garantiert** ist. Deshalb wird der Zustand
+gemessen und nicht angenommen.
+
+## Absatzkriterien im Fliesstext (Setzung, 02.09.2026)
+
+Absatzende bei einer Pause von 2 Sekunden, ab 25 Sekunden Dauer mit Satzzeichen, hart bei
+60 Sekunden. An `9D-xzper0wQ` ergibt das 36 Absätze aus 218 Cues – lesbar. Das sind
+Setzungen, keine Messwerte; an sehr schnell gesprochenen Spuren nachzujustieren.
+
+## Folgemodus: Ruhezone und Zielpunkt (02.09.2026)
+
+Die aktive Zeile wird nur nachgeführt, wenn sie ausserhalb von 20–60 % der sichtbaren
+Höhe liegt, und landet dann auf einem Drittel. Gerechnet wird mit `offsetTop`/`scrollTop`
+statt `getBoundingClientRect`, weil `zoom` die Rechteckwerte skaliert. Gemessen: Video auf
+Minute 10 von 17:34 gesetzt, Klick auf das Symbol scrollt von 0 auf 2016 px; ein
+`wheel`-Ereignis schaltet den Modus wieder ab.

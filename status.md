@@ -2,10 +2,43 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Neue Presets gegen ein echtes Video messen** (Fazit/Argumente/Ausführlich mit dem
-   neuen System-Prompt) – braucht einen OpenRouter-Lauf.
+1. **Fazit-Prompt schärfen**: unsichere Angaben weglassen statt in Klammern raten
+   (gemessen am Video `9D-xzper0wQ`, siehe unten).
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
+4. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+   verschmelzen – nur, wenn gewünscht.
+
+## Stand 02.09.2026 (nachts, sechzehnter Durchgang) – drei Lesestufen
+
+Der Transkript-Tab hat **drei Stufen statt zwei**, in denen die Verdichtung von links
+nach rechts zunimmt:
+
+| Stufe | Symbol | Zeit | Aufgabe |
+|---|---|---|---|
+| Untertitel | `Captions` | je Zeile | zitieren |
+| Absätze | `AlignLeft` | je Absatz | mitlesen |
+| Lesetext | `BookOpenText` | keine | lesen |
+
+Der **Kopieren-Knopf liefert, was zu sehen ist** – kein dritter Knopf, kein
+Modus-Sonderfall. Herunterladen bleibt der Vollbestand mit Zeitmarken, damit jede
+sinnvolle Kombination genau einen Ort hat. Der Tooltip nennt die Stufe.
+
+Leseabsätze bauen auf den Absätzen der zweiten Stufe auf (sammeln bis 150 Wörter, früher
+schliessen an einer Sprechpause ab drei Sekunden ab 50 Wörtern). Gemessen: 218 Cues → 36
+Absätze → 12 Leseabsätze mit 159 bis 207 Wörtern. Geprüft im Selfcheck (13 Prüfungen).
+
+Die zwei Sprachfelder der Kopfzeile tragen jetzt ihr Symbol davor – Untertitelsymbol vor
+der Spurwahl, Übersetzen-Symbol vor der Zielsprache. **Fable riet stattdessen, Knopf und
+Zielsprache zu einem einzigen Auswahlfeld zu verschmelzen** („Übersetzen …" als
+Ruheeintrag, Sprachwahl löst aus, spart 32 px). Der ausdrückliche Wunsch war die Variante
+mit zwei Symbolen; Fables Alternative liegt als Option auf dem Tisch.
+
+**Presets gegen ein echtes Video gemessen** (`9D-xzper0wQ`, gemini-3.5-flash-lite):
+Kapitel liefert 8 Sprungmarken mit sauberen Überschriften, Fakten 16 Sprungmarken nach
+Themen gruppiert, Argumente 6. Ein Mangel: das **Fazit rät bei unsicheren Angaben in
+Klammern** („viermonatige (bzw. viertägige/vierwöchige) Kurs"), während das
+Fakten-Preset an derselben Stelle korrekt „Vier Wochenenden [04:26]" schreibt.
 
 ## Stand 02.09.2026 (nachts, fünfzehnter Durchgang) – Transkript-Tab neu
 
@@ -518,10 +551,12 @@ transkribiert, obwohl Untertitel da sind. Nur im `full`-Build.
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Neue Presets gegen ein echtes Video messen** (Fazit/Argumente/Ausführlich mit dem
-   neuen System-Prompt) – braucht einen OpenRouter-Lauf.
+1. **Fazit-Prompt schärfen**: unsichere Angaben weglassen statt in Klammern raten
+   (gemessen am Video `9D-xzper0wQ`, siehe unten).
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
+4. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+   verschmelzen – nur, wenn gewünscht.
 
 ## Stand 02.09.2026 – Umzug in Chromes Seitenleiste, Farben, Icon
 

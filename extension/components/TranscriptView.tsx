@@ -1,6 +1,6 @@
 import * as React from "react";
 import { AudioLines, Copy, Download, Languages, Search, X } from "lucide-react";
-import { kurzcode, kurzname, langname } from "@/lib/tracks";
+import { langname } from "@/lib/tracks";
 import { Button } from "@/components/ui/button";
 import { formatTs, transcriptToText } from "@/lib/timestamps";
 import type { T } from "@/lib/i18n";
@@ -18,6 +18,7 @@ export function TranscriptView({
   onForceAudio,
   onTranslate,
   translationTarget,
+  uiLang = "de",
   busy,
 }: {
   t: T;
@@ -33,6 +34,7 @@ export function TranscriptView({
   /** Übersetzt das Transkript – nicht zu verwechseln mit dem Wechsel der Spur links. */
   onTranslate?: () => void;
   translationTarget?: string;
+  uiLang?: "de" | "en";
   busy?: string | null;
 }) {
   const [suche, setSuche] = React.useState("");
@@ -76,11 +78,15 @@ export function TranscriptView({
             title={t("captionTrackYouTube")}
             className="spur-select h-6 min-w-0 max-w-[190px] shrink"
           >
-            {tracks.map((tr) => (
-              <option key={tr.url} value={tr.url}>
-                {`${kurzcode(tr, tracks)} · ${langname(tr)}`}
-              </option>
-            ))}
+            {[...tracks]
+              // Alphabetisch nach dem Namen in der Sprache der Oberfläche – bei 31 Spuren
+              // ist YouTubes eigene Reihenfolge nicht nachvollziehbar.
+              .sort((a, b) => langname(a, uiLang).localeCompare(langname(b, uiLang), uiLang))
+              .map((tr) => (
+                <option key={tr.url} value={tr.url}>
+                  {langname(tr, uiLang)}
+                </option>
+              ))}
           </select>
         ) : (
           // Nur eine Spur: gleiche Höhe und Stelle, aber ohne Rahmen und Pfeil. Ein
@@ -88,12 +94,12 @@ export function TranscriptView({
           <span
             title={
               activeTrack
-                ? `${t("captionTrackYouTube")}: ${langname(activeTrack)}`
+                ? `${t("captionTrackYouTube")}: ${langname(activeTrack, uiLang)}`
                 : transcript.source
             }
             className="inline-flex h-6 min-w-0 max-w-[190px] items-center truncate px-1 text-xs font-medium text-muted-foreground"
           >
-            {activeTrack ? kurzname(activeTrack) : transcript.source}
+            {activeTrack ? langname(activeTrack, uiLang) : transcript.source}
           </span>
         )}
         <div className="ml-auto flex shrink-0 gap-0.5">

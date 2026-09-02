@@ -883,6 +883,7 @@ export function Sidebar({
           onSwitchTrack={(tr) => void switchTrack(tr)}
           onTranslate={() => translate(true)}
           translationTarget={settings?.translationTarget ?? ""}
+          uiLang={uiLang}
           onForceAudio={__FALLBACK__ ? () => runFallbackJob("audio") : undefined}
           busy={fallbackState}
         />

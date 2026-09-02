@@ -35,10 +35,12 @@ hängte „(automatisch)" an. Im zweiten Anlauf kam er noch einmal doppelt, weil
 Name ihn beide setzten („en (auto) · Englisch (auto)") – jetzt steht er genau einmal am
 Ende der Zeile. Dazu `white-space: nowrap` samt Auslassungspunkten am Kasten und an
 `selectedcontent`: der gewählte Text brach sonst unter das Feld. Die Wahrheit steht im Flag `auto`. Neues Modul
-`lib/tracks.ts`: geschlossen steht das Kürzel – **`de (auto)`, `en`, `pt-BR`** –, in der
-Liste Kürzel und ausgeschriebener Name in der Sprache der Oberfläche
-(**`de · Deutsch`**, nicht „German"; über `Intl.DisplayNames`, YouTubes Rohname nur als
-Rückfall). Die Region steht nur da, wo sie unterscheidet.
+`lib/tracks.ts`: es steht nur noch der ausgeschriebene Name in der Sprache der Oberfläche
+– **„Deutsch (auto)"**, nicht „German (auto-generated) (automatisch)" – über
+`Intl.DisplayNames`, YouTubes Rohname nur als Rückfall. Die Liste ist alphabetisch nach
+diesem Namen sortiert; bei 31 Spuren ist YouTubes eigene Reihenfolge nicht
+nachvollziehbar. Die Sprachkürzel sind auf Wunsch wieder raus, `kurzcode` und `kurzname`
+bleiben im Modul für den Fall, dass sie an anderer Stelle gebraucht werden.
 
 ### Gestaltetes Dropdown statt Browser-Grau
 

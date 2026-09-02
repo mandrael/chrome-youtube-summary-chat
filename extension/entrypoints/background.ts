@@ -1,6 +1,6 @@
 import { defineBackground } from "wxt/utils/define-background";
 import { listModels, listSttModels, streamChat, testKey } from "@/lib/openrouter";
-import { getSettings } from "@/lib/storage";
+import { collapsedItem, getSettings } from "@/lib/storage";
 import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 
 /**
@@ -18,6 +18,19 @@ interface ChatPortRequest {
 }
 
 export default defineBackground(() => {
+  // Ohne diesen Listener und ohne `default_popup` täte ein Klick aufs Symbol schlicht
+  // nichts. Auf einer Videoseite klappt er die Sidebar auf oder zu, sonst öffnet er die
+  // Einstellungen – ein Content-Script darf `openOptionsPage` nicht selbst aufrufen.
+  chrome.action.onClicked.addListener((tab) => {
+    void (async () => {
+      if (tab.url && /youtube\.com\/watch/.test(tab.url)) {
+        await collapsedItem.setValue(!(await collapsedItem.getValue()));
+      } else {
+        await chrome.runtime.openOptionsPage();
+      }
+    })();
+  });
+
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "chat") return handleChatPort(port);
     if (port.name === "fallback" && __FALLBACK__) return handleFallbackPort(port);

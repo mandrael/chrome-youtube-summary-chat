@@ -90,7 +90,7 @@ export function Options() {
   const customValid = !s.customModel.trim() || isValidSlug(s.customModel);
 
   return (
-    <div className="mx-auto max-w-3xl bg-background p-6 text-foreground">
+    <div className="mx-auto min-h-screen max-w-5xl bg-background p-8 text-foreground">
       <h1 className="mb-1 text-xl font-semibold">YouTube Summary Chat</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Alle Modellaufrufe laufen über OpenRouter. Es gibt keinen zweiten Anbieter und
@@ -247,6 +247,24 @@ export function Options() {
               className="w-40 accent-[var(--primary)]"
             />
             <span className="w-12 font-mono text-xs text-muted-foreground">{s.uiScale} %</span>
+          </div>
+        </Field>
+
+        <Field
+          label="Breite der Spalte auf YouTube"
+          hint="Wie breit die rechte Spalte mit der Sidebar sein darf. Der Player weicht entsprechend zurück; bei schmalem Fenster greift eine Obergrenze von 46 % der Fensterbreite. YouTubes eigener Wert liegt je nach Fenster bei rund 400 bis 490 px."
+        >
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={400}
+              max={900}
+              step={20}
+              value={s.columnWidth}
+              onChange={(e) => patch({ columnWidth: Number(e.target.value) })}
+              className="w-40 accent-[var(--primary)]"
+            />
+            <span className="w-12 font-mono text-xs text-muted-foreground">{s.columnWidth} px</span>
           </div>
         </Field>
 

@@ -36,6 +36,12 @@ export interface CaptionTrack {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  /**
+   * Was in der Blase steht, wenn es nicht `content` sein soll. Die Preset-Knöpfe
+   * schicken einen langen Anweisungstext ans Modell; angezeigt wird davon nur der
+   * Name des Knopfes.
+   */
+  label?: string;
   /** Nur bei Assistenten-Nachrichten und nur, wenn die Kostenanzeige an ist. */
   usage?: Usage;
   error?: boolean;
@@ -112,6 +118,8 @@ export interface Settings {
   /** Chrome-eigene Translator API statt OpenRouter fürs Übersetzen. */
   preferLocalTranslate: boolean;
   uiScale: number;
+  /** Breite der rechten YouTube-Spalte in Pixeln; der Player weicht entsprechend. */
+  columnWidth: number;
 }
 
 /** Nachrichten zwischen Content-Script/Options und Service Worker. */

@@ -4,6 +4,7 @@ import type { ContentScriptContext } from "wxt/utils/content-script-context";
 import ReactDOM from "react-dom/client";
 import { Sidebar } from "@/components/Sidebar";
 import { loadTrack, loadTranscript, NoCaptionsError, videoIdFromUrl } from "@/lib/transcript";
+import { getSettings, settingsItem } from "@/lib/storage";
 import "@/assets/tailwind.css";
 
 /**
@@ -98,31 +99,47 @@ export default defineContentScript({
 
     // YouTube navigiert ohne Reload. Beide Signale: WXTs Location-Change als Grundlage,
     // YouTubes eigenes Event als schnellere Ergänzung.
-    const melden = () => {
-      void sync();
-      chrome.runtime.sendMessage({ type: "videoChanged" }).catch(() => {
-        /* Seitenleiste ist zu – niemand hört zu, das ist kein Fehler */
-      });
-    };
+    const melden = () => void sync();
     ctx.addEventListener(window, "wxt:locationchange", melden);
     ctx.addEventListener(window, "yt-navigate-finish" as any, melden);
 
-    // Umschalten der Platzierung soll sofort wirken, nicht erst beim nächsten Video.
-    chrome.storage.local.onChanged.addListener(() => void sync());
-
-    // YouTubes Theme-Wechsel an die Seitenleiste weitergeben.
-    const themeObserver = new MutationObserver(() => {
-      chrome.runtime.sendMessage({ type: "videoChanged" }).catch(() => {});
-    });
-    themeObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["dark"],
-    });
+    void breiteAnwenden(ctx);
     schuetzeTastatur(ctx);
-
-    ctx.onInvalidated(() => themeObserver.disconnect());
   },
 });
+
+/**
+ * Gibt der rechten Spalte mehr Platz, indem der Player gedeckelt wird.
+ *
+ * Beide Variablen sind nötig, gemessen am 02.09.2026: `--ytd-watch-flexy-sidebar-width`
+ * rechnet YouTube beim Laden einmal aus (im Test 489 px) und fasst sie danach nicht mehr
+ * an – wer nur den Player deckelt, bekommt eine Lücke statt einer breiteren Spalte.
+ * Umgekehrt genügt die Spaltenbreite allein nicht, weil der Player seine Grösse aus
+ * `--ytd-watch-flexy-max-player-width` zieht.
+ *
+ * `min(…, 46vw)` statt eines festen Werts: bei schmalem Fenster bliebe sonst kein Video
+ * übrig. Das Theater-Layout ist ausgenommen, dort liegt die Spalte ohnehin unter dem
+ * Player.
+ */
+async function breiteAnwenden(ctx: ContentScriptContext): Promise<void> {
+  const style = document.createElement("style");
+  style.id = "yt-summary-chat-breite";
+  const setzen = (px: number) => {
+    style.textContent = `ytd-watch-flexy:not([theater]):not([fullscreen]) {
+      --ytd-watch-flexy-sidebar-width: min(${px}px, 46vw) !important;
+      --ytd-watch-flexy-max-player-width: calc(100vw - min(${px}px, 46vw) - 96px) !important;
+    }`;
+    // YouTube berechnet die Player-Grösse in JavaScript und nur auf Anlass hin.
+    window.dispatchEvent(new Event("resize"));
+  };
+  setzen((await getSettings()).columnWidth);
+  document.head.appendChild(style);
+  const stop = settingsItem.watch((s) => setzen(s?.columnWidth ?? 620));
+  ctx.onInvalidated(() => {
+    stop();
+    style.remove();
+  });
+}
 
 /**
  * Hält YouTubes Tastaturkürzel aus dem Chat heraus.
@@ -136,7 +153,8 @@ export default defineContentScript({
  * Abgefangen wird am `window` in der **Capture**-Phase. Das ist die früheste Station der
  * Ereigniskette – früher als jeder Listener am `document`, egal wer zuerst registriert
  * hat. `stopPropagation()` allein genügt: die Taste soll ja im Feld ankommen, nur nicht
- * bei YouTube.
+ * bei YouTube. Der Preis: auch die eigenen React-Handler sehen das Event nicht mehr,
+ * deshalb die Ausnahme für Enter und Escape.
  */
 function schuetzeTastatur(ctx: ContentScriptContext): void {
   const ausEingabefeld = (e: Event): boolean => {
@@ -149,7 +167,14 @@ function schuetzeTastatur(ctx: ContentScriptContext): void {
     return ziel.matches("input, textarea, select, [contenteditable]");
   };
 
+  // Enter und Escape sind ausgenommen. `stopPropagation()` in der Capture-Phase am
+  // window hält das Event auch vom Ziel fern – damit feuert kein React-Handler im
+  // Shadow DOM mehr, und Enter zum Senden war tot. Beide Tasten sind zugleich keine
+  // Video-Kürzel von YouTube (gemessen: keydown-Listener am document prüft Leer, k, m,
+  // j, l, f, c, i, t und Ziffern), das Durchlassen kostet also nichts.
   const handler = (e: Event) => {
+    const taste = (e as KeyboardEvent).key;
+    if (taste === "Enter" || taste === "Escape") return;
     if (ausEingabefeld(e)) e.stopPropagation();
   };
 

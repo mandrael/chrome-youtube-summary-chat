@@ -5,9 +5,9 @@ import {
   Copy,
   Download,
   Loader2,
+  BrushCleaning,
   Settings,
   Square,
-  Trash2,
   Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -102,10 +102,15 @@ export function Sidebar({
       setSettings(await getSettings());
       setCollapsed(await collapsedItem.getValue());
     })();
-    // Änderungen in der Options-Page sollen ohne Reload ankommen.
+    // Änderungen in der Options-Page sollen ohne Reload ankommen, und das Symbol in der
+    // Werkzeugleiste klappt über denselben Schlüssel auf und zu.
     const onChange = () => void getSettings().then(setSettings);
     chrome.storage.local.onChanged.addListener(onChange);
-    return () => chrome.storage.local.onChanged.removeListener(onChange);
+    const stop = collapsedItem.watch((v) => setCollapsed(!!v));
+    return () => {
+      chrome.storage.local.onChanged.removeListener(onChange);
+      stop();
+    };
   }, []);
 
   React.useEffect(() => {
@@ -222,7 +227,7 @@ export function Sidebar({
    *   Übersetzen einer bereits erzeugten Antwort ist das diese Antwort. Ohne ihn
    *   arbeitet das Modell wie sonst auf dem Transkript im System-Prompt.
    */
-  async function send(text: string, systemOverride?: string, nutzlast?: string) {
+  async function send(text: string, systemOverride?: string, nutzlast?: string, label?: string) {
     if (!settings || !transcript || streaming) return;
     if (!settings.apiKey) {
       setMessages((m) => [...m, { role: "assistant", content: t("noKey"), error: true }]);
@@ -231,7 +236,10 @@ export function Sidebar({
 
     const basis = nutzlast ? `${text}\n\n---\n\n${nutzlast}` : text;
     const prompt = extra.trim() ? `${basis}\n\n${extra.trim()}` : basis;
-    const next: ChatMessage[] = [...messages, { role: "user", content: prompt }];
+    const next: ChatMessage[] = [
+      ...messages,
+      { role: "user", content: prompt, ...(label ? { label } : {}) },
+    ];
     setMessages([...next, { role: "assistant", content: "" }]);
     setStreaming(true);
     setTab("chat");
@@ -278,8 +286,17 @@ export function Sidebar({
     }
   }
 
+  const PRESET_LABELS = {
+    summary_short: "presetShort",
+    summary_medium: "presetMedium",
+    summary_long: "presetLong",
+    chapters: "presetChapters",
+  } as const;
+
   function preset(key: keyof (typeof PRESETS)["de"]) {
-    void send(PRESETS[uiLang][key]);
+    // Angezeigt wird der Name des Knopfes, gesendet der volle Anweisungstext.
+    const beschriftung = PRESET_LABELS[key as keyof typeof PRESET_LABELS];
+    void send(PRESETS[uiLang][key], undefined, undefined, beschriftung ? t(beschriftung) : undefined);
   }
 
   /* ---- Übersetzung ---- */
@@ -474,7 +491,7 @@ export function Sidebar({
     <div
       className={cn(
         "flex flex-col rounded-xl border border-border bg-card text-card-foreground overflow-hidden",
-        fullHeight ? "h-full" : "mb-3 max-h-[75vh]",
+        fullHeight ? "h-full" : "mb-3 h-[72vh] min-h-[440px]",
       )}
       // zoom skaliert den ganzen Baum – Schrift, Abstände, Knöpfe – in einem Zug.
       style={{ zoom: (settings?.uiScale ?? 110) / 100 }}
@@ -496,7 +513,7 @@ export function Sidebar({
       {tab === "chat" && (
         <>
           <div className="border-b border-border px-2 py-2">
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetShortHint")} onClick={() => preset("summary_short")}>
                 {t("presetShort")}
               </Button>
@@ -513,6 +530,22 @@ export function Sidebar({
                 {t("presetTranslate")}
                 {settings?.preferLocalTranslate ? " ⌂" : ""}
               </Button>
+              {messages.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto"
+                  disabled={streaming}
+                  title={t("newChatHint")}
+                  onClick={() => {
+                    setMessages([]);
+                    void deleteConversation(videoId);
+                  }}
+                >
+                  <BrushCleaning />
+                  {t("newChat")}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -627,17 +660,7 @@ export function Sidebar({
                 <Button size="iconSm" variant="ghost" title={t("exportMd")} onClick={() => download(`chat-${videoId}.md`, chatMarkdown())}>
                   <Download />
                 </Button>
-                <Button
-                  size="iconSm"
-                  variant="ghost"
-                  title={t("clear")}
-                  onClick={() => {
-                    setMessages([]);
-                    void deleteConversation(videoId);
-                  }}
-                >
-                  <Trash2 />
-                </Button>
+
               </div>
             )}
           </div>
@@ -781,7 +804,7 @@ function MessageBubble({
   if (message.role === "user") {
     return (
       <div className="mb-2 rounded-lg bg-secondary px-2.5 py-1.5 text-sm text-secondary-foreground whitespace-pre-wrap">
-        {message.content}
+        {message.label ?? message.content}
       </div>
     );
   }

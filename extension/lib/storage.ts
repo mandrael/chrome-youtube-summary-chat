@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sttRoute: "parakeet-mlx",
   preferLocalTranslate: false,
   uiScale: 110,
+  columnWidth: 620,
 };
 
 /**

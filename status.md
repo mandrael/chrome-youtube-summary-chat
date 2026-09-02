@@ -7,6 +7,58 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, dritter Durchgang) – Breite, Platz, Enter, Optionen
+
+### YouTubes Spalte lässt sich verbreitern, aber nur mit zwei Variablen
+
+Gemessen: `--ytd-watch-flexy-sidebar-width` rechnet YouTube beim Laden einmal per
+JavaScript aus (489 px bei 1600 px Fenster) und fasst sie danach nicht mehr an.
+`--ytd-watch-flexy-max-player-width` steuert den Player. Wer nur den Player deckelt,
+bekommt eine Lücke; wer nur die Spalte setzt, bekommt Überlappung. Beide zusammen per
+`!important` auf `ytd-watch-flexy` funktionieren sauber (600/700/850 px getestet, Player
+904/804/654 px, kein Überlauf). Danach muss einmal ein `resize`-Event gefeuert werden,
+weil YouTube die Player-Grösse nur auf Anlass hin neu rechnet.
+
+Neue Einstellung `columnWidth` (Default 620, Regler 400–900), Obergrenze `46vw` gegen
+schmale Fenster, ausgenommen sind Theater- und Vollbild-Layout.
+
+### Der Chat hatte 141 px Platz
+
+Die Karte hatte `max-h-[75vh]` ohne eigene Höhe und schrumpfte damit auf ihren Inhalt –
+der Nachrichtenbereich blieb bei `min-h-32`. Jetzt `h-[72vh] min-h-[440px]`, gemessen
+512 px Nachrichtenbereich bei 913 px Fensterhöhe.
+
+### Enter zum Senden war tot – Nebenwirkung des Tastaturschutzes
+
+`stopPropagation()` in der Capture-Phase am `window` hält das Event auch vom Ziel fern,
+also feuert kein React-Handler im Shadow DOM. Enter und Escape sind jetzt ausgenommen;
+beide sind keine Video-Kürzel von YouTube. Gemessen mit synthetischen Events am
+`textarea`: von Leertaste, „k" und Enter erreicht nur Enter YouTubes document-Listener,
+und das Eingabefeld ist danach leer – der Sende-Handler läuft wieder.
+
+### Der Klick aufs Symbol tat nichts
+
+Kein `default_popup`, kein `chrome.action.onClicked` – der Listener war beim Rückbau der
+Seitenleiste mit entfernt worden. Jetzt: auf einer Watch-Seite klappt er die Sidebar auf
+oder zu (über `collapsedItem`, die Sidebar hört per `watch` darauf), sonst öffnet er die
+Einstellungen.
+
+### Die Options-Seite war ein schmaler Dialog
+
+`options_ui.open_in_tab` in `wxt.config.ts` ist wirkungslos – WXT nimmt den Wert aus dem
+Entrypoint. Gebaut wurde `false`, also der eingebettete Dialog in `chrome://extensions`.
+Jetzt steht `<meta name="manifest.open_in_tab" content="true">` in
+`entrypoints/options/index.html`, gebaut kommt `true` heraus. Dazu: Inhalt bis 1280 px
+breit, und `html`/`body` bekommen die Hintergrundfarbe – vorher blieb der Bereich neben
+der zentrierten Spalte im Dunkelmodus weiss.
+
+### Preset-Prompts stehen nicht mehr im Chat
+
+Ein Klick auf „Fazit" schickte den vollen Anweisungstext und zeigte ihn auch an.
+`ChatMessage` hat jetzt ein optionales `label`: gesendet wird der Prompt, angezeigt der
+Name des Knopfes. Dazu ein sichtbarer Knopf **Leeren** (Besen-Symbol) in der Knopfleiste,
+der die Unterhaltung zu diesem Video verwirft; der versteckte Papierkorb unten ist weg.
+
 ## Stand 02.09.2026 (nachts, später) – Schriftgrösse gefunden, Seitenleiste zurückgebaut
 
 ### Die winzige Schrift: eine einzige Regel, und ich habe an ihr vorbeigemessen

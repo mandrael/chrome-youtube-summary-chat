@@ -18,10 +18,21 @@
    * die Regel muss deshalb am Kind ansetzen, von dem alles Weitere erbt.
    * Gesetzt wird YouTubes eigener Stack, damit die Sidebar kein Fremdkörper ist.
    */
+  /*
+   * Nur für eigene Seiten (Optionen): ohne diese Regel bleibt der Bereich neben der
+   * zentrierten Spalte im Dunkelmodus weiss, weil `body` selbst keine Farbe trägt.
+   * Im Shadow DOM greift der Selektor nicht, dort gibt es kein `body`.
+   */
+  html:has(body > #root),
+  html:has(body > #root) body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+
   :host > *,
   :root {
     font-family: "Roboto", "Arial", "Helvetica Neue", Helvetica, sans-serif;
-    line-height: 1.45;
+    line-height: 1.35;
     /*
      * Kein `-webkit-font-smoothing: antialiased`: YouTube rendert mit `auto` (gemessen),
      * und auf macOS zeichnet `antialiased` die Striche dünner. Bei identischer
@@ -103,14 +114,14 @@
    *
    * Die Stufen orientieren sich an YouTube: Fliesstext 14 px, Sekundäres 13 px.
    */
-  --text-xs: 14px;
-  --text-xs--line-height: 20px;
-  --text-sm: 15px;
-  --text-sm--line-height: 23px;
-  --text-base: 16px;
-  --text-base--line-height: 24px;
-  --text-lg: 18px;
-  --text-lg--line-height: 28px;
+  --text-xs: 13px;
+  --text-xs--line-height: 18px;
+  --text-sm: 14px;
+  --text-sm--line-height: 20px;
+  --text-base: 15px;
+  --text-base--line-height: 22px;
+  --text-lg: 17px;
+  --text-lg--line-height: 24px;
   --text-xl: 20px;
   --text-xl--line-height: 28px;
   --text-2xl: 24px;
@@ -162,8 +173,8 @@
      * Schrift; die Tailwind-Klassen daneben waren längst auf Pixel umgestellt.
      * Alle Innenmasse bleiben `em`: die hängen an dieser Zeile und skalieren mit.
      */
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
     word-break: break-word;
   }
   .md-body > * + * {

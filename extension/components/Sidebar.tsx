@@ -306,8 +306,10 @@ export function Sidebar({
       return;
     }
 
-    const basis = nutzlast ? `${text}\n\n---\n\n${nutzlast}` : text;
-    const prompt = extra.trim() ? `${basis}\n\n${extra.trim()}` : basis;
+    // Der Zusatz gehört zu den Schnellbefehlen und wird dort angehängt (siehe
+    // `preset`). Hier bleibt er draussen: sonst verdirbt ein liegengebliebener Zusatz
+    // still auch Übersetzung und Netzrecherche.
+    const prompt = nutzlast ? `${text}\n\n---\n\n${nutzlast}` : text;
     const next: ChatMessage[] = [
       ...messages,
       { role: "user", content: prompt, ...(label ? { label } : {}) },
@@ -456,7 +458,12 @@ export function Sidebar({
   function preset(key: keyof (typeof PRESETS)["de"]) {
     // Angezeigt wird der Name des Knopfes, gesendet der volle Anweisungstext.
     const beschriftung = PRESET_LABELS[key as keyof typeof PRESET_LABELS];
-    void send(PRESETS[uiLang][key], undefined, undefined, beschriftung ? t(beschriftung) : undefined);
+    const basis = PRESETS[uiLang][key];
+    const zusatz = extra.trim();
+    // Der Vorrang muss dastehen: sonst weiss das Modell bei „nur drei Punkte" nicht,
+    // ob sein „drei bis fünf" aus dem Schnellbefehl gilt oder der Wunsch des Nutzers.
+    const prompt = zusatz ? `${basis}\n\n${t("extraPrecedence")}\n${zusatz}` : basis;
+    void send(prompt, undefined, undefined, beschriftung ? t(beschriftung) : undefined);
   }
 
   /* ---- Übersetzung ---- */
@@ -753,7 +760,7 @@ export function Sidebar({
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetShortHint")} onClick={() => preset("summary_short")}>
                 {t("presetShort")}
               </Button>
-              <Button size="sm" variant="secondary" disabled={!transcript || streaming} onClick={() => preset("chapters")}>
+              <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetChaptersHint")} onClick={() => preset("chapters")}>
                 {t("presetChapters")}
               </Button>
               <Button size="sm" variant="secondary" disabled={!transcript || streaming} title={t("presetMediumHint")} onClick={() => preset("summary_medium")}>
@@ -839,7 +846,15 @@ export function Sidebar({
                   !streaming && messages[i - 1]?.role === "user"
                     ? () => {
                         const frage = messages[i - 1];
-                        if (frage) recherchiere(frage.label ?? frage.content);
+                        if (!frage) return;
+                        // Bei einem Schnellbefehl steht in `label` nur „Fazit" – das als
+                        // Suchanfrage zu schicken, sucht nach dem Wort statt nach der
+                        // Sache. Dann geht die Antwort selbst mit ins Netz.
+                        recherchiere(
+                          frage.label
+                            ? `${frage.label} – prüfe die Aussagen dieser Antwort im Netz:\n\n${m.content}`
+                            : frage.content,
+                        );
                       }
                     : undefined
                 }

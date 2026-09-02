@@ -21,21 +21,24 @@ Harte Regeln:
   Wochenenden" wird weder "vier Wochen" noch "viermonatig". Zwei
   verschiedene Zahlen zur selben Sache werden nicht zu einer Spanne
   zusammengezogen: aus "80 geschrieben, auf 54 verdichtet" wird nicht
-  "54 bis 80". Lässt sich eine Angabe nicht sicher wiedergeben, bleibt
-  sie weg – eine Klammer mit Alternativen ist keine Lösung.
+  "54 bis 80". Keine Umrechnung, keine Summe, kein Mittelwert, keine
+  Spanne aus zwei Zahlen.
 - Kommt ein Verfahren in der Antwort vor und erklärt der Sprecher, wie es
-  funktioniert, gib seine Erklärung wieder, nicht nur das Schlagwort. Ob es
-  vorkommt, entscheidet die Anfrage.
-- Füllwörter, Wiederholungen, Werbung, Begrüssungen und Aufrufe zum
+  funktioniert, gib seine Erklärung wieder – im Umfang, den die Anfrage
+  zulässt –, nicht nur das Schlagwort. Ob es vorkommt, entscheidet die Anfrage.
+- Füllwörter, Wiederholungen, Werbung, Begrüßungen und Aufrufe zum
   Abonnieren tragen keine Information und kommen nie vor.
 - Gib Gegenargumente, Einschränkungen und Unsicherheiten des Sprechers
-  mit wieder. Was der Sprecher nur behauptet, steht als seine Behauptung
-  („laut Sprecher“); was er mit Zahl, Quelle oder Demonstration belegt,
-  steht mit diesem Beleg.
+  mit wieder. In der Antwort ist ohnehin alles seine Aussage, das muss nicht
+  in jedem Satz stehen: „laut Sprecher“ steht nur, wo eine unbelegte
+  Behauptung neben einer belegten steht oder er eine fremde Meinung
+  wiedergibt. Was er mit Zahl, Quelle oder Demonstration belegt, steht mit
+  diesem Beleg.
 - Erfinde nichts. Was nicht im Transkript steht, kommt nicht vor. Ist eine
   Stelle erkennbar verhört – automatische Untertitel zerlegen Zahlen und
-  Namen –, schreib die wahrscheinliche Lesart und dahinter
-  „(Transkript unklar)“; ist keine Lesart erkennbar, lass die Angabe weg.
+  Namen – und ist eine Lesart klar, steht diese Lesart mit dem Zusatz
+  „(Transkript unklar)“. Sind mehrere Lesarten möglich, bleibt die Angabe
+  weg. Nie eine Klammer mit Alternativen.
   Bei Produkt- und Firmennamen, die der Zusammenhang eindeutig macht, gilt die
   richtige Schreibweise ohne Zusatz: aus „Cloud Code“ in einem Beitrag über
   Programmierwerkzeuge wird „Claude Code“.
@@ -45,9 +48,12 @@ Zeitstempel:
   nachprüfen oder hinspringen will – hinter einer Zahl, einem Zitat, einer
   Demonstration. Format [mm:ss], bei Videos über einer Stunde [hh:mm:ss].
 - Wie viele es sind und ob überhaupt, sagt die Anfrage.
-- Eine Marke in der ersten Minute belegt nichts: dort beginnt der Zuschauer ohnehin.
-  Für eine Aussage, die nur am Anfang fällt, steht keine Marke. Mehrere Stellen zur
-  selben Aussage kommen in eine Klammer: [18:46, 21:03, 34:44].
+- Eine Marke zeigt auf die Stelle, an der etwas belegt wird, nicht auf die, an
+  der es angekündigt wird. Die Hauptaussage bekommt keine Marke auf die Einleitung;
+  wird sie nirgends sonst begründet, bekommt sie keine. Kapitel setzen Marken als
+  Gliederung, das verlangt ihre Anfrage.
+- Mehrere Stellen zur selben Aussage kommen in eine Klammer: [18:46, 21:03, 34:44].
+  Eine solche Klammer zählt als eine Marke.
 - Liegen im Transkript keine Zeitstempel vor, lass sie weg und erfinde
   keine. Dass keine vorliegen, sagt die Oberfläche dem Nutzer selbst.
 
@@ -72,7 +78,7 @@ Sprache:
 /*
  * Die vier Zusammenfassungsstufen unterscheiden sich nicht in der Länge, sondern im Zweck: was soll der
  * Leser danach können. Reine Mengenangaben („kurz", „lang") erzeugen Nacherzählung in
- * drei Grössen – das Modell deckt den Inhalt proportional ab, weil ihm ein Kriterium zum
+ * drei Größen – das Modell deckt den Inhalt proportional ab, weil ihm ein Kriterium zum
  * Weglassen fehlt.
  *
  * Die Formulierungen stehen absichtlich so ausführlich da: Leser und Situation statt
@@ -88,8 +94,9 @@ export const PRESETS = {
       "will, was hier behauptet wird und wozu der Sprecher kommt. " +
       "Ein bis zwei Absätze, zusammen höchstens sechs Sätze. " +
       "Der erste Satz ist die Hauptaussage als Behauptung, nicht als Thema: nicht " +
-      "„es geht um X“, sondern „X ist Y, weil Z“. Danach nur, was diese Aussage trägt: " +
-      "das wichtigste Ergebnis, die entscheidende Zahl, die wichtigste Einschränkung. " +
+      "„es geht um X“, sondern „X ist Y, weil Z“. Danach nur, was diese Aussage trägt, " +
+      "soweit es das im Video gibt: das wichtigste Ergebnis, eine Zahl, die die Aussage " +
+      "trägt, die wichtigste Einschränkung. " +
       "Hat das Video mehrere unabhängige Themen (Nachrichten, Podcast), gilt das für die " +
       "zwei oder drei wichtigsten, je ein Satz. " +
       "Fließtext ohne Überschriften, Aufzählung oder Zeitstempel. " +
@@ -110,12 +117,14 @@ export const PRESETS = {
       "vor, gehört alles dazu in einen Punkt. " +
       "Zeitstempel in der Schreibweise des Transkripts nur dort, wo man hinspringen " +
       "möchte: eine konkrete Zahl, ein " +
-      "Zitat, eine Demonstration. Höchstens einer pro Punkt, am Satzende. " +
-      "Zum Schluss ein Satz: was folgt daraus. " +
+      "Zitat, eine Demonstration. Höchstens eine Marke je Punkt, am Satzende; eine " +
+      "Klammer mit mehreren Stellen zählt als eine. " +
+      "Zum Schluss ein Satz: was der Sprecher daraus folgert. Zieht er keinen Schluss, " +
+      "entfällt der Satz. " +
       "Nicht: Aufzählung der behandelten Themen, Beschreibung des Gesprächsverlaufs, " +
       "Wendungen wie „es wird diskutiert“. " +
       "Der erste Absatz höchstens drei Sätze, jeder Punkt höchstens vier Sätze " +
-      "einschliesslich des fetten, der Schluss einer; bei einem langen Video nicht mehr " +
+      "einschließlich des fetten, der Schluss einer; bei einem langen Video nicht mehr " +
       "Punkte, sondern strenger ausgewählt. Beginne direkt mit dem Inhalt, ohne Vorspann.",
     summary_long:
       "Schreib für jemanden, der das Video durch den Text ersetzen will. " +
@@ -133,7 +142,8 @@ export const PRESETS = {
       "nachprüfen kann, nicht hinter jedem Satz. " +
       "Bei mehreren unabhängigen Themen (Nachrichten, Podcast): je Thema ein Abschnitt, " +
       "nach Gewicht sortiert. " +
-      "Am Ende, nur wenn es sie gibt: offene Fragen oder Widersprüche. " +
+      "Am Ende, nur wenn es sie gibt: Fragen, die der Sprecher selbst offen lässt, oder " +
+      "Widersprüche zwischen seinen Aussagen. " +
       "Der Umfang folgt der Zahl der Sachfragen, nicht der Länge des Videos: sagt der " +
       "Sprecher dasselbe dreimal, steht es einmal. Keine Wiedergabe des " +
       "Gesprächsverlaufs (nicht „dann kommt das Gespräch auf …“). Ausgelassen wird nur, was keine " +

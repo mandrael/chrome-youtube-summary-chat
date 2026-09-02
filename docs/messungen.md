@@ -290,3 +290,40 @@ Höhe liegt, und landet dann auf einem Drittel. Gerechnet wird mit `offsetTop`/`
 statt `getBoundingClientRect`, weil `zoom` die Rechteckwerte skaliert. Gemessen: Video auf
 Minute 10 von 17:34 gesetzt, Klick auf das Symbol scrollt von 0 auf 2016 px; ein
 `wheel`-Ereignis schaltet den Modus wieder ab.
+
+## Beschleunigte Wiedergabe als Audioquelle: 4x trägt, 8x nicht (02.09.2026)
+
+Für einen Store-Build ohne yt-dlp bleibt nur der Ton, den der Browser ohnehin abspielt.
+Gemessen im Content-Script auf einer Watch-Seite (Chrome 152): `video.captureStream()`
+liefert eine Audiospur, `createMediaElementSource` ebenfalls; hängt der Graph nicht an
+`ctx.destination`, hört der Nutzer nichts. `playbackRate` bis 16 bleibt tönend – bei 8x
+und 16x kam kein einziger stiller Block an, RMS unverändert. Der AudioContext lief mit
+**44,1 kHz**.
+
+Der Haken ist nicht der Dekoder, sondern die Bandbreite: Web Audio liefert in
+Wanduhrzeit, die Beschleunigung komprimiert das Signal. Nach dem Zurückrechnen bleibt
+44,1 kHz geteilt durch den Faktor, halbiert.
+
+Nachgemessen mit `parakeet-tdt-0.6b-v3` an vier Minuten deutscher Rede aus
+`M4Tw_3SmNXg`. Die Kette in ffmpeg bildet Chromes Weg nach:
+`asetrate=48000*N, aresample=44100, asetrate=44100/N, aresample=16000`. Referenz ist
+dasselbe Audio ohne Umweg, 548 Wörter.
+
+| Faktor | Nutzband | Wörter | WER | 30-min-Video braucht |
+|---|---|---|---|---|
+| 1x | 22,0 kHz | 548 | – | 30:00 |
+| 3x | 7,4 kHz | 548 | 0,0 % | 10:00 |
+| **4x** | **5,5 kHz** | **549** | **1,6 %** | **7:30** |
+| 5x | 4,4 kHz | 549 | 1,8 % | 6:00 |
+| 6x | 3,7 kHz | 549 | 4,2 % | 5:00 |
+| 8x | 2,8 kHz | 463 | 32,7 % | 3:45 |
+
+Die WER-Zahl allein verharmlost den Bruch bei 8x. Dort **kippt Parakeet in die falsche
+Sprache** und übersetzt halb: aus „Das ist in diesem Fall aber nicht weiter schlimm"
+wird „This is in this fall but not schlimm, while we this model not test". Der Text
+klingt flüssig und ist falsch – die gefährlichste Fehlerart. Bei 4x und 5x sind es
+Kleinigkeiten („ist" → „is"), bei 6x beginnt dasselbe Kippen einzelner Sätze
+(„That is in diesem Fall").
+
+Damit ist **4x der Arbeitspunkt** und 5x die Grenze, an die man gehen kann. Der Gewinn
+von 6x (eine Minute je halbe Stunde) steht gegen den Anfang des Sprachkippens.

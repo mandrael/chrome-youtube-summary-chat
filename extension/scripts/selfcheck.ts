@@ -25,6 +25,7 @@ import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
 import { bildeAbsaetze, bildeLeseabsaetze } from "../lib/absaetze.ts";
+import { korrigiere, schreibweisenHinweis } from "../lib/korrektur.ts";
 
 let checks = 0;
 const check = (name: string, fn: () => void) => {
@@ -250,6 +251,35 @@ check("TS_GROUP_PATTERN fasst mehrere Zeiten in einer Klammer", () => {
   // Zahlen ohne Klammern bleiben in Ruhe.
   TS_GROUP_PATTERN.lastIndex = 0;
   assert.equal(TS_GROUP_PATTERN.test("Preise 3,55 bis 11,587 Dollar"), false);
+});
+
+console.log("korrektur");
+
+check("Wörterbuch ersetzt und setzt Schreibweisen durch", () => {
+  const wb = [
+    { begriff: "Cloud Code", ersatz: "Claude Code" },
+    { begriff: "DiktaGo" },
+    { begriff: "Kinesiologie" },
+  ];
+
+  // Stufe 1: echtes Ersetzungspaar, Gross- und Kleinschreibung egal.
+  assert.equal(korrigiere("Mit cloud code getestet.", wb), "Mit Claude Code getestet.");
+
+  // Stufe 2: eigene Schreibweise, auch über Leerzeichen und Bindestrich hinweg.
+  assert.equal(korrigiere("Ich nutze diktago täglich.", wb), "Ich nutze DiktaGo täglich.");
+  assert.equal(korrigiere("Ich nutze Dikta Go täglich.", wb), "Ich nutze DiktaGo täglich.");
+  assert.equal(korrigiere("Ich nutze Dikta-Go täglich.", wb), "Ich nutze DiktaGo täglich.");
+
+  // Was nicht im Wörterbuch steht, bleibt unangetastet – auch Wörter, die einem
+  // Eintrag ähneln. Genau hier liegt die Grenze zu DiktaGos Fuzzy-Stufen.
+  assert.equal(korrigiere("Das Bild hängt schief.", wb), "Das Bild hängt schief.");
+  assert.equal(korrigiere("Kinesologie ist etwas anderes.", wb), "Kinesologie ist etwas anderes.");
+
+  // Der Hinweis nennt nur, was im Text vorkommt.
+  const hinweis = schreibweisenHinweis("Wir sprechen über Kinesiologie.", wb);
+  assert.ok(hinweis.includes("Kinesiologie"));
+  assert.ok(!hinweis.includes("Claude Code"));
+  assert.equal(schreibweisenHinweis("Nichts davon hier.", wb), "");
 });
 
 console.log(`\n${checks} Prüfungen bestanden.`);

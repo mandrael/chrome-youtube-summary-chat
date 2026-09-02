@@ -76,22 +76,27 @@
   :host(.dark),
   .dark,
   :root.dark {
-    --background: #1a1613;
-    --foreground: #f4eee3;
-    --card: #221e18;
-    --card-foreground: #e4dccd;
+    /*
+     * Dunkel folgt YouTube, nicht DiktaGo: #0F0F0F Grund und #F1F1F1 Text sind exakt
+     * die Werte des Bereichs unter dem Video. Ein warmer Braunton daneben liest sich
+     * als Fremdkörper – die helle Farbwelt bleibt warm, die dunkle nicht.
+     */
+    --background: #0f0f0f;
+    --foreground: #f1f1f1;
+    --card: #0f0f0f;              /* wie die Seite, abgegrenzt nur durch den Rand */
+    --card-foreground: #f1f1f1;
     --primary: #ff4438;           /* auf dunklem Grund heller als das Marken-Rot */
     --primary-foreground: #ffffff;
-    --secondary: #2a251e;
-    --secondary-foreground: #e4dccd;
-    --muted: #2a251e;
-    --muted-foreground: #a89e8d;
-    --accent: #332d24;
-    --accent-foreground: #f4eee3;
+    --secondary: #272727;         /* YouTubes Chip- und Knopfgrund */
+    --secondary-foreground: #f1f1f1;
+    --muted: #272727;
+    --muted-foreground: #aaaaaa;  /* YouTubes sekundärer Text */
+    --accent: #303030;
+    --accent-foreground: #f1f1f1;
     --destructive: #e68b6b;
-    --destructive-foreground: #1a1613;
-    --border: #383229;
-    --input: #383229;
+    --destructive-foreground: #0f0f0f;
+    --border: #303030;
+    --input: #303030;
     --ring: #ff4438;
   }
 }

@@ -42,8 +42,23 @@ export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
   return next;
 }
 
-/** Ob die Sidebar eingeklappt ist – bewusst getrennt von den Einstellungen. */
+/**
+ * Ob die Sidebar eingeklappt ist – bewusst getrennt von den Einstellungen.
+ * Eingeklappt ist der Normalzustand: die Seite sieht aus wie YouTube, bis jemand die
+ * Sidebar holt.
+ */
 export const collapsedItem = storage.defineItem<boolean>("local:collapsed", {
+  fallback: true,
+});
+
+/**
+ * Ob die Spalte für die Sidebar verbreitert wird.
+ *
+ * Getrennt vom Auf- und Zuklappen, weil beide Wege verschiedene Absichten haben: das
+ * Symbol in der Werkzeugleiste holt die Sidebar in YouTubes eigener Spaltenbreite, das
+ * Aufklappen in der Seite und der Ziehgriff verbreitern sie.
+ */
+export const wideItem = storage.defineItem<boolean>("local:wide", {
   fallback: false,
 });
 
@@ -78,7 +93,9 @@ export async function listConversations(): Promise<Conversation[]> {
  */
 export async function clearCache(): Promise<number> {
   const all = await storage.snapshot("local");
-  const keys = Object.keys(all).filter((k) => k.startsWith("conv:") || k === "collapsed");
+  const keys = Object.keys(all).filter(
+    (k) => k.startsWith("conv:") || k === "collapsed" || k === "wide",
+  );
   await Promise.all(keys.map((k) => storage.removeItem(`local:${k}` as `local:${string}`)));
   return keys.length;
 }

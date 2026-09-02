@@ -1,6 +1,6 @@
 import { defineBackground } from "wxt/utils/define-background";
 import { listModels, listSttModels, streamChat, testKey } from "@/lib/openrouter";
-import { collapsedItem, getSettings } from "@/lib/storage";
+import { collapsedItem, getSettings, wideItem } from "@/lib/storage";
 import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 
 /**
@@ -24,7 +24,11 @@ export default defineBackground(() => {
   chrome.action.onClicked.addListener((tab) => {
     void (async () => {
       if (tab.url && /youtube\.com\/watch/.test(tab.url)) {
-        await collapsedItem.setValue(!(await collapsedItem.getValue()));
+        const zu = await collapsedItem.getValue();
+        // Über das Symbol kommt die Sidebar in YouTubes eigener Spaltenbreite; wer sie
+        // breiter will, klappt in der Seite auf oder zieht am Griff.
+        if (zu) await wideItem.setValue(false);
+        await collapsedItem.setValue(!zu);
       } else {
         await chrome.runtime.openOptionsPage();
       }

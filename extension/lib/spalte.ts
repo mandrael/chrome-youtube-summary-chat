@@ -41,6 +41,10 @@ export function setzeSpaltenbreite(px: number): void {
 }
 
 export function entferneSpaltenbreite(): void {
-  element?.remove();
+  if (!element) return;
+  element.remove();
   element = null;
+  // Ohne dieses Event behält der Player seine kleine Grösse, während die Spalte schon
+  // zurückgefallen ist – dazwischen steht dann ein Spalt.
+  window.dispatchEvent(new Event("resize"));
 }

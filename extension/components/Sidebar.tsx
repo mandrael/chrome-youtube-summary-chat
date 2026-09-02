@@ -26,6 +26,7 @@ import {
   loadConversation,
   saveConversation,
   setSettings as speichereSettings,
+  wideItem,
 } from "@/lib/storage";
 import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
 import { transcriptToText } from "@/lib/timestamps";
@@ -329,6 +330,7 @@ export function Sidebar({
       document.body.style.userSelect = "";
       void speichereSettings({ columnWidth: Math.round(letzte) });
     };
+    void wideItem.setValue(true);
     document.body.style.userSelect = "none";
     window.addEventListener("pointermove", bewegen);
     window.addEventListener("pointerup", beenden);
@@ -518,6 +520,7 @@ export function Sidebar({
           type="button"
           onClick={() => {
             setCollapsed(false);
+            void wideItem.setValue(true);
             void collapsedItem.setValue(false);
           }}
           className="flex w-full items-center justify-between px-3 py-2 text-sm font-medium cursor-pointer"

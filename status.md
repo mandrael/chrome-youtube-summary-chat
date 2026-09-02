@@ -7,6 +7,38 @@
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
 3. Optional: Store-Build einreichen.
 
+## Stand 02.09.2026 (nachts, sechster Durchgang) – Zustände, Farben, Spalt
+
+### Offen und breit sind jetzt zwei Dinge
+
+Neuer Schlüssel `local:wide` neben `local:collapsed`. Das Symbol in der Werkzeugleiste
+holt die Sidebar in **YouTubes eigener Spaltenbreite** (`wide` bleibt aus), das Aufklappen
+in der Seite und der Ziehgriff verbreitern sie. Gemessen bei 1600 px Fenster:
+
+| Zustand | Spalte | Player |
+|---|---|---|
+| frisch installiert (eingeklappt) | 489 px | 1063 px |
+| über das Symbol geöffnet | 440 px | 1063 px |
+| in der Seite aufgeklappt | 744 px | 808 px |
+
+**Eingeklappt ist ab jetzt der Normalzustand** (`collapsedItem` fällt auf `true` zurück):
+die Seite sieht aus wie YouTube, bis jemand die Sidebar holt.
+
+### Der Spalt beim Einklappen
+
+`entferneSpaltenbreite()` hat die Regel entfernt, aber kein `resize`-Event gefeuert – die
+Spalte fiel zurück, der Player behielt seine kleine Grösse, dazwischen stand eine Lücke.
+YouTube meldet dem Player seine Grösse in JavaScript und nur auf Anlass hin; das gilt für
+beide Richtungen, nicht nur beim Setzen.
+
+### Dunkel folgt YouTube, nicht DiktaGo
+
+`#0F0F0F` Grund und `#F1F1F1` Text sind exakt die Werte des Bereichs unter dem Video,
+dazu `#272727` für Knöpfe und Chips und `#AAAAAA` für sekundären Text. Die Karte trägt
+denselben Grund wie die Seite und grenzt sich nur über den Rand ab – so wie YouTubes
+eigene Spalte. Der warme Braunton aus DiktaGo bleibt in der hellen Farbwelt, im Dunkeln
+las er sich als Fremdkörper.
+
 ## Stand 02.09.2026 (nachts, fünfter Durchgang) – Knopf „Fakten", Prompts nachgeschärft
 
 Neuer Preset-Knopf **Fakten**. Reihenfolge jetzt: Fazit · Kapitel · Argumente · Fakten ·

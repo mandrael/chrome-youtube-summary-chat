@@ -4,7 +4,7 @@ import type { ContentScriptContext } from "wxt/utils/content-script-context";
 import ReactDOM from "react-dom/client";
 import { Sidebar } from "@/components/Sidebar";
 import { loadTrack, loadTranscript, NoCaptionsError, videoIdFromUrl } from "@/lib/transcript";
-import { collapsedItem, getSettings, settingsItem } from "@/lib/storage";
+import { collapsedItem, getSettings, settingsItem, wideItem } from "@/lib/storage";
 import { entferneSpaltenbreite, setzeSpaltenbreite } from "@/lib/spalte";
 import "@/assets/tailwind.css";
 
@@ -104,18 +104,22 @@ export default defineContentScript({
     ctx.addEventListener(window, "wxt:locationchange", melden);
     ctx.addEventListener(window, "yt-navigate-finish" as any, melden);
 
-    // Eingeklappt bekommt YouTube seine eigene Spaltenbreite zurück: neben dem schmalen
-    // Balken stünde sonst eine leere Fläche, während das Video klein bleibt.
+    // Verbreitert wird nur, wenn die Sidebar offen ist und ausdrücklich breit sein soll.
+    // Eingeklappt bekommt YouTube seine eigene Spaltenbreite zurück, sonst stünde neben
+    // dem schmalen Balken eine leere Fläche, während das Video klein bleibt.
     const breiteNachziehen = async () => {
-      if (await collapsedItem.getValue()) entferneSpaltenbreite();
+      const [zu, breit] = await Promise.all([collapsedItem.getValue(), wideItem.getValue()]);
+      if (zu || !breit) entferneSpaltenbreite();
       else setzeSpaltenbreite((await getSettings()).columnWidth);
     };
     void breiteNachziehen();
-    const stopBreite = settingsItem.watch(() => void breiteNachziehen());
-    const stopCollapsed = collapsedItem.watch(() => void breiteNachziehen());
+    const stops = [
+      settingsItem.watch(() => void breiteNachziehen()),
+      collapsedItem.watch(() => void breiteNachziehen()),
+      wideItem.watch(() => void breiteNachziehen()),
+    ];
     ctx.onInvalidated(() => {
-      stopBreite();
-      stopCollapsed();
+      for (const stop of stops) stop();
       entferneSpaltenbreite();
     });
     schuetzeTastatur(ctx);

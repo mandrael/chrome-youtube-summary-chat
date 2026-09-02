@@ -83,7 +83,7 @@
      */
     --background: #0f0f0f;
     --foreground: #f1f1f1;
-    --card: #0f0f0f;              /* wie die Seite, abgegrenzt nur durch den Rand */
+    --card: #1a1a1a;              /* eine Spur heller als die Seite (#0F0F0F), hebt die Sidebar ab */
     --card-foreground: #f1f1f1;
     --primary: #e1002d;           /* YouTubes eigenes Badge-Rot, hell wie dunkel */
     --primary-foreground: #ffffff;

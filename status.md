@@ -47,9 +47,9 @@ beide Richtungen, nicht nur beim Setzen.
 ### Dunkel folgt YouTube, nicht DiktaGo
 
 `#0F0F0F` Grund und `#F1F1F1` Text sind exakt die Werte des Bereichs unter dem Video,
-dazu `#272727` für Knöpfe und Chips und `#AAAAAA` für sekundären Text. Die Karte trägt
-denselben Grund wie die Seite und grenzt sich nur über den Rand ab – so wie YouTubes
-eigene Spalte. Der warme Braunton aus DiktaGo bleibt in der hellen Farbwelt, im Dunkeln
+dazu `#272727` für Knöpfe und Chips und `#AAAAAA` für sekundären Text. Die Fläche der
+Sidebar steht auf `#1A1A1A` – eine Spur heller als die Seite, damit sie sich abhebt,
+ohne aufzufallen. Der warme Braunton aus DiktaGo bleibt in der hellen Farbwelt, im Dunkeln
 las er sich als Fremdkörper.
 
 ## Stand 02.09.2026 (nachts, fünfter Durchgang) – Knopf „Fakten", Prompts nachgeschärft

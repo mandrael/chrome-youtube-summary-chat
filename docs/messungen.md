@@ -691,7 +691,8 @@ Der Nachbau in `scratchpad/anevergleich/` bildet den Aufruf exakt nach: `AsrMana
 
 | Modell | Weg | WER | ausgegebene Wörter |
 |---|---|---|---|
-| **parakeet primeline** | FluidAudio / CoreML (ANE) | **3,0 %** | 1352 |
+| **parakeet primeline** (ValentinWeyer) | FluidAudio / CoreML (ANE) | **3,0 %** | 1352 |
+| **parakeet primeline** (matt-2012) | FluidAudio / CoreML (ANE) | **3,0 %** | 1351 |
 | parakeet primeline | sherpa-onnx, ONNX int8 | 3,8 % | 1352 |
 | whisper-large-v3 | OpenRouter | 4,1 % | 1369 |
 | whisper-large-v3-turbo | OpenRouter | 4,5 % | 1372 |
@@ -736,3 +737,25 @@ heisst. Kontrolle bei jedem Lauf mit eigenem Modell:
 - kein neuer Ordner im Elternverzeichnis,
 - bei primeline: **kein einziges ß** im Ergebnis. Das ist die verlässlichste Signatur;
   v3 setzt neun.
+
+### Es gibt zwei primeline-CoreML-Konvertierungen, beide gleich gut
+
+`ValentinWeyer/parakeet-primeline-de-coreml` und `matt-2012/parakeet-primeline-de-coreml`
+gehen auf denselben Checkpoint zurück (`primeline/parakeet-primeline`, bei Valentin als
+`2_95_WER.nemo` in den Metadaten benannt). Decoder und JointDecision sind bytegleich, die
+Encoder-Gewichte unterscheiden sich in der Quantisierung: 1212,1 MB bei Valentin gegen
+1185,9 MB bei matt-2012.
+
+Gemessen am selben Talk: 41 gegen 40 falsche Wörter von 1353. Der Unterschied ist Rauschen,
+die Ausgaben sind aber nicht identisch. Beide brauchen rund 11 s zum Laden und knapp 3 s
+für 11:54 Audio.
+
+Beigaben unterscheiden sich: Valentin liefert `conversion_metadata.json` (die einzige
+Quelle für Fenstergrösse, Vokabulargrösse und `compute_units`) und zwei Vokabulardateien,
+matt-2012 nur `parakeet_vocab.json`.
+
+**Achtung bei vorgefundenen Modellordnern:** Ein Ordner namens `primeline-matt` aus einer
+DiktaGo-Sitzung enthielt in Wahrheit das Standard-v3 – erkennbar am 425-MB-Encoder und an
+einer `config.json`, die von `palettized_lut6_mixed_fp16` und FluidAudio-Issue 760 spricht.
+Der Lauf darauf lieferte prompt wieder die v3-Zahlen. Ein Ordnername ist kein Beleg; der
+Beleg ist die Encoder-Grösse (primeline über 1,1 GB) und **null ß im Ergebnis**.

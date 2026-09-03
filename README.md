@@ -56,8 +56,9 @@ Wem die Schrift zu klein ist, stellt dort die **Schriftgrösse der Oberfläche**
 klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
 die Einstellungen.
 
-Die acht Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe nimmt
-das ganze Video, die untere schneidet einen Zweck heraus:
+Die zwölf Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe nimmt
+das ganze Video, die mittlere schneidet einen Zweck heraus, die untere hilft beim
+Aneignen und Weiterverfolgen:
 
 - **Fazit** – was behauptet wird und wozu es kommt, ein bis zwei Absätze, ohne Zeitstempel.
 - **Kernaussagen** – Hauptaussage plus die drei bis fünf tragenden Punkte mit Begründung.
@@ -70,6 +71,14 @@ das ganze Video, die untere schneidet einen Zweck heraus:
   und Zeitstempeln; was der Sprecher nur zeigt und nicht ausspricht, wird nicht erraten.
 - **Pro/Contra** – Argumente beider Seiten mit ihren Belegen, dazu „Für wen",
   „Alternativen" und „Nicht geprüft", soweit das Video sie hergibt.
+- **Begriffe** – Fachbegriffe, Methoden und Verfahren mit der Erklärung, die der Sprecher
+  selbst gibt; erklärt er einen Begriff nicht, steht das da, statt Wissen zu ergänzen.
+- **Verweise** – Bücher, Studien, Personen, Werkzeuge und Websites, die genannt werden,
+  je mit dem, wozu der Sprecher sie anführt. Nennt er keine Quelle, steht das so.
+- **Lernfragen** – acht bis zwölf Fragen zum Stoff, jede mit der Antwort aus dem Video
+  und der Zeitmarke, an der sie steht.
+- **Positionen** – bei Gesprächen: je Person Rolle, Positionen und Begründungen, danach
+  Übereinstimmungen und Widersprüche, soweit sie ausdrücklich fallen.
 
 Passt ein Knopf nicht zum Video, sagt seine Antwort das in einem Satz – ausgeblendet wird
 keiner, denn das liesse sich nur raten.

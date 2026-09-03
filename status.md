@@ -2,13 +2,66 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Ende-zu-Ende-Lauf des Store-Audiowegs** über den Knopf in der Seitenleiste,
-   sobald die Internetleitung frei ist. Der Kern ist gemessen (siehe unten), die
-   Verdrahtung Knopf → Transkript-Tab noch nicht.
-2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-4. Optional: Store-Build einreichen.
-5. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+2. Optional: Store-Build einreichen.
+3. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+
+## Stand 03.09.2026 (achtzehnter Durchgang) – Version 0.2.0, drei Wege gemessen, vier neue Schnellbefehle
+
+**Versionsnummern ab jetzt geführt**, Schema `main.function.fix`. Die Version steht im
+Kopf der Optionsseite mit dem Build dahinter („0.2.0 full“ / „0.2.0 store“), damit beim
+Testen sichtbar ist, was im Browser steckt. 0.1.1 waren die zwei Befunde unten, 0.2.0
+sind die vier neuen Schnellbefehle.
+
+### Ende-zu-Ende in Michaels angemeldetem Profil, alles per Klick in der Seitenleiste
+
+Testaufbau: Chrome mit einer Kopie von Michaels Profil (angemeldet), Debug-Port 9222,
+`--mute-audio`, Erweiterung aus `build-full`. Video `JTFq1MM9bYA` (5:06, deutsch, **ohne
+jede Untertitelspur**, mit `yt-dlp --list-subs` geprüft).
+
+| Weg | ab Klick | Kosten | Qualität |
+|---|---|---|---|
+| Helfer + `openai/whisper-large-v3-turbo` (OpenRouter) | **13,5 s** | bezahlt | beste Wortgenauigkeit, aber grobe Blöcke (bis 19 s je Cue) |
+| Helfer + `parakeet-tdt-0.6b-v3` (MLX, lokal) | **16,6 s** | 0 | einzelne Wortfehler („Michela“, „herlen“), Zeitmarken fein |
+| Live 4x im Tab (Store-Weg, Whisper) | **109 s** | bezahlt | gut, feine Zeitmarken |
+
+Der Store-Weg ist also **achtmal langsamer** als der Helfer, liefert aber die besten
+Sprungmarken – und ist im Store-Build der einzige Weg. Zusätzlich geprüft: 46-s-Video in
+16 s, Fortschrittsanzeige („Erkennt … 03:15 / 05:06“) und Abbrechen-Knopf laufen.
+
+Der Chat-Weg wurde im selben Aufbau geprüft: Untertitel gelesen, „Fazit“ geklickt,
+inhaltlich korrekte deutsche Zusammenfassung in der Seitenleiste.
+
+### Zwei Befunde repariert (0.1.1)
+
+- **„Keine Untertitel“ brauchte über 20 Sekunden.** Ursache: Meldet der Player gar keine
+  Spur, lief trotzdem der zweite Weg über YouTubes Transkript-Panel und verwartete dort
+  seine 8 + 12 Sekunden. Jetzt bricht `loadTranscript` sofort ab, wenn die Spurenliste
+  leer ist. **Gemessen: 4,0 s statt über 20 s.**
+- **Fehlender Native-Host meldete sich technisch.** Der Fehlertext war vorhanden (mein
+  früherer Befund „stiller Fehlschlag“ war ein Messfehler: mein Ausleseskript zeigte nur
+  die letzten 200 Zeichen der Seitenleiste). Ergänzt ist jetzt der Handlungssatz, was zu
+  tun ist. Ursache im Testaufbau: **Chrome sucht das Host-Manifest im Ordner des jeweiligen
+  Profils** – eine Instanz mit eigenem `--user-data-dir` sieht die Installation im
+  Standardprofil nicht. Im Testprofil per Symlink gelöst.
+
+### Vier neue Schnellbefehle (0.2.0)
+
+Codex (sol, high) und Fable 5.1 haben unabhängig voneinander dieselben Lücken benannt:
+Aneignen und Weiterverfolgen fehlten ganz. Neu, von Michael ausgewählt: **Begriffe**
+(Glossar aus den Erklärungen des Sprechers), **Verweise** (Bücher, Studien, Personen,
+Werkzeuge), **Lernfragen** (8 bis 12 Fragen mit Antwort und Zeitmarke), **Positionen**
+(bei Gesprächen: wer was vertritt). Damit zwölf Knöpfe in drei Reihen.
+
+Am System-Prompt behoben: der Widerspruch zwischen Prompt („eine Minute“) und Code
+(`MIN_MARKEN_ABSTAND = 30`), die Zahlenregel (Rundung stand gegen „keine Umrechnung“, und
+englisches „11,587 dollars“ blieb als Komma stehen), der tote Satz zur
+Übersetzungsfunktion, die Meta-Aussage über die Oberfläche (Modelle erwähnen fehlende
+Zeitstempel trotzdem), „Erfinde nichts“ steht jetzt an erster Stelle. Bei den Presets:
+Doppelung im Schluss von „Kernaussagen“, die Grenze zwischen „Fakten“ und „Behauptungen“
+in beiden Prompts, ein Kürzungshinweis in „Ausführlich“ gegen stillen Verlust bei langen
+Videos, körperliche Abläufe in „Anleitung“ (Position, Kontaktpunkt, Druck, Dauer).
 
 ### Der eingefrorene System-Prompt in Michaels Profil ist weg
 

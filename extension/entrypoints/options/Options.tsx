@@ -208,7 +208,15 @@ export function Options() {
 
   return (
     <div className="mx-auto min-h-screen max-w-5xl bg-background p-8 text-foreground">
-      <h1 className="mb-1 text-xl font-semibold">YouTube Summary Chat</h1>
+      <h1 className="mb-1 text-xl font-semibold">
+        YouTube Summary Chat{" "}
+        {/* Die geladene Version sichtbar machen: beim Testen ist sonst nicht zu sehen,
+            welcher Build gerade im Browser steckt. */}
+        <span className="text-sm font-normal text-muted-foreground">
+          {chrome.runtime.getManifest().version}
+          {__FALLBACK__ ? " full" : " store"}
+        </span>
+      </h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Alle Modellaufrufe laufen über OpenRouter. Es gibt keinen zweiten Anbieter und
         kein eigenes Backend.

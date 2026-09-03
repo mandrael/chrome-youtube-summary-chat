@@ -242,14 +242,22 @@ export async function loadTranscript(
   captionLang: string,
 ): Promise<LoadResult> {
   let direkt: Error | null = null;
+  let keineSpuren = false;
   try {
     const tracks = await fetchCaptionTracks(videoId);
     const track = pickTrack(tracks, captionLang);
     if (track) return { ...(await loadTrack(track)), tracks };
+    keineSpuren = tracks.length === 0;
     direkt = new NoCaptionsError();
   } catch (e) {
     direkt = e as Error;
   }
+
+  // Meldet der Player gar keine Spur, kann auch YouTubes eigenes Panel keine anzeigen:
+  // der zweite Weg würde nur seine 8 + 12 Sekunden verwarten, bevor die UI dasselbe
+  // sagt. Gemessen am 02.09.2026 – über 20 Sekunden „wird geladen“, bevor „keine
+  // Untertitel“ erschien.
+  if (keineSpuren) throw new NoCaptionsError();
 
   const { readTranscriptPanel } = await import("./transcript-panel");
   try {

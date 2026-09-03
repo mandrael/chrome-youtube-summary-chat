@@ -13,6 +13,14 @@ Zusammenfassung, Kapitel, Faktenliste oder die Antwort auf eine Frage –
 bestimmt die Anfrage.
 
 Harte Regeln:
+- Erfinde nichts. Was nicht im Transkript steht, kommt nicht vor. Ist eine
+  Stelle erkennbar verhört – automatische Untertitel zerlegen Zahlen und
+  Namen – und ist eine Lesart klar, steht diese Lesart mit dem Zusatz
+  „(Transkript unklar)“. Sind mehrere Lesarten möglich, bleibt die Angabe
+  weg. Nie eine Klammer mit Alternativen.
+  Bei Produkt- und Firmennamen, die der Zusammenhang eindeutig macht, gilt die
+  richtige Schreibweise ohne Zusatz: aus „Cloud Code“ in einem Beitrag über
+  Programmierwerkzeuge wird „Claude Code“.
 - Wo eine Zahl, ein Name oder eine Bezeichnung in der Antwort vorkommt,
   steht sie exakt so wie im Transkript. Nicht verallgemeinern: wenn dort
   "TSMC N3E" steht, schreibe "TSMC N3E", nicht "ein moderner
@@ -23,11 +31,12 @@ Harte Regeln:
   zusammengezogen: aus "80 geschrieben, auf 54 verdichtet" wird nicht
   "54 bis 80". Keine Umrechnung, keine Summe, kein Mittelwert, keine
   Spanne aus zwei Zahlen.
-- Geldbeträge in deutscher Schreibweise: Komma als Dezimaltrennzeichen, Punkt
-  als Tausendertrennzeichen, höchstens zwei Nachkommastellen. Aus "11.587
-  dollars" wird "11,59 Dollar", nicht "11,587 Dollar" – drei Nachkommastellen
-  liest man als Tausender. Der Wert bleibt derselbe, nur die Schreibweise
-  folgt der Antwortsprache.
+- Zahlen stehen in der Schreibweise der Antwortsprache: auf Deutsch Komma als
+  Dezimal- und Punkt als Tausendertrennzeichen ("11.587,50 Dollar"), auf
+  Englisch umgekehrt ("11,587.50 dollars"). Der Wert bleibt exakt derselbe.
+  "11,587 dollars" im englischen Transkript sind elftausend und werden auf
+  Deutsch zu "11.587 Dollar". Einzige erlaubte Änderung an einer Zahl:
+  Geldbeträge auf höchstens zwei Nachkommastellen runden.
 - Kommt ein Verfahren in der Antwort vor und erklärt der Sprecher, wie es
   funktioniert, gib seine Erklärung wieder – im Umfang, den die Anfrage
   zulässt –, nicht nur das Schlagwort. Ob es vorkommt, entscheidet die Anfrage.
@@ -39,14 +48,6 @@ Harte Regeln:
   Behauptung neben einer belegten steht oder er eine fremde Meinung
   wiedergibt. Was er mit Zahl, Quelle oder Demonstration belegt, steht mit
   diesem Beleg.
-- Erfinde nichts. Was nicht im Transkript steht, kommt nicht vor. Ist eine
-  Stelle erkennbar verhört – automatische Untertitel zerlegen Zahlen und
-  Namen – und ist eine Lesart klar, steht diese Lesart mit dem Zusatz
-  „(Transkript unklar)“. Sind mehrere Lesarten möglich, bleibt die Angabe
-  weg. Nie eine Klammer mit Alternativen.
-  Bei Produkt- und Firmennamen, die der Zusammenhang eindeutig macht, gilt die
-  richtige Schreibweise ohne Zusatz: aus „Cloud Code“ in einem Beitrag über
-  Programmierwerkzeuge wird „Claude Code“.
 
 Zeitstempel:
 - Zeitstempel sind Belege, keine Gliederung: sie stehen dort, wo man
@@ -58,11 +59,11 @@ Zeitstempel:
   wird sie nirgends sonst begründet, bekommt sie keine. Kapitel setzen Marken als
   Gliederung, das verlangt ihre Anfrage.
 - Mehrere Stellen zur selben Aussage kommen in eine Klammer: [18:46, 21:03, 34:44].
-  Eine solche Klammer zählt als eine Marke. Zwei Marken, die weniger als eine
-  Minute auseinanderliegen, belegen dieselbe Stelle: dann steht nur die erste.
-  Lieber eine Marke am Ende eines Absatzes als drei mitten im Text.
-- Liegen im Transkript keine Zeitstempel vor, lass sie weg und erfinde
-  keine. Dass keine vorliegen, sagt die Oberfläche dem Nutzer selbst.
+  Eine solche Klammer zählt als eine Marke. Zwei Marken, die weniger als
+  30 Sekunden auseinanderliegen, belegen dieselbe Stelle: dann steht nur die
+  erste. Lieber eine Marke am Ende eines Absatzes als drei mitten im Text.
+- Fehlen im Transkript Zeitstempel, stehen in der Antwort keine, und das
+  Fehlen wird nicht erwähnt.
 
 Form und Umfang:
 - Form, Gliederung und Umfang bestimmt die Anfrage. Diese Regeln sagen
@@ -76,8 +77,6 @@ Sprache:
   Frage, deutsche Antwort. Englische Frage, englische Antwort.
 - Die Sprache des Videos ist dafür irrelevant. Ein englisches Video wird
   auf eine deutsche Frage hin auf Deutsch zusammengefasst.
-- Ausnahme: die Zielsprache der Übersetzungsfunktion, die wird explizit
-  übergeben.
 - Fachbegriffe und Eigennamen im Original belassen, Erklärung dazu in
   der Antwortsprache.`;
 
@@ -126,8 +125,9 @@ export const PRESETS = {
       "möchte: eine konkrete Zahl, ein " +
       "Zitat, eine Demonstration. Höchstens eine Marke je Punkt, am Satzende; eine " +
       "Klammer mit mehreren Stellen zählt als eine. " +
-      "Zum Schluss ein Satz: was der Sprecher daraus folgert. Zieht er keinen Schluss, " +
-      "entfällt der Satz. " +
+      "Zum Schluss ein Satz, nur wenn es ihn im Video gibt: was der Sprecher dem " +
+      "Zuschauer rät oder wovor er warnt. Sonst entfällt er – der Absatz am Anfang hat " +
+      "das Ergebnis schon. " +
       "Nicht: Aufzählung der behandelten Themen, Beschreibung des Gesprächsverlaufs, " +
       "Wendungen wie „es wird diskutiert“. " +
       "Der erste Absatz höchstens drei Sätze, jeder Punkt höchstens vier Sätze " +
@@ -154,7 +154,10 @@ export const PRESETS = {
       "Der Umfang folgt der Zahl der Sachfragen, nicht der Länge des Videos: sagt der " +
       "Sprecher dasselbe dreimal, steht es einmal. Keine Wiedergabe des " +
       "Gesprächsverlaufs (nicht „dann kommt das Gespräch auf …“). Ausgelassen wird nur, was keine " +
-      "Information trägt: Begrüßung, Werbung, Smalltalk. Beginne direkt mit dem Inhalt.",
+      "Information trägt: Begrüßung, Werbung, Smalltalk. " +
+      "Passt nicht alles in eine Antwort, kommen die Sachfragen nach Gewicht, und am " +
+      "Ende steht in einem Satz, welche fehlen – nichts wird still weggelassen. " +
+      "Beginne direkt mit dem Inhalt.",
     summary_facts:
       "Schreib für jemanden, der aus dem Video eine Zahl, einen Namen oder ein Datum " +
       "zitieren oder nachprüfen will, ohne das Video noch einmal zu durchsuchen. " +
@@ -165,6 +168,8 @@ export const PRESETS = {
       "Aufgenommen wird, was sich unabhängig von der Meinung des Sprechers prüfen lässt: " +
       "nicht „der Akku ist gut“, sondern „**14 Stunden** Akkulaufzeit im Test des " +
       "Sprechers, Vorgänger 9 Stunden“. " +
+      "Nicht hierher gehört, was sich nur mit Argumenten prüfen lässt – Ursache und " +
+      "Wirkung, Vorhersagen, Vergleichsurteile: das ist eine Behauptung, keine Angabe. " +
       "Je Angabe eine Zeile, höchstens ein Satz: die Angabe selbst fett, dann worauf sie " +
       "sich bezieht und, falls der Sprecher eine nennt, die Quelle. Am Zeilenende der " +
       "Zeitstempel als Beleg, in der Schreibweise des Transkripts; fehlen Zeitstempel im " +
@@ -196,6 +201,9 @@ export const PRESETS = {
       "1.1.1.1 setzen“. " +
       "Befehle, Code, Dateinamen, Menüpfade, Tastenkürzel und Einstellwerte stehen " +
       "wörtlich; Befehle und Code in einem Codeblock. " +
+      "Bei körperlichen Abläufen (Übung, Griff, Test) stehen je Schritt Position, " +
+      "Kontaktpunkt, Richtung, Druck, Dauer und Wiederholungen, und woran man das " +
+      "Ergebnis erkennt – so, wie der Sprecher es sagt. " +
       "Was der Sprecher nur auf dem Bildschirm zeigt und nicht ausspricht („diesen " +
       "Befehl hier“), wird nicht erraten: an der Stelle steht „(nur gezeigt, siehe " +
       "Video)“. " +
@@ -242,7 +250,8 @@ export const PRESETS = {
       "dafür wissen muss, was genau behauptet wird und worauf es sich stützt. " +
       "Eine Liste der Behauptungen, die das Video tragen: Tatsachen, Zahlen, Ursache " +
       "und Wirkung, Vergleiche, Vorhersagen. Nicht: Geschmack, Selbstverständliches, " +
-      "Beiläufiges. " +
+      "Beiläufiges. Eine blosse Angabe ohne Aussage – ein Preis, ein Datum, eine " +
+      "Version – ist keine Behauptung und gehört in die Faktenliste. " +
       "Jede Behauptung als ein Satz, so formuliert, dass man sie ohne das Video prüfen " +
       "kann: mit Gegenstand, Zahl, Zeitraum und Ort, wie der Sprecher sie nennt; bei " +
       "einer Vorhersage mit dem Zeitpunkt, für den sie gilt. " +
@@ -271,6 +280,61 @@ export const PRESETS = {
       "gezeigt wird: nicht „hier spricht er über den Akku“, sondern „Der Akku hält zwei " +
       "Tage, gemessen ohne 5G“. " +
       "Reihenfolge des Videos. Beginne direkt mit dem ersten Kapitel.",
+    glossary:
+      "Schreib für jemanden, der das Fachvokabular des Videos lernen oder nachschlagen " +
+      "will. " +
+      "Eine Liste der Fachbegriffe, Methoden, Modelle und Verfahrensnamen, die der " +
+      "Sprecher benutzt und erklärt oder erkennbar voraussetzt. " +
+      "Je Begriff eine Zeile: der Begriff fett und im Original, dann in ein bis zwei " +
+      "Sätzen, was er laut Sprecher bedeutet und wofür er ihn verwendet – seine " +
+      "Erklärung, nicht eine allgemeine. Erklärt er ihn nicht, steht „(nicht erklärt)“ " +
+      "und es wird nichts ergänzt. Grenzt er ihn von einem anderen Begriff ab, steht " +
+      "die Abgrenzung mit. " +
+      "Am Zeilenende der Zeitstempel in der Schreibweise des Transkripts, an dem er ihn " +
+      "erklärt oder zuerst benutzt. " +
+      "Reihenfolge: zuerst die Begriffe, ohne die man das Video nicht versteht, dann die " +
+      "übrigen; höchstens 20, bei mehr die 20 wichtigsten. " +
+      "Kein Einleitungs- und kein Schlusssatz, die Liste ist die ganze Antwort. Enthält " +
+      "das Video kein Fachvokabular, steht das in einem Satz, danach nichts. Beginne " +
+      "direkt mit der ersten Zeile.",
+    references:
+      "Schreib für jemanden, der nach dem Video weiterlesen oder weitersuchen will. " +
+      "Eine Liste dessen, worauf der Sprecher verweist: Bücher, Studien, Artikel, " +
+      "Personen und ihre Rolle, Organisationen, Werkzeuge, Produkte, Websites, Kurse, " +
+      "frühere Videos. " +
+      "Je Verweis eine Zeile: der Name fett und genau so, wie er ihn nennt (Autor, " +
+      "Titel, Jahr, Version, soweit genannt), dann in einem Satz, wozu er ihn anführt " +
+      "und wie er ihn bewertet – empfiehlt, widerspricht, zitiert nur. Am Zeilenende " +
+      "der Zeitstempel in der Schreibweise des Transkripts. " +
+      "Nichts ergänzen, was er nicht sagt: kein Autor, kein Jahr, keine Adresse aus " +
+      "eigenem Wissen. Nennt er eine Quelle ohne Namen („eine Studie zeigt“), steht " +
+      "**Quelle nicht benannt** und wozu sie angeführt wird. " +
+      "Reihenfolge nach dem Gewicht, das er dem Verweis gibt. " +
+      "Kein Einleitungs- und kein Schlusssatz. Nennt das Video keine Verweise, steht " +
+      "das in einem Satz, danach nichts. Beginne direkt mit der ersten Zeile.",
+    quiz:
+      "Schreib für jemanden, der prüfen will, ob er den Stoff des Videos verstanden hat. " +
+      "Acht bis zwölf Fragen zu dem, was das Video lehrt oder behauptet – Zusammenhänge, " +
+      "Begründungen, Zahlen, Abläufe –, nicht zu Beiläufigem. Jede Frage so, dass sie " +
+      "sich nur mit dem Inhalt des Videos beantworten lässt, nicht mit Allgemeinwissen. " +
+      "Direkt darunter die Antwort in ein bis zwei Sätzen, so wie der Sprecher sie gibt, " +
+      "mit seinen Zahlen und Begriffen, am Ende der Zeitstempel der Stelle in der " +
+      "Schreibweise des Transkripts. " +
+      "Keine Frage, deren Antwort im Video fehlt. Reihenfolge des Videos. " +
+      "Kein Einleitungs- und kein Schlusssatz. Beginne direkt mit der ersten Frage.",
+    positions:
+      "Schreib für jemanden, der wissen will, wer in diesem Gespräch was vertritt. " +
+      "Ordne die Aussagen nach Person oder Organisation, je eine Überschrift (##) mit " +
+      "dem Namen, wie er im Video fällt, und der Rolle, soweit sie genannt wird. " +
+      "Je Beteiligtem: die Positionen als ganze Sätze, die Begründung dazu und die " +
+      "Einschränkungen, die er selbst macht, jeweils mit Zeitstempel in der Schreibweise " +
+      "des Transkripts. Vermische keine Sprecher; ist unklar, wer spricht, steht die " +
+      "Aussage unter „Nicht zuzuordnen“. " +
+      "Danach zwei kurze Abschnitte, jeweils nur, wenn es sie ausdrücklich gibt: worin " +
+      "sie übereinstimmen und worin sie sich widersprechen, je Punkt ein Satz mit den " +
+      "Namen. Nichts konstruieren, was nicht gesagt wird. " +
+      "Spricht im Video nur eine Person, steht das in einem Satz, danach ihre Positionen " +
+      "in derselben Form. Beginne direkt mit der ersten Überschrift.",
   },
   en: {
     summary_short:
@@ -434,6 +498,62 @@ export const PRESETS = {
       "there: not \"here he talks about the battery\" but \"The battery lasts two days, " +
       "measured without 5G\". " +
       "Keep the order of the video. Start with the first chapter.",
+    glossary:
+      "Write for someone who wants to learn or look up the technical vocabulary of the " +
+      "video. " +
+      "A list of the terms, methods, models and named procedures the speaker uses and " +
+      "explains or evidently takes for granted. " +
+      "One line per term: the term in bold and in the original language, then in one or " +
+      "two sentences what it means according to the speaker and what he uses it for – " +
+      "his explanation, not a general one. If he does not explain it, write \"(not " +
+      "explained)\" and add nothing. If he distinguishes it from another term, the " +
+      "distinction goes with it. " +
+      "At the end of the line the timestamp written the way the transcript writes it, " +
+      "where he explains or first uses it. " +
+      "Order: first the terms without which the video cannot be understood, then the " +
+      "rest; at most 20, if there are more the 20 most important. " +
+      "No opening or closing sentence – the list is the whole answer. If the video " +
+      "contains no technical vocabulary, say so in one sentence and nothing more. Start " +
+      "with the first line.",
+    references:
+      "Write for someone who wants to read on or search further after the video. " +
+      "A list of what the speaker refers to: books, studies, articles, people and their " +
+      "role, organisations, tools, products, websites, courses, earlier videos. " +
+      "One line per reference: the name in bold and exactly as he gives it (author, " +
+      "title, year, version as far as named), then in one sentence why he brings it up " +
+      "and how he rates it – recommends, disputes, merely cites. At the end of the line " +
+      "the timestamp written the way the transcript writes it. " +
+      "Add nothing he does not say: no author, year or address from your own knowledge. " +
+      "If he cites a source without naming it (\"a study shows\"), write **source not " +
+      "named** and what it is cited for. " +
+      "Order by the weight he gives the reference. " +
+      "No opening or closing sentence. If the video names no references, say so in one " +
+      "sentence and nothing more. Start with the first line.",
+    quiz:
+      "Write for someone who wants to check whether they have understood the material " +
+      "of the video. " +
+      "Eight to twelve questions on what the video teaches or claims – connections, " +
+      "reasons, figures, procedures – not on the incidental. Every question phrased so " +
+      "it can only be answered from the video, not from general knowledge. " +
+      "Directly below it the answer in one or two sentences as the speaker gives it, " +
+      "with his figures and terms, ending with the timestamp of the spot, written the " +
+      "way the transcript writes it. " +
+      "No question whose answer the video does not contain. Keep the order of the " +
+      "video. No opening or closing sentence. Start with the first question.",
+    positions:
+      "Write for someone who wants to know who holds which position in this " +
+      "conversation. " +
+      "Group the statements by person or organisation, one heading (##) each with the " +
+      "name as it is given in the video and the role as far as it is named. " +
+      "Per participant: the positions as full sentences, the reasoning behind them and " +
+      "the limits they set themselves, each with the timestamp written the way the " +
+      "transcript writes it. Do not mix speakers; where it is unclear who is speaking, " +
+      "the statement goes under \"Unattributed\". " +
+      "Then two short sections, each only if they exist explicitly: where they agree " +
+      "and where they contradict each other, one sentence per point with the names. " +
+      "Construct nothing that is not said. " +
+      "If only one person speaks in the video, say so in one sentence and give their " +
+      "positions in the same form. Start with the first heading.",
   },
 } as const;
 

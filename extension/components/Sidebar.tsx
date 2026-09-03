@@ -405,6 +405,10 @@ export function Sidebar({
     claims: "presetClaims",
     howto: "presetHowto",
     pro_contra: "presetProContra",
+    glossary: "presetGlossary",
+    references: "presetReferences",
+    quiz: "presetQuiz",
+    positions: "presetPositions",
   } as const;
 
   /**
@@ -829,13 +833,15 @@ export function Sidebar({
           {presetsVisible && (
           <div className="border-b border-border px-2 py-2">
             {/*
-              Zwei Reihen mit je einem Zweck: oben das ganze Video in vier Formen, von
-              kurz nach lang, dann die Zeitachse. Unten der Ausschnitt für einen Zweck,
-              nach Reichweite geordnet – Fakten passen auf jedes Video, Anleitung und
-              Pro/Contra nur auf ihren Typ. Eine einzige Reihe aus acht Knöpfen bricht
-              dreimal um und wird nicht mehr gelesen; mehr als acht bräuchte ein Menü,
-              und das wäre das Zeichen, wieder zu streichen. Ausgeblendet wird nichts:
-              passt ein Knopf nicht zum Video, sagt sein Prompt das in einem Satz.
+              Drei Reihen mit je einem Zweck: oben das ganze Video in vier Formen, von
+              kurz nach lang, dann die Zeitachse. In der Mitte der Ausschnitt für einen
+              Zweck, nach Reichweite geordnet – Fakten passen auf jedes Video, Anleitung
+              und Pro/Contra nur auf ihren Typ. Unten das Aneignen und Weiterverfolgen,
+              für Ausbildungsvideos. Reihen statt einer Leiste, weil eine einzige Reihe
+              mehrfach umbricht und dann nicht mehr gelesen wird; eine vierte Reihe
+              bräuchte ein Menü, und das wäre das Zeichen, wieder zu streichen.
+              Ausgeblendet wird nichts: passt ein Knopf nicht zum Video, sagt sein Prompt
+              das in einem Satz.
             */}
             {[
               [
@@ -849,6 +855,12 @@ export function Sidebar({
                 ["claims", "presetClaims", "presetClaimsHint"],
                 ["howto", "presetHowto", "presetHowtoHint"],
                 ["pro_contra", "presetProContra", "presetProContraHint"],
+              ],
+              [
+                ["glossary", "presetGlossary", "presetGlossaryHint"],
+                ["references", "presetReferences", "presetReferencesHint"],
+                ["quiz", "presetQuiz", "presetQuizHint"],
+                ["positions", "presetPositions", "presetPositionsHint"],
               ],
             ].map((reihe, n) => (
               <div key={n} className={`flex flex-wrap items-center gap-1${n ? " mt-1" : ""}`}>

@@ -65,7 +65,21 @@ const de = {
   presetProContra: "Pro/Contra",
   presetProContraHint:
     "Zum Entscheiden: Argumente dafür und dagegen, für wen, Alternativen.",
-  extraPrecedence: "Zusatz des Nutzers – gilt vor allem Obigen, wo er ihm widerspricht:",
+  presetGlossary: "Begriffe",
+  presetGlossaryHint:
+    "Fachbegriffe und Methoden mit der Erklärung, die der Sprecher selbst gibt.",
+  presetReferences: "Verweise",
+  presetReferencesHint:
+    "Bücher, Studien, Personen, Werkzeuge und Websites, die genannt werden.",
+  presetQuiz: "Lernfragen",
+  presetQuizHint:
+    "Zur Lernkontrolle: Fragen zum Stoff, je mit der Antwort aus dem Video.",
+  presetPositions: "Positionen",
+  presetPositionsHint:
+    "Bei Gesprächen: wer was vertritt, wo sie einig sind und wo nicht.",
+  extraPrecedence:
+    "Zusatz des Nutzers – hat Vorrang vor Form und Schwerpunkt, nicht vor den Regeln " +
+    "zur Quellentreue:",
   presetTranslate: "Übersetzen",
   tabChat: "Chat",
   tabTranscript: "Transkript",
@@ -185,7 +199,18 @@ const en: Record<Keys, string> = {
   presetHowtoHint: "To follow along: the steps in order, with commands, values and timestamps.",
   presetProContra: "Pros/cons",
   presetProContraHint: "To decide: arguments for and against, who it suits, alternatives.",
-  extraPrecedence: "User addition – takes precedence over the above wherever it conflicts:",
+  presetGlossary: "Terms",
+  presetGlossaryHint: "Technical terms and methods with the explanation the speaker gives.",
+  presetReferences: "References",
+  presetReferencesHint: "Books, studies, people, tools and websites that are mentioned.",
+  presetQuiz: "Self-check",
+  presetQuizHint: "To test yourself: questions on the material, each with the answer from the video.",
+  presetPositions: "Positions",
+  presetPositionsHint:
+    "For conversations: who holds which position, where they agree and where they do not.",
+  extraPrecedence:
+    "User addition – takes precedence over form and focus, not over the rules on " +
+    "staying true to the source:",
   presetTranslate: "Translate",
   tabChat: "Chat",
   tabTranscript: "Transcript",

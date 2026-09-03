@@ -104,7 +104,15 @@ export function runFallback(
       reject(
         new Error(
           err
-            ? `Native-Host nicht erreichbar: ${err}`
+            ? `Native-Host nicht erreichbar: ${err}${
+                // Chrome sucht das Host-Manifest im Ordner des jeweiligen Profils.
+                // Eine Instanz mit eigenem --user-data-dir sieht die Installation im
+                // Standardprofil deshalb nicht (gemessen am 02.09.2026).
+                /not found/i.test(err)
+                  ? "\nDer Helfer ist für dieses Chrome-Profil nicht installiert – " +
+                    "native-host/install-macos.sh ausführen (Windows: install-windows.ps1)."
+                  : ""
+              }`
             : "Native-Host hat die Verbindung ohne Ergebnis beendet.",
         ),
       );

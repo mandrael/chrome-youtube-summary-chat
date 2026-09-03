@@ -7,6 +7,65 @@
 3. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
 
+## Stand 03.09.2026 (zwanzigster Durchgang) – primeline vs. v3 auf der ANE, Plattformweg für Windows/Linux gefunden
+
+### Ergebnis, das die Empfehlung trägt
+
+Auf der Apple Neural Engine (FluidAudio/CoreML) schlägt das deutsche Spezialmodell
+**primeline** (3,0 % Wortfehler) sowohl `parakeet v3` (5,9 %) als auch
+`whisper-large-v3` (4,1 %) auf demselben deutschen Referenztext. Beide geprüften
+primeline-Konvertierungen (`ValentinWeyer` und `matt-2012`) liegen gleichauf. Volle
+Messreihe in [docs/messungen.md](docs/messungen.md).
+
+**Folge für die Erweiterung:** primeline als zweites, deutsch-optimiertes Modell
+anbieten – nicht als Ersatz für v3, das für Englisch und alle anderen Sprachen das
+richtige Standardmodell bleibt. Vorschlag für den Helfer-Dialog: Erkennt YouTube am
+Video eine deutsche Originalsprache und werden Untertitel gebraucht, fragen
+„Für bessere Qualität auf Deutsch: spezialisiertes Modell laden (primeline, 1,2 GB)
+oder das allgemeine Modell verwenden (parakeet v3, 480 MB, bereits geladen)?" –
+mit dem klaren Hinweis, dass **beide Modelle nebeneinander bestehen bleiben** und v3
+für andere Sprachen weiterhin genutzt wird. **Noch nicht umgesetzt, Entscheidung
+über den genauen Dialogtext steht bei Michael offen.**
+
+### Reale Modellgrössen (abgerufen über die HuggingFace-API, nicht geschätzt)
+
+| Modell | CoreML (ANE) | ONNX int8 |
+|---|---|---|
+| parakeet v3 | 482 MB | 670 MB |
+| primeline (ValentinWeyer) | 1224 MB | – |
+| primeline (matt-2012) | 1211 MB | – |
+| primeline (OpenVoiceOS, ONNX) | – | 672 MB |
+
+### Sprachvorgabe bei FluidAudio ist für die WER wirkungslos
+
+`language: "de"` statt `nil` an `AsrManager.transcribe` ändert bei v3 nichts an der
+Fehlerzahl (weiterhin 80 von 1353 Wörtern) – der Parameter steuert nur die
+Schriftfilterung für nicht-lateinische Schriften, nicht die Wortgenauigkeit.
+
+### Plattformweg für Windows, Linux und Intel-Mac gefunden
+
+`onnxruntime` (PyPI, Version 1.29.0) liefert fertige Räder für `win_amd64`,
+`win_arm64`, `manylinux x86_64`, `manylinux aarch64`, `macosx x86_64` (Intel) und
+`macosx arm64` – ein einziger Weg über `onnx-asr` bzw. `sherpa-onnx` für alle vier
+Zielplattformen, mit denselben ONNX-Modelldateien wie oben. Auf macOS/Apple Silicon
+lokal getestet: `onnx-asr` lädt `nemo-parakeet-tdt-0.6b-v3` mit `quantization="int8"`
+und dem primeline-ONNX-Ordner gleichermassen; `onnxruntime` meldet dort
+`CoreMLExecutionProvider` als schnellsten verfügbaren Provider. **Noch nicht
+gemessen: echte Windows/Linux-Läufe und eine CUDA-GPU-Messung** – dafür fehlt hier
+die Hardware, wird als ungetestet geführt, nicht geschätzt.
+
+### Offen aus dieser Sitzung
+
+- Weitere deutschsprachige TEDx-Referenzvideos mit von Hand erstellter
+  Untertitelspur werden gesucht, um den 3,0-%-Wert an einem zweiten, längeren Text
+  gegenzuprüfen – Suche lief beim Sitzungsende noch (127 Kandidaten geprüft, siehe
+  `scratchpad/finde-referenzen.py`, liegt ausserhalb des Projekts und ist nach
+  Sitzungsende weg).
+- Serielle End-zu-Ende-Geschwindigkeitsmessung aller Wege in einer Tabelle steht
+  noch aus (parallel gemessene Werte sind nicht vergleichbar).
+- Testbrowser Chrome (Debug-Port, Profilkopie) läuft noch offen für die
+  Weiterarbeit an dieser Frage.
+
 ## Stand 03.09.2026 (neunzehnter Durchgang) – Modellsuche neu gebaut, Tempo 8x, STT-Wege vermessen
 
 ### Die Modellsuche ist jetzt ein eigenes Feld, kein Radix-Select mehr

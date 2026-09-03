@@ -759,3 +759,39 @@ DiktaGo-Sitzung enthielt in Wahrheit das Standard-v3 – erkennbar am 425-MB-Enc
 einer `config.json`, die von `palettized_lut6_mixed_fp16` und FluidAudio-Issue 760 spricht.
 Der Lauf darauf lieferte prompt wieder die v3-Zahlen. Ein Ordnername ist kein Beleg; der
 Beleg ist die Encoder-Grösse (primeline über 1,1 GB) und **null ß im Ergebnis**.
+
+## Reale Modellgrössen und ein Plattformweg für Windows/Linux/Intel-Mac (03.09.2026)
+
+Grössen über die HuggingFace-API abgerufen (`?blobs=true`), nicht geschätzt – nur die
+Dateien gezählt, die der jeweilige Loader tatsächlich braucht:
+
+| Modell | CoreML (ANE) | ONNX int8 |
+|---|---|---|
+| parakeet v3 | 482 MB (`Encoder_v2` + `Decoder` + `JointDecisionv3` + `Preprocessor`) | 670 MB (`istupakov/parakeet-tdt-0.6b-v3-onnx`) |
+| primeline (ValentinWeyer) | 1224 MB | – |
+| primeline (matt-2012) | 1211 MB | – |
+| primeline (OpenVoiceOS, ONNX) | – | 672 MB |
+
+primeline ist auf dem CoreML-Weg zweieinhalbmal so gross wie v3: v3s Encoder liegt dort
+6-bit-palettiert vor (`Encoder_v2.mlmodelc`), primelines Konvertierungen nur in fp16.
+
+### Sprachvorgabe ändert bei FluidAudio nichts an der Wortfehlerrate
+
+`AsrManager.transcribe(…, language: "de")` gegen `language: nil` an `parakeet v3`:
+identische 80 von 1353 falschen Wörtern. Der Parameter filtert laut Quelltext nur die
+Ausgabeschrift für nicht-lateinische Alphabete, er beeinflusst nicht die Erkennung
+selbst. Für Deutsch/Englisch also wirkungslos.
+
+### `onnxruntime` deckt Windows, Linux und Intel-Mac mit demselben Code ab
+
+Geprüft über die PyPI-API: Version 1.29.0 liefert Räder für `win_amd64`, `win_arm64`,
+`manylinux2014_x86_64`, `manylinux2014_aarch64`, `macosx_10_15_x86_64` (Intel) und
+`macosx_11_0_arm64`. `onnx-asr` (Modellname `nemo-parakeet-tdt-0.6b-v3`,
+`quantization="int8"`) lädt sowohl das offizielle v3-ONNX-Repo als auch den
+primeline-ONNX-Ordner mit derselben Codezeile. Lokal (Apple Silicon) bestätigt:
+`onnxruntime.get_available_providers()` meldet dort `CoreMLExecutionProvider` vor
+`CPUExecutionProvider` – der Provider wählt sich pro Plattform selbst, auf Windows wäre
+das `CUDAExecutionProvider`/`DmlExecutionProvider`, auf Linux `CUDAExecutionProvider`.
+
+**Nicht gemessen, weil die Hardware fehlt:** echte Windows- oder Linux-Läufe, eine
+CUDA-GPU-Messung. Wird als offen geführt, nicht geschätzt.

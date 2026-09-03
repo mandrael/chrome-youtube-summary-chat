@@ -29,6 +29,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+import wave
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -115,7 +116,17 @@ def tool_status() -> dict[str, bool]:
         "yt-dlp": which("yt-dlp") is not None,
         "ffmpeg": which("ffmpeg") is not None,
         "parakeet-mlx": which("parakeet-mlx") is not None,
+        "sherpa-onnx": sherpa_verfuegbar(),
     }
+
+
+def sherpa_verfuegbar() -> bool:
+    """sherpa-onnx ist ein Python-Paket, kein Programm - `which` findet es nicht."""
+    try:
+        import sherpa_onnx  # noqa: F401
+    except Exception:
+        return False
+    return True
 
 
 def run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
@@ -404,6 +415,98 @@ def transcribe_parakeet_mlx(audio: Path, workdir: Path) -> dict[str, Any]:
     }
 
 
+MODELL_PRIMELINE = "x-ian/sherpa-onnx-parakeet-primeline-de-int8"
+
+
+def primeline_ordner() -> Path:
+    """Wo das deutsche Modell liegt. Ein fester Ort, damit es nur einmal geladen wird."""
+    if sys.platform == "darwin":
+        basis = Path.home() / "Library" / "Application Support"
+    elif sys.platform.startswith("win"):
+        basis = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    else:
+        basis = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return basis / "yt-summary-chat" / "parakeet-primeline-de"
+
+
+def transcribe_primeline(audio: Path) -> dict[str, Any]:
+    """Deutsches Spezialmodell ueber sherpa-onnx - laeuft auf macOS, Windows und Linux.
+
+    Warum dieser Weg und nicht parakeet v3: v3 erkennt die Sprache selbst und laesst
+    sich nicht darauf festlegen ("automatically detects the language ... without
+    requiring additional prompting", NVIDIA-Modellkarte). Bei deutschen Vortraegen mit
+    englischen Zitaten kippt es ins Englische und uebersetzt weiter, statt zu
+    transkribieren. Gemessen an drei deutschen TEDx-Vortraegen (5434 Woerter,
+    03.09.2026): primeline 9,3 Prozent Wortfehler, v3 auf demselben Weg 57,2 Prozent.
+
+    Die Fensterung schneidet hart bei 120 s ohne Ueberlappung. Eine Ueberlappung, die
+    nur aneinandergehaengt wird, transkribiert den Nahtbereich doppelt - gemessen 24
+    ueberzaehlige Woerter und 1,8 Prozentpunkte schlechter.
+    """
+    try:
+        import numpy as np
+        import sherpa_onnx
+    except Exception as e:
+        raise HostError(
+            "sherpa-onnx fehlt. Installation: pip install sherpa-onnx numpy"
+        ) from e
+
+    ordner = primeline_ordner()
+    noetig = ("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", 'tokens.txt')
+    fehlend = [n for n in noetig if not (ordner / n).is_file()]
+    if fehlend:
+        raise HostError(
+            f"Das deutsche Modell fehlt in {ordner}. Es sind rund 670 MB. "
+            f"Fehlende Dateien: {', '.join(fehlend)}. "
+            f"Bezugsquelle: https://huggingface.co/{MODELL_PRIMELINE}"
+        )
+
+    progress("transcribe", "Deutsche Spracherkennung laeuft ...")
+    erkenner = sherpa_onnx.OfflineRecognizer.from_transducer(
+        encoder=str(ordner / "encoder.int8.onnx"),
+        decoder=str(ordner / "decoder.int8.onnx"),
+        joiner=str(ordner / "joiner.int8.onnx"),
+        tokens=str(ordner / 'tokens.txt'),
+        num_threads=4,
+        provider="cpu",
+        model_type="nemo_transducer",
+        decoding_method="greedy_search",
+    )
+
+    with wave.open(str(audio)) as w:
+        rate = w.getframerate()
+        roh = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+    proben = roh.astype(np.float32) / 32768.0
+
+    fenster = 120 * rate
+    segmente: list[dict[str, Any]] = []
+    texte: list[str] = []
+    for nr in range(0, len(proben), fenster):
+        stueck = proben[nr:nr + fenster]
+        versatz = nr / rate
+        strom = erkenner.create_stream()
+        strom.accept_waveform(rate, stueck)
+        erkenner.decode_stream(strom)
+        text = strom.result.text.strip()
+        if not text:
+            continue
+        texte.append(text)
+        marken = strom.result.timestamps or []
+        # Die Wort-Zeitstempel kommen je Token. Fuer eine Sprungmarke genuegt der erste
+        # Zeitpunkt des Stuecks; feiner braucht es die Seitenleiste nicht.
+        segmente.append({
+            "start": versatz + (marken[0] if marken else 0.0),
+            "end": versatz + (marken[-1] if marken else len(stueck) / rate),
+            "text": text,
+        })
+
+    return {
+        "segments": segmente,
+        "text": " ".join(texte),
+        "route": "parakeet primeline (deutsch, lokal)",
+    }
+
+
 def parse_parakeet_segments(data: Any) -> Iterator[dict[str, Any]]:
     """Nimmt sowohl {"sentences": [...]} als auch {"segments": [...]} und blanke Listen.
 
@@ -443,7 +546,9 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
         raise HostError(f"Ungültige Video-ID: {video_id!r}")
 
     route = str(msg.get("route", "parakeet-mlx"))
-    if route not in STT_MODELS and route not in ("parakeet-mlx", "subtitles"):
+    if route not in STT_MODELS and route not in (
+        "parakeet-mlx", "parakeet-primeline", "subtitles"
+    ):
         raise HostError(f"Unbekannte Route: {route}")
 
     api_key = msg.get("apiKey") or ""
@@ -463,10 +568,11 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
 
         source = download_audio(video_id, workdir)
 
-        if route == "parakeet-mlx":
+        if route in ("parakeet-mlx", "parakeet-primeline"):
             wav = workdir / "audio.wav"
             to_wav(source, wav)
-            result = transcribe_parakeet_mlx(wav, workdir)
+            result = (transcribe_primeline(wav) if route == "parakeet-primeline"
+                      else transcribe_parakeet_mlx(wav, workdir))
         else:
             opus = workdir / "audio.opus"
             to_opus(source, opus)

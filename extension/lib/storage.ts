@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: Settings = {
   captionLang: "auto",
   uiLang: "auto",
   showCost: false,
-  sttRoute: "parakeet-mlx",
+  sttRoute: "parakeet-primeline",
   preferLocalTranslate: false,
   uiScale: 110,
   // Knapp über YouTubes eigenem Wert (400 bis 490 px je nach Fenster): spürbar mehr

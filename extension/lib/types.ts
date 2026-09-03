@@ -94,6 +94,7 @@ export type ReasoningEffort = "minimal" | "low" | "medium" | "high";
 export type SttRoute =
   | "openrouter-whisper-turbo"
   | "openrouter-parakeet"
+  | "parakeet-primeline"
   | "parakeet-mlx";
 
 /**

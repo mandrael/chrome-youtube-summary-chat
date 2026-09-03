@@ -7,6 +7,86 @@
 3. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
 
+## Stand 03.09.2026 (einundzwanzigster Durchgang) – deutsches Modell gemessen, eingebaut, Standard gewechselt
+
+### Ergebnis über drei deutsche TEDx-Vorträge (5434 Referenzwörter, 40 Minuten)
+
+| Modell | Weg | WER | Tempo |
+|---|---|---|---|
+| **primeline matt-2012** | CoreML / ANE (Swift, FluidAudio) | **8,4 %** | **352x** |
+| **primeline ValentinWeyer** | CoreML / ANE | **8,5 %** | 289x |
+| primeline (OpenVoiceOS) | onnx-asr, CPU | 9,2 % | 27x |
+| primeline (x-ian) | sherpa-onnx, CPU | 9,3 % | 32x |
+| parakeet v3 | CoreML / ANE | 30,2 % | 241x |
+| parakeet v3 (ONNX) | onnx-asr, CPU | 57,2 % | 26x |
+| parakeet v3 (GGUF) | NeMo-Speech.cpp, Metal | 58,0 % | 38x |
+| parakeet v3 (GGUF) | NeMo-Speech.cpp, CPU | 58,5 % | 24x |
+
+Tempo = Audiosekunden je Rechensekunde, Apple M5, seriell gemessen, Ladezeit separat.
+Vollständige Reihe samt Einzelwerten in [docs/messungen.md](docs/messungen.md).
+
+### Der Grund für den Abstand ist nicht die Erkennung, sondern die Sprache
+
+**parakeet v3 übersetzt deutsche Vorträge ins Englische.** Bei `JBRv-EAv2IA` (deutscher
+TEDx-Vortrag mit englischen Zitaten) schreibt v3 „Spring and the network. This is the
+phrase that we hear." – die Referenz lautet „Spring und das Netz wird erscheinen. Das
+sind so geflügelte Phrasen, die wir immer wieder hören." Auf allen drei Wegen
+reproduziert. Ohne englische Zitate (`ted.wav`) liegt v3 bei 5,9 %.
+
+**Das lässt sich nicht abstellen.** NVIDIAs Modellkarte: „The model automatically detects
+the language of the audio and transcribes it without requiring additional prompting."
+Gemessen: `nemo-speech --language de` liefert bitgleich dieselbe englische Ausgabe.
+FluidAudios `language:` steuert nur einen Latein-gegen-Kyrillisch-Schriftfilter. Im
+FluidAudio-Quelltext steht das Phänomen ausdrücklich beschrieben – „the spontaneous-speech
+translation phenomenon where the model falls back to its English prior" – mit einer
+Gegenmaßnahme, die **nur für Französisch** freigeschaltet ist (`englishBlocklistApplies`
+prüft `language == .french`).
+
+### Was eingebaut wurde
+
+- Neue Route **`parakeet-primeline`** in [yt_summary_host.py](native-host/yt_summary_host.py)
+  über sherpa-onnx: läuft auf macOS, Windows, Linux und Intel-Macs mit denselben
+  Modelldateien, liefert Wort-Zeitstempel, 670 MB.
+- **Standard gewechselt**: `sttRoute` steht in [storage.ts](extension/lib/storage.ts) jetzt
+  auf `parakeet-primeline` statt `parakeet-mlx`.
+- Optionsseite: beide lokalen Routen mit ihrer Eignung beschriftet, dazu der Hinweis, dass
+  v3 für englischen und anderssprachigen Ton weiterhin richtig ist und **beide Modelle
+  nebeneinander bestehen** dürfen. Installationszeile `pip install sherpa-onnx numpy`.
+
+### Warum sherpa-onnx und nicht onnx-asr
+
+Gleichwertig in der Qualität (9,3 gegen 9,2 %), aber sherpa-onnx ist schneller (32x gegen
+27x), liefert **Wort-Zeitstempel** (2864 bis 5052 Marken je Vortrag; onnx-asr liefert
+keine), bringt VAD mit, erlaubt CUDA und DirectML über denselben `provider`-Schalter und
+wird aktiver gepflegt (01.09.2026 gegen 15.07.2026). Ohne Zeitstempel gäbe es nach
+Projektregel 3 keine Sprungmarken.
+
+### Empfehlung für den Mac
+
+**Beste Qualität und Geschwindigkeit: primeline über CoreML/ANE** (8,4 %, 352x). Das
+verlangt allerdings ein eigenes Swift-Binary mit FluidAudio neben dem Python-Host – der
+Prototyp `anevergleich` existiert, ein ausgeliefertes Binary nicht. **Noch nicht gebaut,
+Entscheidung offen.**
+
+Bis dahin ist die eingebaute sherpa-onnx-Route auch auf dem Mac die richtige Wahl: 9,3 %
+gegen 8,4 % ist ein knapper Prozentpunkt, und 32x reichen für ein Zehn-Minuten-Video
+(rund 20 Sekunden). Zwischen den beiden primeline-Konvertierungen entscheidet nichts –
+0,1 Prozentpunkt ist Rauschen; ValentinWeyer liefert die `conversion_metadata.json` mit.
+
+### Grenzen dieser Messung, ehrlich benannt
+
+- Die Referenzen sind **lektorierte** TED-Untertitel: Füllwörter und Wiederholungen
+  fehlen dort, wörtlich transkribierende Modelle werden dafür bestraft. Die absoluten
+  Werte sind deshalb höher als die reine Erkennungsleistung; der Vergleich *zwischen*
+  den Modellen bleibt gültig, weil alle gegen dieselbe Referenz laufen.
+- Die ONNX-Wege schneiden hart bei 120 bzw. 300 Sekunden ohne Überlappung, FluidAudio
+  segmentiert intern besser. Geschätzter Nachteil 0,1 bis 0,3 Prozentpunkte zulasten
+  der ONNX-Wege.
+- **Windows, Linux und CUDA sind nicht gemessen** – dafür fehlt die Hardware. Belegt ist
+  nur, dass `onnxruntime` Räder für `win_amd64`, `win_arm64`, `manylinux x86_64/aarch64`
+  und `macosx x86_64` veröffentlicht und sherpa-onnx `provider="cuda"` kennt.
+- Die Prüfung durch Codex und Fable wurde auf Wunsch abgebrochen, bevor Berichte vorlagen.
+
 ## Stand 03.09.2026 (zwanzigster Durchgang) – primeline vs. v3 auf der ANE, Plattformweg für Windows/Linux gefunden
 
 ### Ergebnis, das die Empfehlung trägt

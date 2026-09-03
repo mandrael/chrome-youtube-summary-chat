@@ -448,11 +448,18 @@ export function Options() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="parakeet-primeline">
+                  <SttRow
+                    name="Parakeet primeline – deutsch (lokal)"
+                    slug="x-ian/sherpa-onnx-parakeet-primeline-de-int8"
+                    detail="kostenlos · Wort-Zeitstempel · macOS, Windows, Linux · 670 MB · braucht sherpa-onnx und ffmpeg"
+                  />
+                </SelectItem>
                 <SelectItem value="parakeet-mlx">
                   <SttRow
-                    name="Parakeet MLX (lokal, Apple Silicon)"
+                    name="Parakeet MLX – mehrsprachig (lokal, Apple Silicon)"
                     slug="mlx-community/parakeet-tdt-0.6b-v3"
-                    detail="kostenlos · Segment-Zeitstempel · braucht parakeet-mlx und ffmpeg"
+                    detail="kostenlos · Segment-Zeitstempel · bei deutschem Ton schwächer · braucht parakeet-mlx und ffmpeg"
                   />
                 </SelectItem>
                 {(["openai/whisper-large-v3-turbo", "nvidia/parakeet-tdt-0.6b-v3"] as const).map(
@@ -487,6 +494,16 @@ export function Options() {
               </SelectContent>
             </Select>
             <p className="mt-2 text-xs text-muted-foreground">
+              Bei deutschem Ton ist das deutsche Modell die erste Wahl. Gemessen an drei
+              deutschen TEDx-Vorträgen (5434 Wörter, 03.09.2026): primeline 9,3 % falsche
+              Wörter, das mehrsprachige Parakeet v3 auf demselben Weg 57,2 %. Der Grund
+              ist nicht die Erkennung, sondern die Sprache: v3 legt sie selbst fest und
+              lässt sich nicht darauf festlegen – bei deutschen Vorträgen mit englischen
+              Zitaten übersetzt es weiter, statt zu transkribieren. Für englischen und
+              anderssprachigen Ton bleibt Parakeet v3 die richtige Wahl; beide Modelle
+              dürfen nebeneinander installiert sein.
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
               OpenRouter weist die Preiseinheit für Transkriptionsmodelle nicht aus. Der
               Stundenpreis ist aus der Grössenordnung des Rohwerts abgeleitet; der Rohwert
               steht deshalb daneben.
@@ -499,6 +516,10 @@ export function Options() {
 
           <Field label="Voraussetzungen installieren">
             <CopyLine label="macOS" cmd="brew install yt-dlp ffmpeg" />
+            <CopyLine
+              label="Deutsches Modell (alle Systeme)"
+              cmd="pip install sherpa-onnx numpy"
+            />
             <CopyLine label="macOS (Parakeet MLX)" cmd="uv tool install parakeet-mlx -U" />
             <CopyLine label="Windows" cmd="winget install yt-dlp.yt-dlp" />
             <CopyLine label="Windows" cmd="winget install ffmpeg" />

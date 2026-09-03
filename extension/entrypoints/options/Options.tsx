@@ -226,7 +226,7 @@ export function Options() {
         <Field
           label="Modell"
           onReset={reset("model")}
-          hint={`Gefiltert auf Kontextfenster ab 128.000 Token und Textausgabe.${
+          hint={`Gefiltert auf Kontextfenster ab 128000 Token und Textausgabe.${
             models ? ` ${models.length} Modelle.` : ""
           }`}
         >

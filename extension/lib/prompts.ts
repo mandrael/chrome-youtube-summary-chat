@@ -31,12 +31,23 @@ Harte Regeln:
   zusammengezogen: aus "80 geschrieben, auf 54 verdichtet" wird nicht
   "54 bis 80". Keine Umrechnung, keine Summe, kein Mittelwert, keine
   Spanne aus zwei Zahlen.
-- Zahlen stehen in der Schreibweise der Antwortsprache: auf Deutsch Komma als
-  Dezimal- und Punkt als Tausendertrennzeichen ("11.587,50 Dollar"), auf
-  Englisch umgekehrt ("11,587.50 dollars"). Der Wert bleibt exakt derselbe.
-  "11,587 dollars" im englischen Transkript sind elftausend und werden auf
-  Deutsch zu "11.587 Dollar". Einzige erlaubte Änderung an einer Zahl:
-  Geldbeträge auf höchstens zwei Nachkommastellen runden.
+- An einer Zahl wird nichts gerechnet und nichts gerundet. Sie steht mit
+  denselben Ziffern da wie im Transkript.
+- **Tausendertrennzeichen kommen nie vor**, in keiner Antwortsprache: aus
+  "1,500 dollars" wird auf Deutsch "1500 Dollar" und auf Englisch
+  "1500 dollars". Punkt und Komma bleiben allein dem Dezimalzeichen
+  vorbehalten – als Tausenderzeichen machen sie dieselbe Ziffernfolge in der
+  jeweils anderen Sprache mehrdeutig. Das Dezimalzeichen folgt der
+  Antwortsprache: Komma auf Deutsch, Punkt auf Englisch. Aus dem englischen
+  "11.587 dollars" – Punkt als Dezimalzeichen – wird auf Deutsch
+  "11,587 Dollar"; die Stellen bleiben, nur das Zeichen wechselt.
+- Ist die Lesart nicht eindeutig, bleibt die Zahl **unverändert** in der
+  Schreibweise des Transkripts stehen, samt ihrer Trennzeichen. Drei Ziffern
+  hinter einem Trennzeichen sind kein Beweis für Tausender: "11,587" kann
+  ebenso ein Wert mit drei Dezimalstellen sein. Entscheidend ist, was der
+  Sprecher sagt – nennt er die Zahl in Worten ("eleven thousand"), gilt das;
+  sagt er sie nicht aus und ist das Format zweideutig, wird nichts
+  umgeschrieben.
 - Kommt ein Verfahren in der Antwort vor und erklärt der Sprecher, wie es
   funktioniert, gib seine Erklärung wieder – im Umfang, den die Anfrage
   zulässt –, nicht nur das Schlagwort. Ob es vorkommt, entscheidet die Anfrage.
@@ -105,11 +116,12 @@ export const PRESETS = {
       "trägt, die wichtigste Einschränkung. " +
       "Hat das Video mehrere unabhängige Themen (Nachrichten, Podcast), gilt das für die " +
       "zwei oder drei wichtigsten, je ein Satz. " +
-      "Fließtext ohne Überschriften, Aufzählung oder Zeitstempel. " +
       "Keine Wiedergabe des Ablaufs und keine Wendungen wie „das Video behandelt“, " +
       "„es wird gesprochen über“, „der Moderator erklärt“. " +
       "Weglassen: Nebenthemen, Beispiele, Anekdoten, auch wenn sie im Transkript viel " +
-      "Platz einnehmen. Beginne direkt mit dem ersten Satz, ohne Vorspann.",
+      "Platz einnehmen. " +
+      "Fließtext ohne Überschriften, ohne Aufzählung und ohne Zeitstempel – auch dann keine Sprungmarken, wenn das Transkript welche enthält. " +
+      "Beginne direkt mit dem ersten Satz, ohne Vorspann.",
     summary_medium:
       "Schreib für jemanden, der das Video nicht ansieht, aber die Aussagen nachvollziehen " +
       "und einordnen will. " +
@@ -349,11 +361,12 @@ export const PRESETS = {
       "decisive figure, the main caveat. " +
       "If the video has several independent topics (news, podcast), do this for the two " +
       "or three most important ones, one sentence each. " +
-      "Prose, no headings, bullet points or timestamps. " +
       "Do not retell the flow and do not use phrases like \"the video covers\", " +
       "\"they talk about\", \"the host explains\". " +
       "Leave out side topics, examples and anecdotes, even if they take up a lot of the " +
-      "transcript. Start with the first sentence, no preamble.",
+      "transcript. " +
+      "Prose, no headings, no bullet points and no timestamps – no jump marks even if the transcript carries them. " +
+      "Start with the first sentence, no preamble.",
     summary_medium:
       "Write for someone who will not watch the video but wants to follow and weigh " +
       "the claims. " +

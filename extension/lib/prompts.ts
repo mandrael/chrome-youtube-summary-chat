@@ -39,8 +39,8 @@ Harte Regeln:
   vorbehalten – als Tausenderzeichen machen sie dieselbe Ziffernfolge in der
   jeweils anderen Sprache mehrdeutig. Das Dezimalzeichen folgt der
   Antwortsprache: Komma auf Deutsch, Punkt auf Englisch. Aus dem englischen
-  "11.587 dollars" – Punkt als Dezimalzeichen – wird auf Deutsch
-  "11,587 Dollar"; die Stellen bleiben, nur das Zeichen wechselt.
+  "3.5 hours" – Punkt als Dezimalzeichen – wird auf Deutsch "3,5 Stunden";
+  die Ziffern bleiben, nur das Zeichen wechselt.
 - Ist die Lesart nicht eindeutig, bleibt die Zahl **unverändert** in der
   Schreibweise des Transkripts stehen, samt ihrer Trennzeichen. Drei Ziffern
   hinter einem Trennzeichen sind kein Beweis für Tausender: "11,587" kann

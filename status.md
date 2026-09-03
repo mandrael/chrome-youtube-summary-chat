@@ -7,6 +7,66 @@
 3. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
 
+## Stand 03.09.2026 (neunzehnter Durchgang) – Modellsuche neu gebaut, Tempo 8x, STT-Wege vermessen
+
+### Die Modellsuche ist jetzt ein eigenes Feld, kein Radix-Select mehr
+
+Drei Anläufe, zwei davon gescheitert – nachzulesen in
+[docs/messungen.md](docs/messungen.md). Radix setzt den Fokus neu, sobald sich die Liste
+ändert; im Feld blieb ein einzelner Buchstabe stehen. Das Abfangen der Tasten am Content
+machte daraus eine Anzeige ohne Cursor („nicht überschreibbar“). Michaels Verweis auf
+Contao war der Ausweg: dort ist es eine echte Combobox, kein aufgebohrtes Auswahlfeld.
+
+Neu in [ModellWahl.tsx](extension/entrypoints/options/ModellWahl.tsx): Auslöser-Knopf,
+Panel mit gewöhnlichem `<input>`, Pfeiltasten/Enter/Esc, Klick-daneben über `mousedown`
+(bei `click` verschluckt das schliessende Panel die Auswahl). Im Browser geprüft: tippen,
+dreimal Rücktaste, alles markieren und überschreiben, Auswahl per Eingabetaste.
+
+### Live-Weg: Tempo 8x statt 4x
+
+Gemessen an `JTFq1MM9bYA`, 120 s Videozeit, whisper-large-v3-turbo mit `language: "de"`:
+4x, 6x und 8x liefern gleich gute Ergebnisse (8x sogar einen Satz mehr als 4x), ab 12x
+kommen die ersten Fehler, 16x ist unbrauchbar. **Ende zu Ende für 5:06 jetzt 43,5 s statt
+109 s.** Der Player schafft bis 15,89x.
+
+Zwei Nebenbefunde: Ohne Sprachvorgabe hielt Whisper deutschen Ton für Englisch und
+übersetzte halb – deshalb übernimmt der Live-Weg ab dem zweiten Stück die im ersten Stück
+erkannte Sprache. Und der Ton bleibt stumm (`GainNode(0)`), das Tempo wird über
+`preservesPitch = false` erreicht.
+
+### Zahlen im System-Prompt: keine Tausendertrennzeichen, in keiner Sprache
+
+Michaels Vorgabe, wörtlich: „weg mit diesen fucking tausendertrennern“. Aus „1,500
+dollars“ wird auf Deutsch „1500 Dollar“ und auf Englisch „1500 dollars“. Der Punkt als
+englisches Dezimalzeichen bleibt eine Zahl und wird nur im Zeichen getauscht: „3.5 hours“
+→ „3,5 Stunden“. Ist die Lesart nicht eindeutig, bleibt die Zahl **unverändert**.
+
+Zur Vorgeschichte, damit die Fehldeutung nicht wiederkehrt: Das Beispiel „11,587 Dollar“
+in einer früheren Prompt-Fassung (Commit d688efc) stammte aus **einer Modellausgabe**,
+nicht aus einem Transkript. Ich hatte es zweimal falsch gelesen und beim zweiten Mal ein
+Transkript dazu erfunden; git hat das aufgeklärt.
+
+### Lernfragen mit Zitatblock, Fazit ohne Sprungmarken
+
+Frage und Antwort waren im Fliesstext nicht zu trennen. Jetzt steht die Antwort als
+Zitatblock unter der Frage. Beim Fazit steht die Formvorgabe („Fliesstext ohne
+Überschriften, ohne Aufzählung und ohne Zeitstempel“) jetzt **am Ende** des Prompts –
+Michaels Beobachtung, Gemini setze dort Sprungmarken, liess sich zwar nicht reproduzieren
+(beide Modelle 0 Zeitmarken), die Härtung bleibt.
+
+### Spracherkennung: der Laufzeitweg wiegt schwerer als das Modell
+
+Vollständige Zahlen in [docs/messungen.md](docs/messungen.md). Kurz: dasselbe Modell
+`parakeet v3` liefert 15,7 % Wortfehler über `parakeet-mlx` mit Standard-Chunking, 8,5 %
+ohne Chunking und 5,9 % über FluidAudio/CoreML – so, wie DiktaGo es lädt. Das deutsche
+Spezialmodell **primeline erreicht auf demselben Weg 3,0 %** und ist damit besser als
+whisper-large-v3 (4,1 %).
+
+**Folge für den Helfer:** `sttRoute: parakeet-mlx` läuft derzeit mit der schlechtesten
+Voreinstellung. Mindestens `--chunk-duration 0` setzen; besser wäre der Wechsel auf
+FluidAudio, der aber ein Swift-Binary neben dem Python-Host bedeutet. **Noch nicht
+umgesetzt, Entscheidung offen.**
+
 ## Stand 03.09.2026 (achtzehnter Durchgang) – Version 0.2.0, drei Wege gemessen, vier neue Schnellbefehle
 
 **Versionsnummern ab jetzt geführt**, Schema `main.function.fix`. Die Version steht im

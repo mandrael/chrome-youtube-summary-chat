@@ -642,3 +642,97 @@ Ebenfalls gemessen: **Chrome sucht das Native-Messaging-Manifest im Ordner des j
 Profils.** Eine Instanz mit eigenem `--user-data-dir` sieht die Installation im
 Standardprofil nicht – `Specified native messaging host not found.` Im Testprofil genügt
 ein Symlink nach `<user-data-dir>/NativeMessagingHosts/`.
+
+## Wortfehlerrate der vier STT-Modelle gegen ein Handtranskript (03.09.2026)
+
+Referenz ist ein **von Hand geschriebenes und lektoriertes** Transkript: TEDx-Vortrag
+`9CZBIaaiPRI`, deutsch, 11:54, 1353 Wörter. YouTube weist es als reguläre Untertitelspur
+aus, nicht als automatische. Live-Untertitel taugen dafür nicht – die Tagesschau
+(`n_Y8ly4MMJ0`) hat zwar eine manuelle Spur, schreibt aber selbst hinein: „Diese Sendung
+wurde vom NDR **live** untertitelt", und Live-Untertitelung kürzt.
+
+Verglichen wird auf Wortebene nach Kleinschreibung, ohne Satzzeichen, mit ß→ss auf beiden
+Seiten (sonst zählte jede Schreibweise als Fehler). Ziffern bleiben Ziffern.
+
+| Modell | WER | falsche Wörter | ausgegebene Wörter |
+|---|---|---|---|
+| **parakeet primeline** (deutsch, lokal, ONNX int8) | **3,8 %** | 51 | 1352 |
+| whisper-large-v3 (OpenRouter) | 4,1 % | 56 | 1369 |
+| whisper-large-v3-turbo (OpenRouter) | 4,5 % | 61 | 1372 |
+| parakeet v3 (mehrsprachig, MLX, lokal) | **15,7 %** | 212 | 1247 |
+
+Der Abstand zwischen primeline und Whisper ist klein (5 Wörter auf 1353). Der grosse
+Befund ist **parakeet v3**: 15,7 % und über 100 verschluckte Wörter – und genau dieses
+Modell ist im Helfer als lokale Route eingestellt.
+
+Die Herstellerangaben von primeline (Ø 2,95 % gegen 3,64 % für v3 und 3,28 % für
+whisper-large-v3) stammen aus Benchmarks mit vorgelesenen Sätzen; auf Vortragston
+schrumpft der Vorsprung.
+
+### primeline schreibt kein ß
+
+Im ganzen Transkript kein einziges ß, dafür „weiss", „muss", „Fuss". Das liegt **nicht**
+an der ONNX-Konvertierung: das Vokabular führt vier ß-Tokens, darunter ein eigenes
+`▁weiß`. Das Modell kennt die Form und wählt sie trotzdem nicht – die Trainingsdaten waren
+offenbar in Schweizer Schreibweise oder ß-normalisiert. Zum Vergleich: whisper-large-v3
+setzt neun ß, die Referenz drei.
+
+## Dasselbe Modell, drei Laufzeitwege – und der Weg entscheidet mehr als das Modell (03.09.2026)
+
+Anlass war Michaels Einwand, `parakeet v3` mit 15,7 % sei „eigenartig, da DiktaGo das nutzt
+und gut ist". Der Einwand war berechtigt: gemessen wurde nicht das Modell, sondern die
+Chunking-Voreinstellung von `parakeet-mlx` (120 s Fenster, 15 s Überlappung), die acht
+Lücken von 8 bis 35 Wörtern hinterliess.
+
+DiktaGo lädt dasselbe Modell über **FluidAudio** – Swift, CoreML, Apple Neural Engine,
+`AsrModels.downloadAndLoad(version: .v3)` aus dem Repo `FluidInference/parakeet-tdt-0.6b-v3-coreml`.
+Der Nachbau in `scratchpad/anevergleich/` bildet den Aufruf exakt nach: `AsrManager` mit
+`config: .default`, frischer `TdtDecoderState`, `language: nil`.
+
+| Modell | Weg | WER | ausgegebene Wörter |
+|---|---|---|---|
+| **parakeet primeline** | FluidAudio / CoreML (ANE) | **3,0 %** | 1352 |
+| parakeet primeline | sherpa-onnx, ONNX int8 | 3,8 % | 1352 |
+| whisper-large-v3 | OpenRouter | 4,1 % | 1369 |
+| whisper-large-v3-turbo | OpenRouter | 4,5 % | 1372 |
+| parakeet v3 | FluidAudio / CoreML (ANE) | 5,9 % | 1347 |
+| parakeet v3 | parakeet-mlx, `--chunk-duration 0` | 8,5 % | 1289 |
+| parakeet v3 | parakeet-mlx, Standard-Chunking | 15,7 % | 1247 |
+
+Für v3 liegen zwischen dem besten und dem schlechtesten Weg **15,7 gegen 5,9 Prozent** –
+bei identischen Gewichten. Die Voreinstellung des Laufzeitwegs wiegt hier schwerer als die
+Wahl zwischen zwei Modellen.
+
+Geschwindigkeit auf der ANE, 11:54 Audio: primeline 3,0 s (235x Echtzeit), v3 2,9 s (248x).
+Laden aus einem bereits vorhandenen Verzeichnis 9,8 s.
+
+### primeline läuft auf der ANE, meldet dabei aber einen Shape-Fehler
+
+Auf stdout erscheint einmalig `E5RT encountered an STL exception … ios17.slice_by_index:
+zero shape error`. Das Transkript ist davon unbeschädigt (1352 Wörter, keine Lücke), aber
+die Meldung landet **vor** dem Text und muss vor jeder Auswertung entfernt werden – sonst
+zählt sie als 16 falsche Wörter und die WER springt von 3,0 auf 4,5 %.
+
+Die Konvertierung ist ausserdem laut `conversion_metadata.json` mit
+`compute_units: CPU_ONLY` gebaut. Sie läuft trotzdem unter FluidAudio, aber sie ist nicht
+für die ANE optimiert – die 235x sind also kein Beleg für ANE-Nutzung des Encoders.
+
+### Die Falle, die zwei Messungen wertlos gemacht hat
+
+`AsrModels.load(from: URL)` **ignoriert den übergebenen Ordnernamen**. Der Code nimmt
+`directory.deletingLastPathComponent()` und hängt den Repo-Ordnernamen selbst an. Heisst
+das eigene Verzeichnis anders, findet FluidAudio nichts, lädt still das Standardmodell von
+HuggingFace nach und rechnet damit – **ohne Fehler, ohne Warnung**.
+
+Zwei Läufe lieferten so bit-identischen Text zum v3-Lauf (gleiche md5, 80 Fehler, 1347
+Wörter), was zuerst wie ein Messfehler in der Auswertung aussah. Bewiesen wurde es mit der
+Gegenprobe: **`Encoder.mlmodelc` komplett entfernt, Lauf lieferte trotzdem 8534 Zeichen
+Transkript in 0,2 s Ladezeit.**
+
+Der Ordner muss `parakeet-tdt-0.6b-v3` heissen – **ohne** `-coreml`, obwohl das HF-Repo so
+heisst. Kontrolle bei jedem Lauf mit eigenem Modell:
+
+- Ladezeit im Sekundenbereich (ein Download dauert Minuten),
+- kein neuer Ordner im Elternverzeichnis,
+- bei primeline: **kein einziges ß** im Ergebnis. Das ist die verlässlichste Signatur;
+  v3 setzt neun.

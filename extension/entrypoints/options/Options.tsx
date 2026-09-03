@@ -8,13 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { ask } from "@/lib/chat-client";
+import { ModellWahl } from "./ModellWahl";
 import { EMPFEHLUNG, FALLBACK_MODELS, ONE_M_CONTEXT } from "@/lib/openrouter";
 import { clearCache, DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
 import { parseWoerterbuch } from "@/lib/korrektur";
@@ -65,8 +64,6 @@ export function Options() {
     "unavailable" | "downloadable" | "downloading" | "available" | "unbekannt"
   >("unbekannt");
   const [lokalLaeuft, setLokalLaeuft] = React.useState<string | null>(null);
-  const [modellSuche, setModellSuche] = React.useState("");
-  const filterRef = React.useRef<HTMLInputElement>(null);
 
   const zielCode = React.useMemo(
     () => ZIELSPRACHEN.find(([n]) => n === s?.translationTarget)?.[1] ?? "de",
@@ -79,41 +76,6 @@ export function Options() {
       setLokalZustand(await localAvailability("en", baseLang(zielCode)));
     })();
   }, [zielCode]);
-
-  const gefilterteModelle = React.useMemo(() => {
-    const liste = models ?? FALLBACK_MODELS;
-    const q = modellSuche.trim().toLowerCase();
-    if (!q) return liste;
-    return liste.filter(
-      (m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
-    );
-  }, [models, modellSuche]);
-
-  /*
-   * Unter der Empfehlung die vollständige Liste nach Anbietern, in der Reihenfolge
-   * ihres jeweils neuesten Modells – so liegt auch dort das Aktuelle vorne. Der
-   * Anbieter steht im Namen vor dem Doppelpunkt, dem einzigen Feld, aus dem er sich
-   * ohne gepflegte Liste ergibt.
-   */
-  const gruppen = React.useMemo(() => {
-    const nachAnbieter = new Map<string, ModelInfo[]>();
-    for (const m of gefilterteModelle) {
-      const anbieter = m.name.includes(":") ? m.name.split(":")[0]!.trim() : "Weitere";
-      const bisher = nachAnbieter.get(anbieter);
-      if (bisher) bisher.push(m);
-      else nachAnbieter.set(anbieter, [m]);
-    }
-    // Anbieter mit ein oder zwei Modellen zerhacken die Liste in 43 Grüppchen. Sie
-    // wandern zusammen nach „Weitere" ans Ende, damit oben die grossen Häuser stehen.
-    const gross: [string, ModelInfo[]][] = [];
-    const klein: ModelInfo[] = [];
-    for (const [anbieter, liste] of nachAnbieter) {
-      if (anbieter !== "Weitere" && liste.length >= 3) gross.push([anbieter, liste]);
-      else klein.push(...liste);
-    }
-    if (klein.length) gross.push(["Weitere", klein]);
-    return gross;
-  }, [gefilterteModelle]);
 
   /*
    * Die Empfehlung steht immer oben und ist bewusst nicht gefiltert: sie ist der
@@ -268,92 +230,31 @@ export function Options() {
             models ? ` ${models.length} Modelle.` : ""
           }`}
         >
-          <Select
+          <ModellWahl
             value={s.model}
-            // Radix legt den Fokus beim Öffnen auf die Liste – dann tippt man ins Leere
-            // statt ins Filterfeld. Einen Öffnen-Hook gibt es beim Select nicht, also
-            // nach dem Rendern selbst fokussieren.
-            onOpenChange={(offen) => {
-              if (offen) setTimeout(() => filterRef.current?.focus(), 40);
-              else setModellSuche("");
-            }}
-            onValueChange={(v) =>
+            models={models ?? FALLBACK_MODELS}
+            empfehlung={empfohlen}
+            onChange={(v) =>
               patch({
                 model: v,
                 // Lite-Modelle bekommen minimal vorbelegt.
                 reasoning: isLiteModel(v) ? "minimal" : s.reasoning,
               })
             }
-          >
-            {/*
-              Der Auslöser zeigt nur die erste Zeile – Name und Kontextgrösse. Slug und
-              Preis stehen in der Liste, sonst wäre das geschlossene Feld dreizeilig.
-            */}
-            <SelectTrigger>
-              {selected ? (
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate">{selected.name}</span>
-                  <KontextMarke n={selected.contextLength} />
-                </span>
-              ) : (
-                <SelectValue />
-              )}
-            </SelectTrigger>
-            {/*
-              Filterfeld: knapp 300 Modelle lassen sich nicht scrollend finden. Es sitzt
-              ausserhalb des scrollenden Bereichs, sonst verdeckt es die erste Zeile,
-              sobald Radix beim Öffnen zur gewählten Option springt. Tastatureingaben
-              dürfen nicht durchgereicht werden, sonst springt der Typeahead des
-              Auswahlfelds beim Tippen zwischen den Einträgen.
-            */}
-            <SelectContent
-              header={
-                <div className="border-b border-border bg-card px-2 py-1.5">
-                  <Input
-                    ref={filterRef}
-                    value={modellSuche}
-                    placeholder="Filtern – Name oder Slug"
-                    onChange={(e) => setModellSuche(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    className="h-7 text-xs"
-                  />
-                </div>
-              }
-            >
-              {gefilterteModelle.length === 0 ? (
-                <p className="px-2 py-3 text-xs text-muted-foreground">
-                  Kein Modell passt zu „{modellSuche}".
-                </p>
-              ) : (
+            // Der Auslöser zeigt nur die erste Zeile – Name und Kontextgrösse. Slug und
+            // Preis stehen in der Liste, sonst wäre das geschlossene Feld dreizeilig.
+            auslöser={(m) =>
+              m ? (
                 <>
-                  {!modellSuche.trim() && empfohlen.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel>Empfohlen</SelectLabel>
-                      {empfohlen.map(([m, marke]) => (
-                        <SelectItem
-                          key={`tipp-${m.id}`}
-                          value={m.id}
-                          textValue={`${m.name} ${m.id}`}
-                        >
-                          <ModelRow m={m} marke={marke} />
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                  {gruppen.map(([anbieter, liste]) => (
-                    <SelectGroup key={anbieter}>
-                      <SelectLabel>{anbieter}</SelectLabel>
-                      {liste.map((m) => (
-                        <SelectItem key={m.id} value={m.id} textValue={`${m.name} ${m.id}`}>
-                          <ModelRow m={m} />
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
+                  <span className="truncate">{m.name}</span>
+                  <KontextMarke n={m.contextLength} />
                 </>
-              )}
-            </SelectContent>
-          </Select>
+              ) : (
+                <span className="truncate text-muted-foreground">{s.model}</span>
+              )
+            }
+            zeile={(m, marke) => <ModelRow m={m} marke={marke} />}
+          />
         </Field>
 
         <Field

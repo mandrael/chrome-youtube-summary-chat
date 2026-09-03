@@ -328,6 +328,10 @@ Kleinigkeiten („ist" → „is"), bei 6x beginnt dasselbe Kippen einzelner Sä
 Damit ist **4x der Arbeitspunkt** und 5x die Grenze, an die man gehen kann. Der Gewinn
 von 6x (eine Minute je halbe Stunde) steht gegen den Anfang des Sprachkippens.
 
+> **Gilt nur für Parakeet.** Der Live-Weg im Browser schickt an
+> `whisper-large-v3-turbo`, und dort liegt die Grenze woanders – siehe den Abschnitt vom
+> 03.09.2026. Entscheidend ist dort nicht der Faktor, sondern die Sprachvorgabe.
+
 ## Audioqualität, Geschwindigkeit und der Versuch, sie nachzukorrigieren (02.09.2026)
 
 **Die Audiospur hängt nicht an der Videoqualität.** Gemessen über
@@ -551,3 +555,90 @@ data directory. Specify this using --user-data-dir."* Tests mit Michaels Anmeldu
 laufen deshalb auf einer **Kopie** des Profils. Der frühere Fehlschlag dieses Wegs lag
 daran, dass Chrome beim Kopieren noch lief; nach sauberem Beenden meldete die Kopie
 `angemeldet: true` und lieferte keine Werbung.
+
+## Tempo im Live-Weg: 8x trägt, die Sprachvorgabe entscheidet (03.09.2026)
+
+Gegenprobe zum Parakeet-Befund oben, diesmal am Modell, das der Live-Weg wirklich
+benutzt: `openai/whisper-large-v3-turbo` über OpenRouter. Aufgenommen wurde jeweils
+**derselbe Abschnitt** – `JTFq1MM9bYA`, ab Sekunde 60, 120 Videosekunden – im echten
+Content-Script-Weg (`captureStream` → ScriptProcessor → WAV mit gemessener Rate).
+
+| Faktor | Rate im WAV | Echtzeit | Ergebnis |
+|---|---|---|---|
+| 4x | 11.025 Hz | 30,2 s | sehr gut |
+| 6x | 7.346 Hz | 20,1 s | sehr gut, kein Unterschied zu 4x |
+| **8x** | **5.506 Hz** | **15,1 s** | **sehr gut – ein Satz mehr als bei 4x** |
+| 12x | 3.673 Hz | 10,1 s | erste Fehler: „liege ich mich in den Stressabbau", „Niedigkeit" |
+| 16x | 2.760 Hz | 7,6 s | unbrauchbar: „Ich heiße mich ja Ila", „Hibbernatur-Prävention" |
+
+Der Player ist nicht die Grenze: eingestellt 16x, erreicht 15,89x, und bis dahin kommt
+lückenlos Ton an (Spitzenwert 0,99 in jedem Lauf).
+
+**Der eigentliche Hebel ist die Sprachvorgabe.** Ohne `language` erkannte Whisper
+denselben deutschen Ausschnitt bei 4x als Englisch und gab ihn halb übersetzt zurück:
+„With my body work I'm going to the stress-on-the-send." Mit `language: "de"` war
+derselbe Ton bei 4x, 6x und 8x fehlerfrei. Das kostet mehr Qualität als jede Tempostufe –
+und es ist dasselbe Kippen, das den Parakeet-Befund oben bei 8x abbrechen liess.
+
+Konsequenz im Code: `TEMPO = 8`, und ab dem zweiten Stück gilt die Sprache, die das erste
+ergeben hat, statt sie je Stück neu raten zu lassen. Ende zu Ende über den Knopf
+gemessen: **43,5 s für ein 5:06-Video** statt 109 s bei 4x.
+
+## Parakeet über OpenRouter liefert keine Zeitstempel (03.09.2026, Gegenprobe)
+
+Der Grund, warum der Live-Weg fest auf Whisper steht, erneut geprüft – dieselbe
+WAV-Datei, drei Anfragen:
+
+| Anfrage | Antwort |
+|---|---|
+| `nvidia/parakeet-tdt-0.6b-v3` + `verbose_json` | HTTP 400: „The selected model does not support response_format \"verbose_json\". Use \"json\" instead." |
+| `nvidia/parakeet-tdt-0.6b-v3` + `json` | HTTP 200, Felder `text`, `usage` – **keine Segmente** |
+| `openai/whisper-large-v3-turbo` + `verbose_json` | HTTP 200, Felder `duration`, `language`, `segments`, `task`, `text`, `usage` |
+
+Ohne Segmente gäbe es im Live-Weg nur eine Sprungmarke je 120-Sekunden-Stück. Lokal über
+den Helfer ist Parakeet dagegen die richtige Wahl: `parakeet-mlx` liefert Zeitstempel
+selbst, kostet nichts und brauchte für dasselbe 5:06-Video 16,6 s.
+
+## Deutsches Parakeet: es gibt eines, aber nicht von NVIDIA (03.09.2026)
+
+`nvidia/parakeet-tdt-0.6b-v3` ist das mehrsprachige Modell – 25 europäische Sprachen laut
+Modellkarte, Deutsch darunter; `v2` und `parakeet-ctc-1.1b` sind rein englisch. Ein
+eigenes deutsches Modell kommt von Dritten: **`primeline/parakeet-primeline`**,
+Feintuning auf v3-Basis, veröffentlicht am 13.01.2026. Genau dieses steckt in der
+Android-App „Dictate Keyboard" (Engine: sherpa-onnx) als Auswahl „Parakeet German".
+Fachspezifisch gibt es ausserdem `Mediform/parakeet-medical-de` und
+`johannhartmann/parakeet_de_med`.
+
+## Der Modellfilter verlor den Fokus nach dem ersten Zeichen (03.09.2026)
+
+Gemeldet und nachgestellt: im Auswahlfeld für das Chat-Modell kam nur ein Buchstabe an,
+danach ging der Fokus verloren. Gemessen über CDP, `document.activeElement` nach jedem
+Anschlag:
+
+| nach | Fokus | Feldwert |
+|---|---|---|
+| „s" | `DIV[role=listbox]` | „s" |
+| „o" | `DIV[role=option]` | „s" |
+| „n" | `DIV[role=option]` | „s" |
+
+Radix setzt den Fokus neu, sobald sich die Liste ändert; die weiteren Anschläge landeten
+im Typeahead des Auswahlfelds. Den Fokus im nächsten Frame zurückzuholen half nicht –
+Radix setzt ihn danach erneut.
+
+Behoben, indem das Auswahlfeld die Tasten selbst entgegennimmt
+(`onKeyDownCapture` am `SelectContent`, druckbare Zeichen und Rücktaste werden vor dem
+Typeahead abgefangen und in den Filtertext geschrieben). Das Feld darüber zeigt nur noch
+an (`readOnly`, `tabIndex={-1}`). Gegenprobe mit „sonnet 5": 147 → 15 → 10 → 5 → 1
+Treffer, der Text steht vollständig im Feld.
+
+## Testbrowser ansteuern, ohne die Arbeit zu stören (03.09.2026)
+
+`PUT /json/new` legt zwar einen Tab an, hebt aber das Chrome-Fenster über die laufende
+Arbeit. Stattdessen am Browser-Endpunkt (`/json/version` → `webSocketDebuggerUrl`)
+`Target.createTarget` mit `background: true` aufrufen und mit `Target.closeTarget` wieder
+schliessen; wo möglich den vorhandenen Tab per `Page.navigate` weiterverwenden.
+
+Ebenfalls gemessen: **Chrome sucht das Native-Messaging-Manifest im Ordner des jeweiligen
+Profils.** Eine Instanz mit eigenem `--user-data-dir` sieht die Installation im
+Standardprofil nicht – `Specified native messaging host not found.` Im Testprofil genügt
+ein Symlink nach `<user-data-dir>/NativeMessagingHosts/`.

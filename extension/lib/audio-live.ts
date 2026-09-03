@@ -37,9 +37,24 @@ declare global {
   }
 }
 
-const TEMPO = 4;
+/*
+ * Achtfach, nicht vierfach – gemessen am 03.09.2026 an demselben Ausschnitt (120 s
+ * deutsche Sprache, `language: "de"` vorgegeben, whisper-large-v3-turbo):
+ *
+ *   4x → 11.025 Hz   sehr gut
+ *   6x →  7.346 Hz   sehr gut
+ *   8x →  5.506 Hz   sehr gut, sogar ein Satz mehr als bei 4x
+ *  12x →  3.673 Hz   erste Fehler („Niedigkeit", „nichts bei dem Unternehmen")
+ *  16x →  2.760 Hz   unbrauchbar („Ich heiße mich ja Ila")
+ *
+ * Der Player selbst schafft alle Stufen bis 16x (eingestellt 16, erreicht 15,89). Die
+ * Grenze ist die Abtastrate, die durch die Zeitkompression entsteht: unter etwa 5 kHz
+ * fehlen die Konsonanten. 8x halbiert die Wartezeit gegenüber 4x und lässt bis 12x noch
+ * Luft, falls sich das Modell ändert.
+ */
+const TEMPO = 8;
 
-/** Videosekunden je Stück. Bei 12 kHz mono sind das rund 2,9 MB je Anfrage. */
+/** Videosekunden je Stück. Bei 5,5 kHz mono sind das rund 1,3 MB je Anfrage. */
 const STUECK_SEKUNDEN = 120;
 
 /** Nach so vielen Sekunden reiner Stille wird abgebrochen – DRM-Ton kommt als Stille an. */
@@ -325,11 +340,18 @@ export function starteLiveTranskription(opts: {
       kette = kette.then(async () => {
         if (abbruch.signal.aborted || fehler) return;
         try {
+          /*
+           * Ab dem zweiten Stück gilt die Sprache, die das erste ergeben hat. Ohne
+           * Vorgabe rät das Modell je Stück neu, und bei beschleunigtem Ton rät es
+           * falsch: am 03.09.2026 hielt es einen deutschen Ausschnitt für Englisch und
+           * gab ihn halb übersetzt zurück („With my body work I'm going to the
+           * stress-on-the-send“). Mit Vorgabe war derselbe Ton fehlerfrei.
+           */
           const { segments, text, sprache: antwortSprache } = await erkenne(
             wav,
             opts.model,
             opts.apiKey,
-            opts.sprache,
+            opts.sprache || sprache,
             opts.zeitstempel,
             abbruch.signal,
           );

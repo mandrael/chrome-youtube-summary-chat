@@ -317,9 +317,12 @@ export const PRESETS = {
       "Acht bis zwölf Fragen zu dem, was das Video lehrt oder behauptet – Zusammenhänge, " +
       "Begründungen, Zahlen, Abläufe –, nicht zu Beiläufigem. Jede Frage so, dass sie " +
       "sich nur mit dem Inhalt des Videos beantworten lässt, nicht mit Allgemeinwissen. " +
-      "Direkt darunter die Antwort in ein bis zwei Sätzen, so wie der Sprecher sie gibt, " +
-      "mit seinen Zahlen und Begriffen, am Ende der Zeitstempel der Stelle in der " +
-      "Schreibweise des Transkripts. " +
+      "Die Frage steht fett und nummeriert in einer eigenen Zeile. " +
+      "Darunter die Antwort als Zitatblock – die Zeile beginnt mit „> “ –, in ein bis " +
+      "zwei Sätzen, so wie der Sprecher sie gibt, mit seinen Zahlen und Begriffen, am " +
+      "Ende der Zeitstempel der Stelle in der Schreibweise des Transkripts. Der " +
+      "Zitatblock trennt Antwort von Frage sichtbar; ohne ihn verschwimmt beides zu " +
+      "einem Absatz. " +
       "Keine Frage, deren Antwort im Video fehlt. Reihenfolge des Videos. " +
       "Kein Einleitungs- und kein Schlusssatz. Beginne direkt mit der ersten Frage.",
     positions:
@@ -535,9 +538,12 @@ export const PRESETS = {
       "Eight to twelve questions on what the video teaches or claims – connections, " +
       "reasons, figures, procedures – not on the incidental. Every question phrased so " +
       "it can only be answered from the video, not from general knowledge. " +
-      "Directly below it the answer in one or two sentences as the speaker gives it, " +
-      "with his figures and terms, ending with the timestamp of the spot, written the " +
-      "way the transcript writes it. " +
+      "The question stands in bold and numbered on a line of its own. " +
+      "Below it the answer as a block quote – the line starts with \"> \" – in one or " +
+      "two sentences as the speaker gives it, with his figures and terms, ending with " +
+      "the timestamp of the spot, written the way the transcript writes it. The block " +
+      "quote keeps answer and question visibly apart; without it the two blur into one " +
+      "paragraph. " +
       "No question whose answer the video does not contain. Keep the order of the " +
       "video. No opening or closing sentence. Start with the first question.",
     positions:

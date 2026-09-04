@@ -11,13 +11,14 @@ import {
   Settings,
   Square,
   WandSparkles,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Markdown } from "@/components/Markdown";
 import { TranscriptView } from "@/components/TranscriptView";
 import { HistoryView } from "@/components/HistoryView";
-import { startChat, startFallback } from "@/lib/chat-client";
+import { ask, startChat, startDownload, startFallback } from "@/lib/chat-client";
 import { makeT, resolveUiLang, type T } from "@/lib/i18n";
 import {
   PRESETS,
@@ -62,6 +63,7 @@ import type {
   Transcript,
   TranscriptTranslation,
   UiLang,
+  VideoFormat,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -405,6 +407,7 @@ export function Sidebar({
     claims: "presetClaims",
     howto: "presetHowto",
     pro_contra: "presetProContra",
+    comparison: "presetComparison",
     glossary: "presetGlossary",
     references: "presetReferences",
     quiz: "presetQuiz",
@@ -686,6 +689,77 @@ export function Sidebar({
       });
   }
 
+  /* ---- Videodownload (nur Build "full", §4a) ---- */
+
+  const [dl, setDl] = React.useState<DownloadLage | null>(null);
+  const dlRef = React.useRef<{ cancel: () => void } | null>(null);
+  // Zählt jede neue Anfrage; verspätete Antworten älterer Anfragen (anderes Video,
+  // abgebrochener Job) erkennen sich daran und fassen den Zustand nicht mehr an.
+  const dlLauf = React.useRef(0);
+
+  function brichDownloadAb() {
+    dlLauf.current++;
+    dlRef.current?.cancel();
+    dlRef.current = null;
+  }
+
+  // Der Dialog gehört zum Video, mit dem er geöffnet wurde; Unmount räumt genauso auf.
+  React.useEffect(() => {
+    brichDownloadAb();
+    setDl(null);
+    return brichDownloadAb;
+  }, [videoId]);
+
+  function oeffneDownload() {
+    if (!__FALLBACK__) return;
+    brichDownloadAb();
+    const lauf = dlLauf.current;
+    // Öffnen lädt nur die Formatliste – der Download selbst wartet auf den zweiten Klick.
+    setDl({ formate: null, fehler: "", hoehe: null, status: "wahl", fortschritt: "", pfad: "" });
+    ask<VideoFormat[]>("videoFormats", { videoId })
+      .then((formate) => {
+        if (lauf !== dlLauf.current) return;
+        const wunsch = settings?.downloadHeight ?? 720;
+        const passend = formate.filter((f) => f.height <= wunsch);
+        // Nächstkleinere vorhandene Höhe; gibt es keine darunter, die kleinste darüber.
+        const hoehe = passend.length
+          ? Math.max(...passend.map((f) => f.height))
+          : formate.length
+            ? Math.min(...formate.map((f) => f.height))
+            : null;
+        setDl((d) => d && { ...d, formate, hoehe });
+      })
+      .catch((e) => {
+        if (lauf !== dlLauf.current) return;
+        setDl((d) => d && { ...d, formate: [], fehler: String(e?.message ?? e) });
+      });
+  }
+
+  function starteDownload() {
+    if (!__FALLBACK__ || !dl || dl.hoehe == null) return;
+    const lauf = dlLauf.current;
+    setDl({ ...dl, status: "laeuft", fehler: "", fortschritt: "" });
+    const job = startDownload(videoId, dl.hoehe, (p) => {
+      if (lauf !== dlLauf.current) return;
+      setDl((d) => d && {
+        ...d,
+        fortschritt: `${p.message}${p.percent != null ? ` (${p.percent}%)` : ""}`,
+      });
+    });
+    dlRef.current = job;
+    job.promise
+      .then((pfad) => {
+        if (lauf === dlLauf.current) setDl((d) => d && { ...d, status: "fertig", pfad });
+      })
+      .catch((e) => {
+        if (lauf === dlLauf.current)
+          setDl((d) => d && { ...d, status: "wahl", fehler: String(e?.message ?? e) });
+      })
+      .finally(() => {
+        if (dlRef.current === job) dlRef.current = null;
+      });
+  }
+
   /* ---- Erneut laden ---- */
 
   async function reloadTranscript() {
@@ -809,6 +883,22 @@ export function Sidebar({
           className="absolute inset-y-0 left-0 z-20 w-2 cursor-col-resize hover:bg-primary/25"
         />
       )}
+      {__FALLBACK__ && dl && (
+        <DownloadDialog
+          t={t}
+          lage={dl}
+          onHoehe={(h) => setDl((d) => d && { ...d, hoehe: h })}
+          onStart={starteDownload}
+          onCancel={() => {
+            brichDownloadAb();
+            setDl((d) => d && { ...d, status: "wahl", fortschritt: "" });
+          }}
+          onClose={() => {
+            brichDownloadAb();
+            setDl(null);
+          }}
+        />
+      )}
       <Header
         t={t}
         tab={tab}
@@ -855,6 +945,7 @@ export function Sidebar({
                 ["claims", "presetClaims", "presetClaimsHint"],
                 ["howto", "presetHowto", "presetHowtoHint"],
                 ["pro_contra", "presetProContra", "presetProContraHint"],
+                ["comparison", "presetComparison", "presetComparisonHint"],
               ],
               [
                 ["glossary", "presetGlossary", "presetGlossaryHint"],
@@ -1085,6 +1176,7 @@ export function Sidebar({
           onMode={(m) => void speichereSettings({ transcriptMode: m })}
           getVideo={getVideo}
           onForceAudio={__FALLBACK__ ? () => runFallbackJob("audio") : undefined}
+          onVideoDownload={__FALLBACK__ ? oeffneDownload : undefined}
           busy={fallbackState}
         />
       )}
@@ -1259,6 +1351,114 @@ function NoCaptions({
       <p className="text-xs text-muted-foreground">
         {keyFehlt ? t("noKey") : t("liveHint")}
       </p>
+    </div>
+  );
+}
+
+interface DownloadLage {
+  /** null, solange die Formatliste geholt wird. */
+  formate: VideoFormat[] | null;
+  fehler: string;
+  hoehe: number | null;
+  status: "wahl" | "laeuft" | "fertig";
+  fortschritt: string;
+  pfad: string;
+}
+
+/**
+ * Auflösungsdialog des Videodownloads (nur Build "full", §4a in CLAUDE.md). Liegt als
+ * Fläche über der Sidebar; der Player der Seite wird nicht berührt. Geladen wird
+ * ausschliesslich nach dem Klick auf „Herunterladen“.
+ */
+function DownloadDialog({
+  t,
+  lage,
+  onHoehe,
+  onStart,
+  onCancel,
+  onClose,
+}: {
+  t: T;
+  lage: DownloadLage;
+  onHoehe: (h: number) => void;
+  onStart: () => void;
+  onCancel: () => void;
+  onClose: () => void;
+}) {
+  const mb = (bytes: number | null) =>
+    bytes == null ? t("downloadSizeUnknown") : `ca. ${(bytes / 1_048_576).toFixed(0)} MB`;
+
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col bg-card/95 p-4 text-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="font-medium">{t("downloadTitle")}</span>
+        <Button size="iconSm" variant="ghost" title={t("close")} onClick={onClose}>
+          <X />
+        </Button>
+      </div>
+
+      {lage.formate === null && (
+        <p className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          {t("downloadLoadingFormats")}
+        </p>
+      )}
+
+      {lage.formate !== null && lage.status !== "fertig" && (
+        <div className="mb-3 flex flex-col gap-1">
+          {lage.formate.length === 0 && !lage.fehler && (
+            <p className="text-muted-foreground">{t("downloadNoFormats")}</p>
+          )}
+          {lage.formate.map((f) => (
+            <label key={f.height} className="flex cursor-pointer items-center gap-2">
+              <input
+                type="radio"
+                name="download-hoehe"
+                checked={lage.hoehe === f.height}
+                disabled={lage.status === "laeuft"}
+                onChange={() => onHoehe(f.height)}
+              />
+              <span className="w-14">{f.height}p</span>
+              <span className="text-muted-foreground">{mb(f.bytes)}</span>
+            </label>
+          ))}
+        </div>
+      )}
+
+      {lage.fehler && (
+        <p className="mb-3 whitespace-pre-wrap text-destructive">{lage.fehler}</p>
+      )}
+
+      {lage.status === "laeuft" && (
+        <p className="mb-3 flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          {lage.fortschritt || t("fallbackRunning")}
+        </p>
+      )}
+
+      {lage.status === "fertig" && (
+        <p className="mb-3 break-all">
+          {t("downloadDone")}: <span className="font-mono text-xs">{lage.pfad}</span>
+        </p>
+      )}
+
+      <p className="mb-3 text-xs text-muted-foreground">{t("downloadLegal")}</p>
+
+      <div className="flex gap-2">
+        {lage.status === "wahl" && (
+          <Button size="sm" disabled={lage.hoehe == null} onClick={onStart}>
+            {t("downloadStart")}
+          </Button>
+        )}
+        {lage.status === "laeuft" && (
+          <Button size="sm" variant="outline" onClick={onCancel}>
+            {t("cancel")}
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          {t("close")}
+        </Button>
+      </div>
     </div>
   );
 }

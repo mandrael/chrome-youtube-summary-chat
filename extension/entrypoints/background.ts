@@ -39,6 +39,7 @@ export default defineBackground(() => {
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "chat") return handleChatPort(port);
     if (port.name === "fallback" && __FALLBACK__) return handleFallbackPort(port);
+    if (port.name === "download" && __FALLBACK__) return handleDownloadPort(port);
   });
 
   // Einmalige Anfragen aus der Options-Page und der Sidebar.
@@ -74,6 +75,15 @@ export default defineBackground(() => {
             }
             const { pingHost } = await import("@/lib/fallback");
             sendResponse({ ok: true, data: await pingHost() });
+            break;
+          }
+          case "videoFormats": {
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const { videoFormate } = await import("@/lib/fallback");
+            sendResponse({ ok: true, data: await videoFormate(String(msg.videoId)) });
             break;
           }
           default:
@@ -122,6 +132,43 @@ function handleChatPort(port: chrome.runtime.Port) {
           type: "error",
           message: String((e as Error)?.message ?? e),
         });
+      } finally {
+        try {
+          port.disconnect();
+        } catch {
+          /* Port war schon zu */
+        }
+      }
+    })();
+  });
+}
+
+/** Videodownload, nur im Build "full" – siehe §4a in CLAUDE.md. Startet nur auf Klick. */
+function handleDownloadPort(port: chrome.runtime.Port) {
+  let cancel: (() => void) | null = null;
+  let abgebrochen = false;
+  port.onDisconnect.addListener(() => {
+    abgebrochen = true;
+    cancel?.();
+  });
+
+  port.onMessage.addListener((raw: unknown) => {
+    const req = raw as { type: string; videoId: string; height: number };
+    if (req.type !== "start") return;
+
+    void (async () => {
+      try {
+        const { videoLaden } = await import("@/lib/fallback");
+        const { downloadTarget } = await getSettings();
+        // Trennung während der beiden awaits: dann darf der Host gar nicht erst starten.
+        if (abgebrochen) return;
+        const job = videoLaden(req.videoId, req.height, downloadTarget, (p) =>
+          port.postMessage({ type: "progress", ...p }),
+        );
+        cancel = job.cancel;
+        port.postMessage({ type: "downloaded", path: await job.promise });
+      } catch (e) {
+        port.postMessage({ type: "error", message: String((e as Error)?.message ?? e) });
       } finally {
         try {
           port.disconnect();

@@ -514,6 +514,38 @@ export function Options() {
             <HostStatus host={host} />
           </Field>
 
+          <Field
+            label="Videodownload: vorgewählte Auflösung"
+            hint="Der Dialog in der Sidebar zeigt die tatsächlich vorhandenen Auflösungen; fehlt diese, ist die nächstkleinere vorgewählt. Nur für eigene, gemeinfreie oder lizenzfreie Inhalte."
+          >
+            <Select
+              value={String(s.downloadHeight)}
+              onValueChange={(v) => patch({ downloadHeight: Number(v) as Settings["downloadHeight"] })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[360, 480, 720, 1080].map((h) => (
+                  <SelectItem key={h} value={String(h)}>
+                    {h}p
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field
+            label="Videodownload: Zielordner"
+            hint="Leer lassen für den Downloads-Ordner des Systems. Der Ordner muss vorhanden sein."
+          >
+            <Input
+              value={s.downloadTarget}
+              placeholder="~/Downloads"
+              onChange={(e) => patch({ downloadTarget: e.target.value })}
+            />
+          </Field>
+
           <Field label="Voraussetzungen installieren">
             <CopyLine label="macOS" cmd="brew install yt-dlp ffmpeg" />
             <CopyLine

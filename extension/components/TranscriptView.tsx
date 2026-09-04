@@ -6,6 +6,7 @@ import {
   Captions,
   Copy,
   Download,
+  FileVideo,
   Languages,
   Locate,
   LocateFixed,
@@ -51,6 +52,7 @@ export function TranscriptView({
   activeTrack,
   onSwitchTrack,
   onForceAudio,
+  onVideoDownload,
   onTranslate,
   translationTarget,
   onTargetChange,
@@ -73,6 +75,8 @@ export function TranscriptView({
   activeTrack: CaptionTrack | null;
   onSwitchTrack: (track: CaptionTrack) => void;
   onForceAudio?: () => void;
+  /** Öffnet den Download-Dialog – nur im Build "full" gesetzt (§4a). */
+  onVideoDownload?: () => void;
   /** Übersetzen, abbrechen, umschalten oder fortsetzen – je nach Zustand. */
   onTranslate?: () => void;
   translationTarget?: string;
@@ -298,6 +302,17 @@ export function TranscriptView({
               onClick={onForceAudio}
             >
               <AudioLines />
+            </Button>
+          )}
+          {onVideoDownload && (
+            <Button
+              size="iconSm"
+              variant="ghost"
+              title={t("downloadVideo")}
+              disabled={!!busy}
+              onClick={onVideoDownload}
+            >
+              <FileVideo />
             </Button>
           )}
           <Button

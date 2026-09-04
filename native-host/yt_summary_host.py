@@ -23,10 +23,12 @@ import json
 import os
 import re
 import shutil
+import signal
 import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import urllib.error
 import urllib.request
 import wave
@@ -129,8 +131,56 @@ def sherpa_verfuegbar() -> bool:
     return True
 
 
+# Der gerade laufende Kindprozess (yt-dlp, ffmpeg), damit der Abbruch-Waechter ihn
+# beenden kann. Es laeuft immer hoechstens einer.
+_KIND: subprocess.Popen[str] | None = None
+
+
 def run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, capture_output=True, text=True, check=False, **kw)
+    global _KIND
+    # Eigene Prozessgruppe: yt-dlp startet selbst ffmpeg, und beim Abbruch muss die
+    # ganze Gruppe weg, nicht nur das direkte Kind.
+    if os.name == "nt":
+        kw.setdefault("creationflags", subprocess.CREATE_NEW_PROCESS_GROUP)
+    else:
+        kw.setdefault("start_new_session", True)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **kw)
+    _KIND = p
+    try:
+        out, err = p.communicate()
+    finally:
+        _KIND = None
+    return subprocess.CompletedProcess(cmd, p.returncode, out, err)
+
+
+def kinder_beenden(*_: Any) -> None:
+    p = _KIND
+    if p is not None and p.poll() is None:
+        try:
+            if hasattr(os, "killpg"):
+                os.killpg(p.pid, signal.SIGTERM)
+            else:
+                p.kill()
+        except OSError:
+            pass
+    os._exit(1)
+
+
+def abbruch_waechter() -> None:
+    """Beendet den Kindprozess, sobald Chrome den Port trennt.
+
+    Chrome schliesst dann stdin des Hosts (und schickt SIGTERM, falls er nicht von
+    selbst endet). Ohne den Waechter bliebe der Host in communicate() haengen und
+    yt-dlp luede nach „Abbrechen" in der Sidebar verwaist weiter. Pro Verbindung kommt
+    genau eine Nachricht, deshalb darf der Waechter stdin bis zum Ende lesen.
+    """
+    def lauschen() -> None:
+        sys.stdin.buffer.read()
+        kinder_beenden()
+
+    threading.Thread(target=lauschen, daemon=True).start()
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, kinder_beenden)
 
 
 def require(name: str) -> str:
@@ -507,6 +557,83 @@ def transcribe_primeline(audio: Path) -> dict[str, Any]:
     }
 
 
+def list_formats(video_id: str) -> dict[str, Any]:
+    """Welche Aufloesungen bietet dieses Video? Eine Zeile je Hoehe, groesste zuerst.
+
+    yt-dlp --dump-json liefert alle Formate einzeln. Interessant sind nur die Hoehen,
+    die die Oberflaeche anbietet; zu jeder wird die kleinste ausreichende Videospur
+    genommen und die Groesse mit der besten Tonspur zusammengerechnet.
+    """
+    exe = require("yt-dlp")
+    # Kein progress() hier: die Anfrage kommt per sendNativeMessage, und Chrome nimmt
+    # dort genau eine Antwort - eine Fortschrittszeile davor waere die Antwort.
+    res = run([exe, "--dump-json", "--no-warnings", f"https://www.youtube.com/watch?v={video_id}"])
+    if res.returncode != 0:
+        raise HostError(f"yt-dlp konnte die Formate nicht lesen:\n{res.stderr[-500:]}")
+    daten = json.loads(res.stdout)
+
+    formate = daten.get("formats") or []
+    # Beste Tonspur fuer die Groessenrechnung - Video und Ton liegen bei YouTube ab
+    # 480p getrennt vor und werden erst von ffmpeg zusammengefuegt.
+    tonspuren = [f for f in formate if f.get("acodec") not in (None, "none")
+                 and f.get("vcodec") in (None, "none")]
+    ton_bytes = max((f.get("filesize") or f.get("filesize_approx") or 0)
+                    for f in tonspuren) if tonspuren else 0
+
+    nach_hoehe: dict[int, int] = {}
+    for f in formate:
+        hoehe = f.get("height")
+        # Nur reine Videospuren: der Download waehlt bestvideo+bestaudio, eine bereits
+        # gemuxte Spur bekaeme hier die Tonspur doppelt angerechnet.
+        if not hoehe or f.get("vcodec") in (None, "none") or f.get("acodec") not in (None, "none"):
+            continue
+        groesse = f.get("filesize") or f.get("filesize_approx") or 0
+        # Groesste bekannte Videospur je Hoehe: bestvideo nimmt den hochwertigsten Codec,
+        # und der ist in der Regel auch der groesste. Unbekannt (0) verdraengt nie.
+        nach_hoehe[hoehe] = max(nach_hoehe.get(hoehe, 0), groesse)
+
+    angebot = [
+        # Ohne Videogroesse keine Schaetzung - die Tonspur allein waere irrefuehrend.
+        {"height": h, "bytes": nach_hoehe[h] + ton_bytes if nach_hoehe[h] else None}
+        for h in sorted(nach_hoehe, reverse=True)
+        if h in (2160, 1440, 1080, 720, 480, 360)
+    ]
+    return {
+        "type": "formats",
+        "title": daten.get("title") or video_id,
+        "duration": daten.get("duration"),
+        "formats": angebot,
+    }
+
+
+def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
+    """Laedt das Video in der gewuenschten Hoehe in den Zielordner.
+
+    ffmpeg ist zwingend: YouTube liefert ab 480p getrennte Video- und Tonspuren
+    (DASH), die erst lokal zusammengefuegt werden. Ohne ffmpeg bliebe nur die
+    progressive 360p-Spur.
+    """
+    exe = require("yt-dlp")
+    require("ffmpeg")
+    ordner = Path(ziel).expanduser()
+    if not ordner.is_dir():
+        raise HostError(f"Der Zielordner existiert nicht: {ordner}")
+
+    progress("download", f"Video wird geladen ({hoehe}p) ...")
+    wahl = f"bestvideo[height<={hoehe}]+bestaudio/best[height<={hoehe}]"
+    res = run([
+        exe, "-f", wahl, "--merge-output-format", "mp4", "--no-playlist", "--no-warnings",
+        "--print", "after_move:filepath",
+        "-o", str(ordner / "%(title).150B [%(id)s] %(height)sp.%(ext)s"),
+        f"https://www.youtube.com/watch?v={video_id}",
+    ])
+    if res.returncode != 0:
+        raise HostError(f"Der Download ist fehlgeschlagen:\n{(res.stderr or res.stdout)[-800:]}")
+
+    pfad = (res.stdout or "").strip().splitlines()[-1] if res.stdout.strip() else ""
+    return {"type": "downloaded", "path": pfad, "height": hoehe}
+
+
 def parse_parakeet_segments(data: Any) -> Iterator[dict[str, Any]]:
     """Nimmt sowohl {"sentences": [...]} als auch {"segments": [...]} und blanke Listen.
 
@@ -544,6 +671,20 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
     # ist hier billiger als jedes Escaping weiter unten.
     if not VIDEO_ID.match(video_id):
         raise HostError(f"Ungültige Video-ID: {video_id!r}")
+    abbruch_waechter()
+
+    # Videodownload: eigener Zweig, keine Transkription. Nur im GitHub-Build erreichbar,
+    # die Store-Fassung enthaelt den aufrufenden Code gar nicht.
+    art = str(msg.get("kind", "transcript"))
+    if art == "formats":
+        send(list_formats(video_id))
+        return
+    if art == "download":
+        hoehe = int(msg.get("height") or 720)
+        ziel = str(msg.get("target") or Path.home() / "Downloads")
+        progress("start", "Vorbereitung ...")
+        send(download_video(video_id, hoehe, ziel))
+        return
 
     route = str(msg.get("route", "parakeet-mlx"))
     if route not in STT_MODELS and route not in (

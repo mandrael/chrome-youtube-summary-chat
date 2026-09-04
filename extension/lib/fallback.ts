@@ -1,4 +1,4 @@
-import type { Cue, SttRoute, Transcript } from "./types";
+import type { Cue, SttRoute, Transcript, VideoFormat } from "./types";
 
 /**
  * Native-Messaging-Brücke zum lokalen Audio-Fallback.
@@ -29,6 +29,83 @@ interface HostResponse {
   /** Reiner Text, wenn nicht. */
   text?: string;
   route?: string;
+}
+
+/**
+ * Fragt den Helfer, welche Auflösungen dieses Video hat.
+ *
+ * Nur im GitHub-Build erreichbar: Der Store-Build enthält diesen Code nicht, weil
+ * Googles Programmrichtlinie das Herunterladen geschützter Inhalte untersagt
+ * („Do not encourage, facilitate, or enable the unauthorized access, download, or
+ * streaming of copyrighted content or media.").
+ */
+export async function videoFormate(videoId: string): Promise<VideoFormat[]> {
+  // `type: "transcribe"` ist der Verteiler des Hosts; `kind` wählt darin den Zweig.
+  const res = (await chrome.runtime.sendNativeMessage(HOST_NAME, {
+    type: "transcribe",
+    videoId,
+    kind: "formats",
+  })) as { type?: string; formats?: VideoFormat[]; message?: string } | undefined;
+  // Fehlt der Host, kommt keine Antwort, sondern lastError – mit derselben Aufbereitung
+  // wie beim Audio-Weg, sonst steht Chromes englische Rohmeldung im Dialog.
+  const err = chrome.runtime.lastError?.message;
+  if (err || !res) throw new Error(hostFehler(err));
+  if (res.type === "error") throw new Error(res.message || "Formate nicht lesbar");
+  return res.formats ?? [];
+}
+
+function hostFehler(err: string | undefined): string {
+  if (!err) return "Native-Host hat die Verbindung ohne Ergebnis beendet.";
+  return `Native-Host nicht erreichbar: ${err}${
+    // Chrome sucht das Host-Manifest im Ordner des jeweiligen Profils.
+    // Eine Instanz mit eigenem --user-data-dir sieht die Installation im
+    // Standardprofil deshalb nicht (gemessen am 02.09.2026).
+    /not found/i.test(err)
+      ? "\nDer Helfer ist für dieses Chrome-Profil nicht installiert – " +
+        "native-host/install-macos.sh ausführen (Windows: install-windows.ps1)."
+      : ""
+  }`;
+}
+
+/**
+ * Lädt das Video. Liefert den Pfad der fertigen Datei; `cancel` trennt den Host-Port,
+ * womit Chrome den Helfer samt yt-dlp beendet – sonst liefe der Download nach dem
+ * Abbrechen in der Sidebar unsichtbar weiter.
+ */
+export function videoLaden(
+  videoId: string,
+  height: number,
+  target: string,
+  onProgress: (p: FallbackProgress) => void,
+): { promise: Promise<string>; cancel: () => void } {
+  const port = chrome.runtime.connectNative(HOST_NAME);
+  const promise = new Promise<string>((auf, ab) => {
+    port.onMessage.addListener((msg: HostResponse & { path?: string }) => {
+      if (msg.type === "progress") {
+        onProgress({
+          stage: msg.stage ?? "download",
+          message: msg.message ?? "",
+          percent: msg.percent,
+        });
+        return;
+      }
+      if (msg.type === "error") {
+        port.disconnect();
+        ab(new Error(msg.message || "Download fehlgeschlagen"));
+        return;
+      }
+      if ((msg as { type?: string }).type === "downloaded") {
+        port.disconnect();
+        auf((msg as { path?: string }).path || "");
+      }
+    });
+    port.onDisconnect.addListener(() => {
+      const f = chrome.runtime.lastError?.message;
+      if (f) ab(new Error(f));
+    });
+    port.postMessage({ type: "transcribe", videoId, kind: "download", height, target });
+  });
+  return { promise, cancel: () => port.disconnect() };
 }
 
 export interface FallbackRequest {
@@ -100,22 +177,7 @@ export function runFallback(
 
     port.onDisconnect.addListener(() => {
       if (settled) return;
-      const err = chrome.runtime.lastError?.message;
-      reject(
-        new Error(
-          err
-            ? `Native-Host nicht erreichbar: ${err}${
-                // Chrome sucht das Host-Manifest im Ordner des jeweiligen Profils.
-                // Eine Instanz mit eigenem --user-data-dir sieht die Installation im
-                // Standardprofil deshalb nicht (gemessen am 02.09.2026).
-                /not found/i.test(err)
-                  ? "\nDer Helfer ist für dieses Chrome-Profil nicht installiert – " +
-                    "native-host/install-macos.sh ausführen (Windows: install-windows.ps1)."
-                  : ""
-              }`
-            : "Native-Host hat die Verbindung ohne Ergebnis beendet.",
-        ),
-      );
+      reject(new Error(hostFehler(chrome.runtime.lastError?.message)));
     });
 
     port.postMessage({ type: "transcribe", ...req });

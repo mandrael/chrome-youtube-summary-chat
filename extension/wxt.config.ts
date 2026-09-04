@@ -18,6 +18,19 @@ export default defineConfig({
   outDir: "..",
   outDirTemplate: "build-{{mode}}",
 
+  hooks: {
+    // WXT ersetzt process.env.NODE_ENV im Bundle durch den Modus-Namen ("full"/"store"),
+    // und seine Vorgabe gewinnt gegen ein eigenes `define` und gegen die
+    // Umgebungsvariable. React hält "full" nicht für Produktion und bündelt seine
+    // Entwicklungsfassung samt DevTools-Hinweis (gemessen am 04.09.2026:
+    // react-dom-client.development.js im Content-Script, 2,25 statt 1,83 MB). Dieser
+    // Hook läuft nach dem Zusammenführen und nur beim Bauen – `wxt dev` bleibt
+    // Entwicklung. Beweis: Test 4 in scripts/verify-store-bundle.sh.
+    "vite:build:extendConfig": (_entrypoints, config) => {
+      (config.define ??= {})["process.env.NODE_ENV"] = JSON.stringify("production");
+    },
+  },
+
   vite: (env) => ({
     plugins: [tailwindcss()],
     define: {

@@ -118,6 +118,36 @@ export function startFallback(
   return { promise, cancel: () => port.disconnect() };
 }
 
+/** Videodownload über den Service Worker. Nur im Build "full" aufgerufen. */
+export function startDownload(
+  videoId: string,
+  height: number,
+  onProgress: (p: FallbackProgress) => void,
+): { promise: Promise<string>; cancel: () => void } {
+  const port = chrome.runtime.connect({ name: "download" });
+  let settled = false;
+
+  const promise = new Promise<string>((resolve, reject) => {
+    port.onMessage.addListener((msg: any) => {
+      if (msg?.type === "progress") {
+        onProgress({ stage: msg.stage, message: msg.message, percent: msg.percent });
+      } else if (msg?.type === "downloaded") {
+        settled = true;
+        resolve(String(msg.path ?? ""));
+      } else if (msg?.type === "error") {
+        settled = true;
+        reject(new Error(msg.message));
+      }
+    });
+    port.onDisconnect.addListener(() => {
+      if (!settled) reject(new Error("Verbindung zum Hintergrundprozess verloren."));
+    });
+  });
+
+  port.postMessage({ type: "start", videoId, height });
+  return { promise, cancel: () => port.disconnect() };
+}
+
 export function ask<T>(type: string, extra: Record<string, unknown> = {}): Promise<T> {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type, ...extra }, (res) => {

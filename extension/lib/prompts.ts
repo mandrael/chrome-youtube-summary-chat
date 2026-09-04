@@ -292,6 +292,26 @@ export const PRESETS = {
       "gezeigt wird: nicht „hier spricht er über den Akku“, sondern „Der Akku hält zwei " +
       "Tage, gemessen ohne 5G“. " +
       "Reihenfolge des Videos. Beginne direkt mit dem ersten Kapitel.",
+    comparison:
+      "Stelle die im Video verglichenen Dinge in einer Tabelle gegenüber. " +
+      "Das können zwei oder drei Produkte, Verfahren, Positionen, Lizenzen, Werkzeuge " +
+      "oder Zeitpunkte sein - was auch immer im Video tatsächlich verglichen wird. " +
+      "Erste Spalte: das Merkmal. Danach je eine Spalte pro verglichener Sache, mit " +
+      "deren Namen als Überschrift. " +
+      "Fünf bis acht Zeilen, jede ein Merkmal, zu dem das Video für **jede** Seite " +
+      "etwas sagt. Sagt es zu einer Seite nichts, schreib in die Zelle „nicht gesagt“ - " +
+      "erfinde nichts und schliesse nichts aus dem Umkehrschluss. " +
+      "In den Zellen stehen kurze Aussagen, keine ganzen Absätze; Zahlen und Einheiten " +
+      "genau so, wie sie im Video fallen. " +
+      "Das wichtigste Wort einer Zelle darf **fett** stehen, höchstens eines je Zelle. " +
+      "Danach ein Abschnitt **Kurz gesagt:** mit einem Aufzählungspunkt je verglichener " +
+      "Sache, jeder ein Satz, der sie aus ihrer eigenen Sicht auf den Punkt bringt. " +
+      "Zum Schluss eine Zeile **Unterschied, der zählt:** - der eine Punkt, an dem sich " +
+      "eine Entscheidung zwischen ihnen entscheidet. " +
+      "Vergleicht das Video gar nichts, schreib das in einem Satz und biete stattdessen " +
+      "die Kernaussagen an. " +
+      "Keine Zeitstempel in der Tabelle; wenn eine Aussage eine Sprungmarke verdient, " +
+      "setz sie in die Kurzfassung.",
     glossary:
       "Schreib für jemanden, der das Fachvokabular des Videos lernen oder nachschlagen " +
       "will. " +
@@ -514,6 +534,25 @@ export const PRESETS = {
       "there: not \"here he talks about the battery\" but \"The battery lasts two days, " +
       "measured without 5G\". " +
       "Keep the order of the video. Start with the first chapter.",
+    comparison:
+      "Lay out what the video compares as a table. " +
+      "It may be two or three products, methods, positions, licences, tools or points " +
+      "in time - whatever the video actually sets against each other. " +
+      "First column: the feature. Then one column per compared thing, its name as the " +
+      "heading. " +
+      "Five to eight rows, each a feature the video addresses for **every** side. If it " +
+      "says nothing about one side, write \"not stated\" in that cell - invent nothing " +
+      "and infer nothing from silence. " +
+      "Cells hold short statements, not paragraphs; numbers and units exactly as spoken. " +
+      "One word per cell may be **bold**, at most one. " +
+      "Then a section **In short:** with one bullet per compared thing, each a single " +
+      "sentence putting it in its own terms. " +
+      "Finally one line **The difference that matters:** - the single point a decision " +
+      "between them turns on. " +
+      "If the video compares nothing, say so in one sentence and offer the key points " +
+      "instead. " +
+      "No timestamps inside the table; if a statement deserves a jump mark, put it in " +
+      "the short section.",
     glossary:
       "Write for someone who wants to learn or look up the technical vocabulary of the " +
       "video. " +

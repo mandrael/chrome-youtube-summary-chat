@@ -2,10 +2,118 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-2. Optional: Store-Build einreichen.
-3. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+1. **Entscheidung Michael: Preset-Reihe 2 bricht bei Standardbreite (440 px) um** –
+   „Vergleich" steht allein in einer dritten Zeile, bei 500 px passen alle fünf. Hinnehmen,
+   Knopf in Reihe 3 verschieben oder vierte Reihe? (Stand 04.09.2026, Screenshots im
+   Sitzungs-Scratchpad, nicht dauerhaft.)
+2. **Standardroute `parakeet-primeline` ist auf diesem Mac nicht installiert**: weder
+   Homebrew- noch System-`python3` hat `sherpa_onnx`, der Modellordner
+   `~/Library/Application Support/yt-summary-chat/parakeet-primeline-de` fehlt. Die
+   Messungen vom 03.09. liefen aus einer gelöschten Scratchpad-Umgebung. Installationsweg
+   (`run-host.sh` startet `/usr/bin/env python3`) festlegen und mit `selfcheck.py` belegen.
+3. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
+4. Kleine Messung: `provider="coreml"` (Mac) bzw. `"directml"` (Windows) in der
+   sherpa-Route – eine Zeile, drei Läufe, ungemessen.
+5. Optional: Store-Build einreichen.
+6. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+
+## Nachtrag 04.09.2026 (Nachmittag) – Download-Knopf gebaut, Codex-Review, React-Produktionsbuild, Parakeet-Bewertung
+
+### Videodownload: sichtbarer Teil fertig, uncommittet
+
+Knopf (Icon `FileVideo`) in der Werkzeugleiste des Transkript-Tabs neben „Neu
+transkribieren (Audio)", Dialog als Fläche über der Sidebar (`absolute inset-0 z-30`)
+aus vorhandenen `Button`-Komponenten plus nativen Radio-Knöpfen. Ablauf: Klick lädt nur
+die Formatliste (`ask("videoFormats")` → Service Worker → `videoFormate`), vorgewählt ist
+die grösste Höhe ≤ `downloadHeight`, der Download startet erst mit „Herunterladen"
+(Port `"download"` → `handleDownloadPort` → `videoLaden`). Rechtshinweis ein Satz
+(de/en). Optionsseite: Auflösung und Zielordner im Abschnitt „Audio-Fallback".
+`verify-store-bundle.sh` prüft neu Test 2d (Download-Bezeichner fehlen im Store) mit
+Gegenprobe im full-Build. Betroffene Dateien: Sidebar.tsx, TranscriptView.tsx,
+background.ts, chat-client.ts, fallback.ts, i18n.ts, Options.tsx, verify-store-bundle.sh,
+yt_summary_host.py, wxt.config.ts.
+
+**Zwei Fehler im Backend vom Vormittag behoben:** `videoFormate`/`videoLaden` schickten
+kein `type: "transcribe"` (der Host-Verteiler hätte „Unbekannter Nachrichtentyp"
+geantwortet), und `list_formats` schickte vor der Antwort eine `progress()`-Zeile –
+`sendNativeMessage` nimmt genau eine Antwort, die Formatliste wäre nie angekommen.
+
+**Codex-Review (gpt-5.6-sol, xhigh) fand vier Punkte, alle behoben und gemessen:**
+
+- **yt-dlp lief nach „Abbrechen" verwaist weiter.** Host: `run()` startet Kinder jetzt in
+  eigener Prozessgruppe, ein Abbruch-Wächter liest stdin bis EOF (Chrome schliesst es beim
+  Trennen des Ports) und beendet die Gruppe per SIGTERM; SIGTERM-Handler ebenso. Gemessen:
+  1080p-Download gestartet, stdin nach 6 s geschlossen, Host Exit 1, kein yt-dlp/ffmpeg
+  mehr in `pgrep`. Gilt damit auch für den Audio-Fallback.
+- **Abbruch während `import`/`getSettings` im Service Worker** startete den Host trotzdem –
+  Flag `abgebrochen` davor.
+- **Verspätete Antworten alter Anfragen** (Videowechsel, erneutes Öffnen) konnten den neuen
+  Dialog überschreiben; „Abbrechen" liess den Status auf `laeuft`. Laufzähler `dlLauf`,
+  Unmount-Cleanup, Abbrechen setzt auf `wahl` zurück.
+- **Grössenschätzung** zählte alle Höhen als Tonspur allein (10,3 MB für jede Höhe, weil
+  eine unbekannte Videogrösse 0 nie verdrängt wurde) – dann als kleinste Spur, jetzt als
+  grösste reine Videospur je Höhe plus beste Tonspur, Anzeige „ca.". Big Buck Bunny 360p:
+  Schätzung 34,4 MB, tatsächliche Datei 25,6 MB (bestvideo nahm nicht den grössten
+  Codec). Ohne Videogrösse steht „Grösse unbekannt", nicht die Tonspur.
+
+Codex' Einwand, die grep-Muster seien nicht minifizierungsfest, greift nicht:
+`minify: false` in wxt.config.ts, genau deshalb. Der bedingte Knopf und der `case
+"videoFormats"` („In diesem Build nicht enthalten.") bleiben im Store-Build als leere
+Hüllen, wie `runFallbackJob` und `hostStatus` – kein Weg zum Helfer, geprüft.
+
+**Echter Lauf des Hosts** gegen `aqz-KE-bpKQ` (Big Buck Bunny, CC-BY): `list_formats`
+liefert sechs Höhen, `download_video` 360p liefert den Pfad als letzte stdout-Zeile
+(`--print after_move:filepath` funktioniert), Datei 25.581.771 Bytes.
+
+**Visueller Test (headless, Chromium via Playwright, 1600×900, `uiScale` 110):** Knopf
+26×26 px an der erwarteten Stelle, Dialog deckt den Header, X und „Schliessen" treffbar,
+„Herunterladen" ohne Auswahl `disabled`, Umlaute und Gedankenstrich korrekt, Dark Mode
+lesbar. Ohne registrierten Host zeigte der Dialog nur Chromes Rohmeldung „Specified
+native messaging host not found." – `videoFormate` nutzt jetzt dieselbe Aufbereitung
+(`hostFehler()`) wie der Audio-Weg. Ungeprüft: Ladezustand (Fehler kam nach 0,3 s),
+Radio-Auswahl und laufender Download im Browser, Drag-Griff.
+
+### React lief bisher als Entwicklungsfassung – behoben
+
+Befund aus dem visuellen Test: Konsole „Download the React DevTools", Bundle enthielt
+`react-dom-client.development.js`. Ursache: WXT ersetzt `process.env.NODE_ENV` im
+Bundle durch den Modus-Namen (`"full"`/`"store"`), und seine Vorgabe gewinnt gegen ein
+eigenes `define` **und** gegen die Umgebungsvariable (beides gemessen). Lösung: WXT-Hook
+`vite:build:extendConfig` in wxt.config.ts setzt den Wert nach dem Zusammenführen und nur
+beim Bauen – ein erster Versuch als Vite-Plugin in `configResolved` hätte laut Codex auch
+`wxt dev` auf Produktion gezwungen. Content-Script 2.249.539 → 1.834.590 Bytes.
+`verify-store-bundle.sh` prüft das als Test 4 in beide Richtungen (Produktionsmarker
+vorhanden, `react-dom-client.development.js` abwesend) für beide Builds.
+
+### Testbrowser-Befund
+
+**Google Chrome 152 ignoriert `--load-extension`** (auch mit
+`--disable-features=DisableLoadExtensionCommandLineSwitch`); Chrome for Testing 148 hängt
+ohne `--use-mock-keychain` und liefert headless keine Screenshots. **Funktioniert:
+Playwright-Chromium 145** (`~/Library/Caches/ms-playwright/chromium-1208`, `headless=True`,
+`--load-extension`, CDP-Port). Frisches Profil zeigt YouTubes Consent-Dialog, dessen
+Backdrop die Sidebar links 65 px verdeckt – vor Screenshots „Alle ablehnen".
+
+### Parakeet: kein Rebuild in diesem Projekt
+
+Bewertung durch einen Opus-Agenten gegen den DiktaGo-Stand (HF-API abgefragt am
+04.09.2026): **Nichts Neues seit 03.09.** – ValentinWeyer unverändert seit 07.08., kein
+deutsches, kein primeline-, kein CoreML-Derivat neu; nur v3-Varianten (ONNX-q8, TensorRT,
+GGUF), die hier bei 58 % WER lagen. **6-Bit-Palettisierung nicht kopieren:** FluidInference
+hat das Rezept selbst durch `Encoder_v2` (int8 linear per-channel, 594 MB) ersetzt
+(Token-Korruption, FluidAudio#760), DiktaGos Reihe Q misst 6-Bit 2,80 Punkte schlechter
+als int4; der WER-Verlust 6-Bit gegen fp16 ist nirgends gemessen. DiktaGo hat Modelle
+(`~/Library/Application Support/DiktagoMessungen/modelle/`), Harness
+(`DiktaGo/_system/messungen/parakeet-ted/`, inkl. Swift-Testprogramm gegen FluidAudio
+0.15.6) und Rezepte (`docs/recherche-parakeet-coreml-2026-09-03.md`); dort läuft
+`v3-encv2` als erster Test, ob Encoder-Präzision WER überhaupt bewegt – **abwarten und
+übernehmen, nicht parallel bauen.** E5RT-Warnung/CPU-Fallback gehört zu DiktaGo (dort
+löst es einen realen Blockabbruch). Zwei Befunde für unseren Weg: ValentinWeyers Fassung
+bricht unter FluidAudio bei Blöcken über 15 s ab (`max_audio_seconds: 15.0`), matt-2012
+nicht; auf gemischtem DE/EN-Material kehrt sich die Rangfolge um (v3 9,47 %, primeline
+24,35 %) – primeline lässt englische Passagen weg, beide Modelle müssen wählbar bleiben.
+Was in diesem Projekt real offen ist, steht oben als To-Do 2 und 4.
 
 ## Stand 04.09.2026 (zweiundzwanzigster Durchgang) – fairer Vergleich, Tabellen im Chat, Downloadweg erforscht
 

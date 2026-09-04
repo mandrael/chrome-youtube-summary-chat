@@ -119,6 +119,10 @@ export interface Settings {
   uiLang: UiLang | "auto";
   showCost: boolean;
   sttRoute: SttRoute;
+  /** Vorgewählte Auflösung im Download-Dialog. */
+  downloadHeight: 360 | 480 | 720 | 1080;
+  /** Zielordner; leer bedeutet den Downloads-Ordner des Systems. */
+  downloadTarget: string;
   /** Chrome-eigene Translator API statt OpenRouter fürs Übersetzen. */
   preferLocalTranslate: boolean;
   uiScale: number;
@@ -166,4 +170,11 @@ export interface KeyStatus {
   limitRemaining?: number | null;
   isFreeTier?: boolean;
   error?: string;
+}
+
+/** Eine im Video vorhandene Auflösung, wie der Helfer sie meldet. */
+export interface VideoFormat {
+  height: number;
+  /** Geschätzte Gesamtgrösse aus Video- und Tonspur; null, wenn YouTube keine nennt. */
+  bytes: number | null;
 }

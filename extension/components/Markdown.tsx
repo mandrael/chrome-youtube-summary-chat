@@ -1,3 +1,4 @@
+import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -116,6 +117,88 @@ export interface MarkdownProps {
   className?: string;
 }
 
+/**
+ * Tabelle, die sich der Breite der Seitenleiste anpasst.
+ *
+ * Ueber 380 px bleibt es eine gewoehnliche Tabelle. Darunter wird jede Zeile zu einer
+ * Karte, in der jede Zelle ihre Spaltenueberschrift vorangestellt bekommt - eine
+ * dreispaltige Vergleichstabelle ist in einer 300-px-Spalte sonst unlesbar.
+ *
+ * Gemessen wird der Container, nicht das Fenster: Die Seitenleiste ist in der Breite
+ * verstellbar, ein Media-Query auf die Fensterbreite ginge daran vorbei.
+ */
+function TabelleAdaptiv({ children }: { children?: React.ReactNode }) {
+  const huelle = React.useRef<HTMLDivElement>(null);
+  const [schmal, setSchmal] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = huelle.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const beobachter = new ResizeObserver((eintraege) => {
+      const breite = eintraege[0]?.contentRect.width;
+      if (breite !== undefined) setSchmal(breite < 380);
+    });
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, []);
+
+  const { kopf, zeilen } = React.useMemo(() => zerlegeTabelle(children), [children]);
+
+  if (!schmal || kopf.length === 0) {
+    return (
+      <div ref={huelle} className="my-3 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">{children}</table>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={huelle} className="my-3 flex flex-col gap-2">
+      {zeilen.map((zeile, i) => (
+        <div key={i} className="rounded-lg border border-border bg-muted/40 px-3 py-2">
+          {zeile.map((zelle, j) => (
+            <p key={j} className="py-0.5 text-sm leading-snug">
+              <span className="text-muted-foreground">{kopf[j] ?? ""}: </span>
+              {zelle}
+            </p>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Holt Kopfzeile und Datenzeilen aus dem React-Baum, den react-markdown liefert. */
+function zerlegeTabelle(children: React.ReactNode): {
+  kopf: React.ReactNode[];
+  zeilen: React.ReactNode[][];
+} {
+  const kopf: React.ReactNode[] = [];
+  const zeilen: React.ReactNode[][] = [];
+
+  const zellen = (tr: React.ReactElement): React.ReactNode[] =>
+    React.Children.toArray(
+      (tr.props as { children?: React.ReactNode }).children,
+    ).map((td) =>
+      React.isValidElement(td)
+        ? (td.props as { children?: React.ReactNode }).children
+        : td,
+    );
+
+  for (const teil of React.Children.toArray(children)) {
+    if (!React.isValidElement(teil)) continue;
+    const reihen = React.Children.toArray(
+      (teil.props as { children?: React.ReactNode }).children,
+    ).filter(React.isValidElement);
+    if (teil.type === "thead") {
+      if (reihen[0]) kopf.push(...zellen(reihen[0]));
+    } else if (teil.type === "tbody") {
+      for (const tr of reihen) zeilen.push(zellen(tr));
+    }
+  }
+  return { kopf, zeilen };
+}
+
 export function Markdown({ children, onSeek, className }: MarkdownProps) {
   return (
     <div className={cn("md-body", className)}>
@@ -123,6 +206,7 @@ export function Markdown({ children, onSeek, className }: MarkdownProps) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeTimestamps, rehypeHighlight]}
         components={{
+          table: ({ node: _n, children: c }) => <TabelleAdaptiv>{c}</TabelleAdaptiv>,
           a: ({ node: _n, ...props }) => (
             <a {...props} target="_blank" rel="noreferrer noopener" />
           ),

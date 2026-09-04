@@ -93,6 +93,20 @@ else
 fi
 
 echo
+echo "== 2d. Videodownload (§4a): kein Weg zum Helfer im Store-Bundle =="
+# Gesucht sind die Funktionen der Bruecke und der Port-Handler im Service Worker, nicht
+# die i18n-Texte des Dialogs – die sind Text, kein Code (siehe 2b).
+DOWNLOAD='videoFormate|videoLaden|kind: "download"|kind: "formats"|function handleDownloadPort|function startDownload'
+DHITS=$(grep -rInE "$DOWNLOAD" "$OUT" --include='*.js' 2>/dev/null || true)
+if [ -n "$DHITS" ]; then
+  echo "  FEHLGESCHLAGEN – Download-Code im Store-Bundle:"
+  echo "$DHITS" | cut -c1-160
+  FAIL=1
+else
+  echo "  ok – keiner von: $DOWNLOAD"
+fi
+
+echo
 echo "== 2c. Der erlaubte Weg MUSS drin sein =="
 # Ein Test, der nur Verbotenes sucht, wuerde auch bestehen, wenn das Store-Bundle gar
 # nichts mehr kann. Die Spracherkennung aus dem laufenden Ton ist dort der einzige Weg
@@ -116,9 +130,32 @@ if [ -d "$FULL" ]; then
     echo "  Damit prüft Test 2 nichts. Erst 'pnpm run build' ausführen."
     FAIL=1
   fi
+  if grep -rqE "videoLaden" "$FULL" --include='*.js' && grep -rqE "function startDownload" "$FULL" --include='*.js'; then
+    echo "  ok – full-Build enthält den Videodownload (Test 2d greift also überhaupt)"
+  else
+    echo "  FEHLGESCHLAGEN – auch der full-Build enthält keinen Download-Code; Test 2d prüft nichts."
+    FAIL=1
+  fi
 else
   echo "  übersprungen ($FULL fehlt)"
 fi
+
+echo
+echo "== 4. React als Produktionsfassung (beide Builds) =="
+# Beide Richtungen: der Produktionsmarker muss da sein UND der Entwicklungsmarker
+# fehlen – sonst bestünde der Test auch, wenn beide Fassungen gebündelt wären. Exakter
+# Dateiname, weil devlop/lib/development.js legitim im Bundle steht.
+for B in "$OUT" "$FULL"; do
+  [ -d "$B" ] || continue
+  CS="$B/content-scripts/content.js"
+  if grep -qF "react-dom-client.production.js" "$CS" && ! grep -qF "react-dom-client.development.js" "$CS"; then
+    echo "  ok – $B: react-dom-client.production.js drin, development-Fassung fehlt"
+  else
+    echo "  FEHLGESCHLAGEN – $B bündelt React nicht (nur) als Produktionsfassung."
+    echo "  Ursache meist: WXT setzt NODE_ENV auf den Modusnamen; siehe Hook in wxt.config.ts."
+    FAIL=1
+  fi
+done
 
 echo
 [ "$FAIL" -eq 0 ] && echo "ERGEBNIS: bestanden" || echo "ERGEBNIS: FEHLGESCHLAGEN"

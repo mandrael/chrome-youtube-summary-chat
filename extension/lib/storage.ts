@@ -17,6 +17,10 @@ export const DEFAULT_SETTINGS: Settings = {
   uiLang: "auto",
   showCost: false,
   sttRoute: "parakeet-primeline",
+  // 720p ist der Punkt, an dem YouTube auf getrennte Spuren umstellt und die Datei noch
+  // handlich bleibt; darüber wächst sie schneller als der sichtbare Gewinn.
+  downloadHeight: 720,
+  downloadTarget: "",
   preferLocalTranslate: false,
   uiScale: 110,
   // Knapp über YouTubes eigenem Wert (400 bis 490 px je nach Fenster): spürbar mehr

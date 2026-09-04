@@ -63,8 +63,12 @@ const de = {
   presetHowtoHint:
     "Zum Nachmachen: Schritte in Reihenfolge, mit Befehlen, Werten und Zeitstempel.",
   presetProContra: "Pro/Contra",
+  presetComparisonHint:
+    "Was das Video gegenüberstellt, als Tabelle – Merkmal für Merkmal, dazu der eine " +
+    "Unterschied, an dem die Entscheidung hängt.",
   presetProContraHint:
     "Zum Entscheiden: Argumente dafür und dagegen, für wen, Alternativen.",
+  presetComparison: "Vergleich",
   presetGlossary: "Begriffe",
   presetGlossaryHint:
     "Fachbegriffe und Methoden mit der Erklärung, die der Sprecher selbst gibt.",
@@ -137,6 +141,16 @@ const de = {
   forceAudio: "Neu transkribieren (Audio)",
   forceAudioHint:
     "Nimmt nicht die Untertitel von YouTube, sondern lädt die Tonspur und transkribiert sie über die eingestellte STT-Route. Dauert länger und kostet je nach Route Geld.",
+  downloadVideo: "Video herunterladen",
+  downloadTitle: "Video herunterladen",
+  downloadLoadingFormats: "Verfügbare Auflösungen werden geholt …",
+  downloadNoFormats: "Für dieses Video meldet yt-dlp keine passende Auflösung.",
+  downloadSizeUnknown: "Grösse unbekannt",
+  downloadLegal:
+    "Nur für eigene, gemeinfreie oder lizenzfreie Inhalte – bei allem anderen ist der Download in Deutschland und Österreich nicht risikofrei.",
+  downloadStart: "Herunterladen",
+  downloadDone: "Gespeichert unter",
+  close: "Schliessen",
 } as const;
 
 type Keys = keyof typeof de;
@@ -198,7 +212,9 @@ const en: Record<Keys, string> = {
   presetHowto: "How-to",
   presetHowtoHint: "To follow along: the steps in order, with commands, values and timestamps.",
   presetProContra: "Pros/cons",
+  presetComparisonHint: "What the video sets against each other, as a table, plus the one difference a decision turns on.",
   presetProContraHint: "To decide: arguments for and against, who it suits, alternatives.",
+  presetComparison: "Comparison",
   presetGlossary: "Terms",
   presetGlossaryHint: "Technical terms and methods with the explanation the speaker gives.",
   presetReferences: "References",
@@ -265,6 +281,16 @@ const en: Record<Keys, string> = {
   forceAudio: "Re-transcribe (audio)",
   forceAudioHint:
     "Ignores YouTube's captions, downloads the audio track and transcribes it via the configured STT route. Slower, and depending on the route it costs money.",
+  downloadVideo: "Download video",
+  downloadTitle: "Download video",
+  downloadLoadingFormats: "Fetching available resolutions …",
+  downloadNoFormats: "yt-dlp reports no suitable resolution for this video.",
+  downloadSizeUnknown: "size unknown",
+  downloadLegal:
+    "Only for your own, public-domain or royalty-free content – for anything else the download is not free of legal risk.",
+  downloadStart: "Download",
+  downloadDone: "Saved to",
+  close: "Close",
 };
 
 const dict = { de, en };

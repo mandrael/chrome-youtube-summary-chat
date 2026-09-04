@@ -18,14 +18,15 @@ Provider-Routing. Keine Provider-Abstraktion: es gibt genau eine Gegenstelle, ei
 Interface mit einer Implementierung wäre Ballast.
 
 **2. Der Store-Build enthält keinen Download-Code.** Nicht ausgeblendet, sondern nicht
-vorhanden: Native Messaging, yt-dlp-Weg und Helfer-Routen fehlen im Bundle. Was im
-Arbeitsspeicher bleibt, ist erlaubt und **muss** drin sein – die Spracherkennung aus dem
-laufenden Ton (`lib/audio-live.ts`) ist im Store-Build der einzige Weg zu einem
-Transkript, wenn Untertitel fehlen. Jede Änderung daran wird mit
-`extension/scripts/verify-store-bundle.sh` gegengeprüft, und zwar gegen das gebaute
-Bundle, nicht gegen den Quelltext. Das Skript prüft beide Richtungen – verbotener Code
-darf nicht drin sein, erwarteter Code muss – und macht eine Gegenprobe gegen den
-`full`-Build; ohne sie könnte ein Test bestehen, der nichts misst.
+vorhanden: Native Messaging, yt-dlp-Weg und Helfer-Routen fehlen im Bundle. Das gilt für
+den Audio-Fallback ebenso wie für den Videodownload (§4a) – beide Wege laufen über
+dieselbe `__FALLBACK__`-Konstante. Was im Arbeitsspeicher bleibt, ist erlaubt und
+**muss** drin sein – die Spracherkennung aus dem laufenden Ton (`lib/audio-live.ts`) ist
+im Store-Build der einzige Weg zu einem Transkript, wenn Untertitel fehlen. Jede
+Änderung daran wird mit `extension/scripts/verify-store-bundle.sh` gegengeprüft, und
+zwar gegen das gebaute Bundle, nicht gegen den Quelltext. Das Skript prüft beide
+Richtungen – verbotener Code darf nicht drin sein, erwarteter Code muss – und macht eine
+Gegenprobe gegen den `full`-Build; ohne sie könnte ein Test bestehen, der nichts misst.
 
 **3. Kein stiller Fehlschlag beim Transkript.** Fehlen Untertitel, sagt die UI das. Kein
 Platzhalter, kein Ersatztext, keine erfundene Ausgabe. Liefert eine Quelle keine
@@ -35,6 +36,13 @@ Zeitstempel, steht `hasTimestamps: false` und es werden keine Sprungmarken angeb
 Spracherkennung starten ausschliesslich auf eine ausdrückliche Nutzeraktion, nie
 automatisch. Der Zustand des Players (Position, Tempo, Ton, Pause) wird danach in jedem
 Fall wiederhergestellt, auch bei Abbruch und Fehler.
+
+**4a. Der Videodownload ist rechtlich nicht risikofrei.** OLG Hamburg (21.11.2024,
+5 U 54/23, rechtskräftig seit BGH-Beschluss Oktober 2025) wertet YouTubes Rolling
+Cipher als wirksame technische Schutzmaßnahme nach § 95a UrhG. Der Knopf ist deshalb
+nur im `full`-Build erreichbar (§2), lädt nur auf Klick (§4) und bekommt in der UI einen
+Hinweis auf eigene, gemeinfreie und lizenzfreie Nutzung. Einordnung mit Quellen:
+[docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
 `youtube.com` und `openrouter.ai`.

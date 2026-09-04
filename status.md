@@ -7,6 +7,106 @@
 3. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
 
+## Stand 04.09.2026 (zweiundzwanzigster Durchgang) – fairer Vergleich, Tabellen im Chat, Downloadweg erforscht
+
+**Nutzervorgabe für die weitere Arbeit, wörtlich:** „kein whisper, das bringt nichts.
+konzentration auf parakeet! und dessen derivate." Whisper-Wege werden nicht mehr
+weiterverfolgt oder gemessen – die bestehende OpenRouter-Route bleibt als bezahlter
+Cloud-Weg im Code, wird aber nicht mehr verglichen oder ausgebaut. Bei einem deutschen
+Parakeet-Derivat gilt **ValentinWeyer als bevorzugte Wahl** (deckt sich mit der
+Empfehlung unten). Kontext: DiktaGo erforscht parallel einen eigenen Rebuild des
+allgemeinen Parakeet-CoreML-Wegs – bei Überschneidungen dort nachsehen, bevor hier neu
+gebaut wird.
+
+### Fairer Vergleich ValentinWeyer gegen matt-2012: Gleichstand bestätigt
+
+Nach Michaels Einwand („primeline matt-2012 scheint gewonnen zu haben, korrekt?") wurde
+das Messschema mit Fable 5.1 abgestimmt und neu gefahren: fünf Runden, ABBA-Reihenfolge,
+jedes Modell im eigenen Prozess, erster Vortrag je Runde als Aufwärmlauf verworfen,
+5 s Pause gegen thermische Drift, Median statt Mittel.
+
+| | Wortfehler | Anteil | Tempo (Median, ohne Aufwärmlauf) |
+|---|---|---|---|
+| matt-2012 | 457 von 5434 | 8,41 % | 369x |
+| ValentinWeyer | 461 von 5434 | 8,48 % | 345x |
+
+**Beide Modelle sind über fünf Runden vollständig deterministisch** (je ein Ergebnis-Hash
+über alle Runden). Der Unterschied von vier Wörtern (0,074 Prozentpunkte) ist laut Fable
+statistisch nicht von null zu unterscheiden. Alle sechs Abweichstellen zwischen den
+beiden sind ausschliesslich Getrennt-/Zusammenschreibung („misslingens" gegen
+„misslings", „mitzusagen" gegen „mit zu sagen") – keine inhaltlichen Fehler. **Fazit
+unverändert: Gleichstand, die Empfehlung bleibt ValentinWeyer** wegen der mitgelieferten
+`conversion_metadata.json`.
+
+Ein Auswertungsfehler ist dabei aufgetreten und behoben: Der Aufwärmlauf nutzt dieselbe
+Datei wie der erste Messlauf; der erste Parser hängte beide Blöcke unter demselben
+Namen aneinander, wodurch die Fehlerzahl kurzzeitig auf 33 % sprang.
+
+### Sind die beiden Konvertierungen optimal gebaut? Nein – Einschätzung von Fable
+
+Volles Gutachten: [docs/gutachten-fable-primeline-optimierung-2026-09-03.md](docs/gutachten-fable-primeline-optimierung-2026-09-03.md).
+Kurz: Beide sind fp16 bei 1,2 GB, keine nutzt Quantisierung. 6-bit-Palettisierung könnte
+auf ~480 MB drücken (wie v3), bei 0,1–0,3 WER-Punkten Verlust – ohne Training, in
+Minuten mit `coremltools.optimize`. Die E5RT-Warnung beim Laden ist ein
+Leistungsdefekt (eine Operation läuft auf CPU statt ANE), kein Datendefekt. Ein
+Engineering-Fork lohnt sich (1–3 Tage), ein Modell-Fork (Neutraining) nicht. **Kein Fork
+geplant**, siehe Gutachten für die Begründung.
+
+### Weitere deutsche Parakeet-Varianten geprüft – keine besser für unseren Zweck
+
+`Mediform/parakeet-medical-de` (117 h medizinische Daten, 11,3 % WER in der Fachdomäne)
+und `johannhartmann/parakeet_de_med` (976 synthetische Arztbriefe, PEFT, 3,3 % in der
+Fachdomäne) sind Domänenspezialisten für medizinische Texte – auf YouTube-Vorträgen
+vermutlich schlechter, nicht besser, ungetestet. `nvidia/stt_de_fastconformer_hybrid_large_pc`
+ist ein eigenständiges 115M-Modell (nicht Parakeet-Architektur), 5,4 % auf Common Voice.
+
+**Öffentliche Vergleichstabelle** (`flozi00/asr-german-mixed-evals`) bestätigt die
+Modellwahl: Auf Tuda-De (realitätsnahe Aufnahmen, am nächsten an YouTube-Material) liegt
+primeline mit 4,11 % vor jedem Whisper-Modell; bei vorgelesener Hörbuchsprache liegen
+Whisper-Fine-Tunes knapp vorn. `2_95_WER.nemo` (primelines Checkpoint-Dateiname) ist
+jetzt geklärt: 2,95 % ist der Gesamtdurchschnitt über Tuda-De, MLS und Common Voice 19.0.
+
+### Zwei neue Chat-Bausteine: Vergleich-Preset und adaptive Tabellen
+
+Nach Michaels Vorbild (Brave Leo, zwei Screenshots: breite Tabelle vs. Kartenansicht):
+[Markdown.tsx](extension/components/Markdown.tsx) bekam eine eigene Tabellenkomponente,
+die per `ResizeObserver` die **Containerbreite** misst (nicht die Fensterbreite, weil die
+Sidebar in der Breite verstellbar ist) – ab 380 px eine gewöhnliche Tabelle, darunter
+eine Karte je Zeile mit vorangestellter Spaltenüberschrift.
+
+Neues Preset **Vergleich** (13. Knopf, Reihe 2 neben Pro/Contra): Tabelle mit
+Merkmal-Spalte und je einer Spalte pro verglichener Sache, danach „Kurz gesagt" mit
+einem Satz je Seite und „Unterschied, der zählt" als Schlusszeile. Sagt das Video zu
+einer Seite nichts, steht „nicht gesagt" statt eines Umkehrschlusses.
+
+**Noch nicht visuell geprüft**, ob fünf Knöpfe in Reihe 2 bei 500 px Breite noch
+umbruchfrei passen (Reihe 1 und 3 waren bei vier Knöpfen gemessen, siehe
+[docs/messungen.md](docs/messungen.md)).
+
+### Videodownload: Machbarkeit und Recht erforscht, Backend gebaut, UI offen
+
+Vollständige Recherche mit Quellen:
+[docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
+Kurz: **rechtlich nicht risikofrei** (OLG Hamburg 21.11.2024, seit BGH-Beschluss
+Oktober 2025 rechtskräftig – YouTubes Rolling Cipher ist eine wirksame technische
+Schutzmaßnahme nach § 95a UrhG), aber ein öffentliches GitHub-Repo mit `yt-dlp`-Aufruf
+ist etablierte Praxis (yt-dlp selbst liegt seit 2020 dort). Store-Einreichung ist
+ausgeschlossen (Googles Programmrichtlinie nennt Downloads geschützter Inhalte
+ausdrücklich). Rein browserseitig ist es technisch nicht praktikabel (n-sig-Verschleierung,
+PO-Tokens, DASH-Muxing sprengt den Service Worker) – der Weg läuft zwingend über den
+Native-Host, wie der Audio-Fallback.
+
+**Gebaut:** `list_formats`/`download_video` in
+[yt_summary_host.py](native-host/yt_summary_host.py) (Selbsttest grün), Brücke
+`videoFormate`/`videoLaden` in [fallback.ts](extension/lib/fallback.ts), neue
+Einstellungen `downloadHeight` (Default 720p) und `downloadTarget`. Nur im
+`full`-Build erreichbar (§2, §4a in [CLAUDE.md](CLAUDE.md)).
+
+**Offen: der sichtbare Teil.** Download-Knopf in der Sidebar und der Auflösungsdialog
+(zeigt die tatsächlich verfügbaren Höhen mit Größe) sind noch nicht gebaut. Danach die
+vier Pflichtprüfungen (`compile`, `check`, beide Builds, `verify-store-bundle.sh`,
+`selfcheck.py`) und ein visueller Test im Browser.
+
 ## Stand 03.09.2026 (einundzwanzigster Durchgang) – deutsches Modell gemessen, eingebaut, Standard gewechselt
 
 ### Ergebnis über drei deutsche TEDx-Vorträge (5434 Referenzwörter, 40 Minuten)

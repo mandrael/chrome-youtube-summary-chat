@@ -56,8 +56,8 @@ Wem die Schrift zu klein ist, stellt dort die **Schriftgrösse der Oberfläche**
 klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
 die Einstellungen.
 
-Die zwölf Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe nimmt
-das ganze Video, die mittlere schneidet einen Zweck heraus, die untere hilft beim
+Die dreizehn Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe
+nimmt das ganze Video, die mittlere schneidet einen Zweck heraus, die untere hilft beim
 Aneignen und Weiterverfolgen:
 
 - **Fazit** – was behauptet wird und wozu es kommt, ein bis zwei Absätze, ohne Zeitstempel.
@@ -71,6 +71,9 @@ Aneignen und Weiterverfolgen:
   und Zeitstempeln; was der Sprecher nur zeigt und nicht ausspricht, wird nicht erraten.
 - **Pro/Contra** – Argumente beider Seiten mit ihren Belegen, dazu „Für wen",
   „Alternativen" und „Nicht geprüft", soweit das Video sie hergibt.
+- **Vergleich** – stellt die im Video verglichenen Dinge als Tabelle gegenüber, dazu
+  eine Kurzfassung je Seite und der eine Unterschied, an dem eine Entscheidung hängt.
+  Vergleicht das Video nichts, sagt die Antwort das und bietet die Kernaussagen an.
 - **Begriffe** – Fachbegriffe, Methoden und Verfahren mit der Erklärung, die der Sprecher
   selbst gibt; erklärt er einen Begriff nicht, steht das da, statt Wissen zu ergänzen.
 - **Verweise** – Bücher, Studien, Personen, Werkzeuge und Websites, die genannt werden,
@@ -98,6 +101,11 @@ auf dem Mac.
 
 **Im Transkript-Tab** filtert eine Suchzeile die Zeilen und hebt den Begriff hervor; hat
 das Video mehrere Untertitelspuren, steht darüber die Sprachwahl.
+
+**Tabellen in Antworten** passen sich der Spaltenbreite an: ab rund 380 px eine
+gewöhnliche Tabelle, darunter eine Karte je Zeile mit vorangestellter
+Spaltenüberschrift – eine dreispaltige Tabelle bliebe in der schmalen Sidebar sonst
+unlesbar.
 
 Eine Ausgabe in Chromes Seitenleiste gab es zwischenzeitlich; sie ist entfernt, weil
 Vivaldi jede Extension mit der Permission `sidePanel` ungefragt in seine Panel-Leiste
@@ -415,6 +423,10 @@ Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nich
   ohnehin nicht verfügbar (Apple Silicon).
 - **Der Chrome Web Store.** Der Store-Build wird gebaut und geprüft, aber bewusst nicht
   eingereicht – Begründung und Wiederaufnahme-Bedingung in [status.md](status.md).
+- **Der Videodownload.** Die Helfer-Seite (Formate abfragen, Datei laden) ist gebaut und
+  der Selbsttest läuft, der Knopf samt Auflösungsdialog in der Sidebar noch nicht – siehe
+  offene Punkte in [status.md](status.md). Nur im `full`-Build, rechtliche Einordnung in
+  [docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
 
 Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 

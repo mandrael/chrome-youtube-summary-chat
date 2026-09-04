@@ -795,3 +795,98 @@ das `CUDAExecutionProvider`/`DmlExecutionProvider`, auf Linux `CUDAExecutionProv
 
 **Nicht gemessen, weil die Hardware fehlt:** echte Windows- oder Linux-Läufe, eine
 CUDA-GPU-Messung. Wird als offen geführt, nicht geschätzt.
+
+## Fairer Vergleich ValentinWeyer gegen matt-2012: Gleichstand bestätigt (04.09.2026)
+
+Anlass war Michaels Zweifel an der ersten Messung, die matt-2012 vorn zeigte (352x
+gegen 289x) – zurecht, denn im ersten Lauf lief Valentin als erstes Modell im
+Skript und trug damit den Aufwärmeffekt allein. Das Messschema wurde vor dem
+erneuten Lauf mit Fable 5.1 abgestimmt:
+
+- jedes Modell im **eigenen Prozess** geladen, nie zwei Modelle nacheinander im
+  selben Lauf
+- der erste Vortrag jeder Runde ist **Aufwärmlauf und wird verworfen**
+- Reihenfolge über die Runden **ABBA** (Runde 1 Valentin→matt, Runde 2 matt→Valentin, …)
+- fünf Runden, **5 Sekunden Pause** zwischen den Läufen gegen thermische Drift
+- ausgewertet wird der **Median**, nicht das arithmetische Mittel
+
+| | Wortfehler (Runde 1, WER ist deterministisch) | Anteil | Tempo, Median über 4 Läufe je Vortrag |
+|---|---|---|---|
+| matt-2012 | 457 von 5434 | 8,41 % | 369x (Streuung 238–411x) |
+| ValentinWeyer | 461 von 5434 | 8,48 % | 345x (Streuung 216–396x) |
+
+**Determinismus geprüft:** Über fünf Runden liefert jedes Modell exakt einen
+Ergebnis-Hash – gleiches Audio, gleiches Ergebnis, kein fp16-Rauschen im Ausgang.
+
+**Die sechs Stellen, an denen beide Modelle überhaupt abweichen** (auf 5434 Wörter):
+
+| ValentinWeyer | matt-2012 |
+|---|---|
+| „oft gekommenen" | „oftgekommenen" |
+| „misslingens" | „misslings" |
+| „ja" | (fehlt) |
+| „weh" | „wehren werden" |
+| „mitzusagen" | „mit zu sagen" |
+| (fehlt) | „denn" |
+
+Ausschliesslich Getrennt-/Zusammenschreibung und Wortgrenzen, keine inhaltlichen
+Fehler, keine falschen Zahlen oder Namen. **Der Tempovorteil von matt-2012 bleibt
+auch fair gemessen bestehen** (rund 7 % im Median), plausibel durch den 26 MB
+kleineren Encoder – Laden und Rechnen sind minimal günstiger. Bei über 340-facher
+Echtzeit ist das für die Praxis ohne Bedeutung.
+
+**Ein Auswertungsfehler ist dabei aufgetreten und behoben:** Der Aufwärmlauf nutzt
+dieselbe Datei wie der erste Messlauf der Runde (`ted.wav` zweimal hintereinander).
+Der erste Parser fasste beide Vorkommen unter demselben Dateinamen zusammen, wodurch
+sich der Text verdoppelte und die Fehlerzahl auf 33 % hochschoss. Der Fehler lag rein
+in der Auswertung, nicht in der Messung selbst – behoben, indem jeder `===DATEI`-Trenner
+die Liste für diesen Namen neu beginnt, statt an eine bestehende anzuhängen.
+
+## Sind die primeline-Konvertierungen optimal? Nein – siehe Gutachten (04.09.2026)
+
+Volle Einschätzung von Fable 5.1, ohne eigene Messung, anhand der Modell-Metadaten:
+[docs/gutachten-fable-primeline-optimierung-2026-09-03.md](gutachten-fable-primeline-optimierung-2026-09-03.md).
+
+Zentrale Punkte: Beide Konvertierungen liegen unquantisiert in fp16 bei 1,2 GB.
+6-bit-LUT-Palettisierung könnte auf rund 480 MB drücken (wie v3s `Encoder_v2.mlmodelc`),
+bei geschätzt 0,1–0,3 WER-Punkten Verlust – ohne Training, mit `coremltools.optimize`
+in Minuten machbar. Die E5RT-Warnung beim Laden ist ein **Leistungsdefekt**, kein
+Datendefekt: Eine `slice_by_index`-Operation mit Nulldimension (vermutlich NeMos
+Cache-aware-Pfad oder das Positional-Encoding) zwingt CoreML, diese eine Stelle auf
+CPU statt ANE zu legen – das Transkript bleibt vollständig, aber jede Partitionsgrenze
+kopiert Aktivierungen. Ein Engineering-Fork (Palettisierung, sauberer ANE-Graph,
+Fenster-Stitching mit Überlappung statt hartem Schnitt) lohnt sich mit 1–3 Tagen
+Aufwand; ein Neutraining nicht (GPU-Tage für vielleicht 1–2 Punkte).
+
+## Weitere deutsche Parakeet-Varianten (04.09.2026)
+
+Recherchiert mit agy, um sicherzugehen, dass primeline nicht übersehen lässt, was
+schon existiert:
+
+| Modell | Basis | Trainingsdaten | WER | Eignung für uns |
+|---|---|---|---|---|
+| `Mediform/parakeet-medical-de` | v3, volles Fine-Tuning | 117 h medizinisch (`Mediform/medical_asr_de`) | 11,3 % (Fachdomäne) | Domänenspezialist, ungeeignet |
+| `johannhartmann/parakeet_de_med` | v3, PEFT (Decoder/Joint) | 976 synth. Arztbriefe | 3,3 % (Fachdomäne) | Domänenspezialist, ungeeignet |
+| `nvidia/stt_de_fastconformer_hybrid_large_pc` | eigenständig, 115M | 2500 h (Common Voice, MLS, VoxPopuli) | 5,4 % Common Voice | andere Architektur, kleiner, nicht Parakeet |
+| **`primeline/parakeet-primeline`** | v3, Daten nicht offengelegt | vermutlich `flozi00/asr-german-mixed` (CV, MLS) | **2,95 %** (Ø Tuda-De/MLS/CV19) | **gewählt** |
+
+Öffentliche Vergleichstabelle (`flozi00/asr-german-mixed-evals`), WER in Prozent:
+
+| Modell | Gesamt | Tuda-De | MLS | Common Voice 19 |
+|---|---|---|---|---|
+| `primeline/whisper-large-v3-turbo-german` | 2,62 | 6,37 | 2,06 | 3,22 |
+| `nyrahealth/CrisperWhisper` | 2,68 | 5,17 | 2,85 | 1,90 |
+| `primeline/whisper-large-v3-german` | 2,76 | 7,78 | 2,12 | 3,31 |
+| **`primeline/parakeet-primeline`** | **2,95** | **4,11** | 2,60 | 3,03 |
+| `openai/whisper-large-v3` (Basis) | 3,28 | 7,86 | 2,85 | 3,46 |
+| `nvidia/parakeet-tdt-0.6b-v3` (Basis) | 3,64 | 7,05 | 2,95 | 3,70 |
+
+Auf **Tuda-De** – akustisch variable, realitätsnahe Aufnahmen, am nächsten an
+YouTube-Vortragston – liegt primeline mit 4,11 % klar vor jedem Whisper-Modell. Bei
+vorgelesener Hörbuch-/Studiosprache (MLS, Common Voice) liegen spezialisierte
+Whisper-Turbo-Fine-Tunes knapp davor. `2_95_WER.nemo`, der Dateiname von primelines
+Checkpoint, bezieht sich auf den Gesamtdurchschnitt „All" aus dieser Tabelle.
+
+**Nutzervorgabe (04.09.2026):** Whisper-Wege werden nicht mehr weiterverfolgt oder
+gemessen, die Recherche konzentriert sich auf Parakeet und dessen Ableitungen. Bei
+einem deutschen Parakeet-Derivat gilt ValentinWeyer als bevorzugte Wahl.

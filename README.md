@@ -117,7 +117,8 @@ einträgt (Bug VB-123452) – aus der Extension heraus nicht verhinderbar.
 
 ### Voraussetzungen
 
-Node 20+, pnpm. Für den Audio-Fallback zusätzlich Python 3, yt-dlp und ffmpeg.
+Node 20+, pnpm. Für den Audio-Fallback zusätzlich Python 3.10+, yt-dlp und ffmpeg;
+sherpa-onnx und das deutsche Modell (rund 670 MB) richtet der Installer selbst ein.
 
 ### Bauen
 
@@ -162,18 +163,36 @@ Der Key liegt in `chrome.storage.local` und geht ausschliesslich an `openrouter.
 
 Nötig nur, wenn Videos ohne Untertitel über die Tonspur transkribiert werden sollen.
 
-### macOS
+Der Installer erledigt auf allen Plattformen dasselbe: Er legt ein eigenes Python-venv
+an und installiert dort `sherpa-onnx` und `numpy` (ein venv, weil Homebrew-Python kein
+`pip install` ins System erlaubt und der Host so nicht davon abhängt, welches `python3`
+Chrome gerade findet), lädt die vier Dateien des deutschen Modells
+`x-ian/sherpa-onnx-parakeet-primeline-de-int8` von Hugging Face (rund 670 MB, davon
+652 MB Encoder; bereits vorhandene Dateien werden übersprungen) und schreibt einen
+Wrapper, der den Host mit dem venv-Python startet. Beides liegt ausserhalb des Projekts
+an einem festen Ort – das Modell, damit es nur einmal geladen wird, das venv, damit es
+weder in git noch in einen Dropbox-Sync gerät:
+
+| Plattform | Basisordner (darin `venv/` und `parakeet-primeline-de/`) |
+|---|---|
+| macOS | `~/Library/Application Support/yt-summary-chat/` |
+| Windows | `%LOCALAPPDATA%\yt-summary-chat\` |
+| Linux | `$XDG_DATA_HOME/yt-summary-chat/` (sonst `~/.local/share/yt-summary-chat/`) |
+
+### macOS und Linux
 
 ```bash
-brew install yt-dlp ffmpeg
-uv tool install parakeet-mlx -U        # nur für die lokale Route
+brew install yt-dlp ffmpeg             # Linux: Paketverwaltung der Distribution
+uv tool install parakeet-mlx -U        # nur für die Route Parakeet MLX, nur Apple Silicon
 cd native-host && ./install-macos.sh
 ```
 
 Danach Chrome einmal neu starten. Das Skript legt das Host-Manifest unter
-`~/Library/Application Support/Google/Chrome/NativeMessagingHosts/` an und erzeugt einen
-Wrapper, der einen brauchbaren `PATH` setzt – Chrome startet den Host ohne Login-Profil,
-weshalb Homebrew und uv sonst schlicht fehlen.
+`~/Library/Application Support/Google/Chrome/NativeMessagingHosts/` (Linux:
+`~/.config/google-chrome/` bzw. `~/.config/chromium/`) an und erzeugt den Wrapper
+`run-host.sh`, der zusätzlich einen brauchbaren `PATH` setzt – Chrome startet den Host
+ohne Login-Profil, weshalb Homebrew und uv sonst schlicht fehlen. Ist `uv` vorhanden,
+installiert das Skript die Pakete damit, sonst mit `pip`; das Ergebnis ist dasselbe.
 
 Weicht die Extension-ID ab (eigener Build ohne den Schlüssel), als Argument übergeben:
 
@@ -190,6 +209,9 @@ cd native-host
 powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
 ```
 
+Gleicher Ablauf: venv und Modell unter `%LOCALAPPDATA%\yt-summary-chat\`, Batch-Hülle
+`run-host.bat`, Registrierung über `HKCU`.
+
 **Ungetestet** – siehe „Was nicht geprüft ist“.
 
 ### Prüfen
@@ -200,6 +222,14 @@ Werkzeug fehlt. Direkt auf der Kommandozeile:
 ```bash
 cd native-host && python3 selfcheck.py
 ```
+
+Unter Windows: `py selfcheck.py`.
+
+Die letzten beiden Prüfungen gelten der Standardroute: Sie lesen aus dem Wrapper
+(`run-host.sh` bzw. `run-host.bat`), welches Python und welchen Basisordner Chrome
+tatsächlich bekommt, starten genau dieses Python mit `import sherpa_onnx, numpy` und
+verlangen die vier Modelldateien in genau diesem Ordner. Fehlt der Wrapper, sagt die
+Ausgabe, dass der Installer noch nicht gelaufen ist.
 
 ---
 
@@ -285,7 +315,7 @@ schnelleren Weg:
 ### Audio-Fallback (nur `full`, nur auf Klick)
 
 Im `full`-Build lädt yt-dlp auf Klick die Tonspur, ffmpeg wandelt sie nach Opus (Faktor 10
-kleiner als WAV: fünf Minuten sind 0,9 MB statt 9,6 MB), dann übernimmt eine von drei
+kleiner als WAV: fünf Minuten sind 0,9 MB statt 9,6 MB), dann übernimmt eine von vier
 Routen. Der Host macht die gesamte Arbeit und liefert nur Text zurück – Native Messaging
 begrenzt eine Nachricht auf 1 MB, base64-Audio sprengt das bei jedem Video von mehr als
 ein paar Sekunden. Ab zehn Minuten wird in Abschnitte geteilt und der Zeitversatz addiert.
@@ -295,8 +325,20 @@ ein paar Sekunden. Ab zehn Minuten wird in Abschnitte geteilt und der Zeitversat
 | `openai/whisper-large-v3-turbo` | OpenRouter | ~$0,012/h | **ja**, Segmente |
 | `nvidia/parakeet-tdt-0.6b-v3` | OpenRouter | ~$0,09/h | **nein** |
 | `parakeet-mlx` (`parakeet-tdt-0.6b-v3`) | lokal, Apple Silicon | kostenlos | **ja**, Sätze |
+| `parakeet-primeline` (Standard) | lokal, macOS/Windows/Linux, CPU | kostenlos | **ja**, je 120-s-Fenster |
 
-Alle drei sind am 01.09.2026 real gemessen, nicht aus der Dokumentation abgeschrieben:
+**parakeet-primeline** ist die Voreinstellung: das deutsche Modell
+`x-ian/sherpa-onnx-parakeet-primeline-de-int8` (ONNX int8, rund 670 MB), das über das
+Python-Paket `sherpa-onnx` auf der CPU läuft. Der Installer legt dafür ein venv an und
+lädt das Modell, beides in den Basisordner aus der Tabelle unter „Native Messaging einrichten“;
+fehlt eines von beidem, meldet der Host das mit Ablageort und Bezugsquelle statt still zu
+scheitern. Warum ein deutsches Spezialmodell: parakeet v3 erkennt die Sprache selbst und
+kippt bei deutschen Vorträgen mit englischen Zitaten ins Englische; gemessen am
+TEDx-Vortrag `9CZBIaaiPRI` liegt primeline bei 3,8 % Wortfehlern (Details in
+[docs/messungen.md](docs/messungen.md)). Auf gemischtem DE/EN-Material kehrt sich das um,
+deshalb bleiben beide Modelle wählbar.
+
+Die drei übrigen sind am 01.09.2026 real gemessen, nicht aus der Dokumentation abgeschrieben:
 
 - **whisper-large-v3-turbo** akzeptiert `response_format: "verbose_json"` zusammen mit
   `timestamp_granularities: ["segment"]` und liefert echte Segmente – bei fünf Minuten
@@ -419,8 +461,12 @@ Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nich
   0,05 Sekunden (siehe [docs/messungen.md](docs/messungen.md)). Der Weg vom Knopfdruck
   bis zum fertigen Transkript im Tab ist noch nicht am Stück durchlaufen.
 - **Windows.** `install-windows.ps1` folgt Chromes dokumentiertem Verfahren, ist aber
-  mangels Windows-Rechner nie ausgeführt worden. Die lokale Route Parakeet MLX ist dort
-  ohnehin nicht verfügbar (Apple Silicon).
+  mangels Windows-Rechner nie ausgeführt worden – das gilt auch für venv, `pip install
+  sherpa-onnx` und den Modell-Download per `Invoke-WebRequest`. Die lokale Route
+  Parakeet MLX ist dort ohnehin nicht verfügbar (Apple Silicon); primeline läuft laut
+  PyPI-Wheels (`win_amd64`) auch dort, gemessen ist es nicht.
+- **Linux.** `install-macos.sh` trägt die Manifest-Pfade unter `~/.config/` und den
+  Modellordner nach XDG mit; ausgeführt wurde es nur auf macOS.
 - **Der Chrome Web Store.** Der Store-Build wird gebaut und geprüft, aber bewusst nicht
   eingereicht – Begründung und Wiederaufnahme-Bedingung in [status.md](status.md).
 - **Der Videodownload.** Die Helfer-Seite (Formate abfragen, Datei laden) ist gebaut und
@@ -441,11 +487,11 @@ Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 | Alle drei STT-Routen end-to-end | siehe Tabelle oben |
 | `/api/v1/key`, Modellliste live | 375 Modelle in der Options-Page |
 | Sidebar-Platzierung, Dark-Mode, SPA-Wechsel | im Browser gesehen |
-| Extension-Logik / Host | 18 bzw. 6 Prüfungen |
+| Extension-Logik / Host | 18 bzw. 8 Prüfungen |
 
 ```bash
 cd extension    && pnpm run check          # 18 Prüfungen
-cd native-host  && python3 selfcheck.py    # 6 Prüfungen
+cd native-host  && python3 selfcheck.py    # 8 Prüfungen
 ```
 
 ## Herkunft

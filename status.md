@@ -2,20 +2,13 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Entscheidung Michael: Preset-Reihe 2 bricht bei Standardbreite (440 px) um** –
-   „Vergleich" steht allein in einer dritten Zeile, bei 500 px passen alle fünf. Hinnehmen,
-   Knopf in Reihe 3 verschieben oder vierte Reihe? (Stand 04.09.2026, Screenshots im
-   Sitzungs-Scratchpad, nicht dauerhaft.)
-2. **Standardroute `parakeet-primeline` ist auf diesem Mac nicht installiert**: weder
-   Homebrew- noch System-`python3` hat `sherpa_onnx`, der Modellordner
-   `~/Library/Application Support/yt-summary-chat/parakeet-primeline-de` fehlt. Die
-   Messungen vom 03.09. liefen aus einer gelöschten Scratchpad-Umgebung. Installationsweg
-   (`run-host.sh` startet `/usr/bin/env python3`) festlegen und mit `selfcheck.py` belegen.
-3. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist.
-4. Kleine Messung: `provider="coreml"` (Mac) bzw. `"directml"` (Windows) in der
-   sherpa-Route – eine Zeile, drei Läufe, ungemessen.
-5. Optional: Store-Build einreichen.
-6. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
+   venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
+2. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
+   sherpa-Route – eine Zeile, drei Läufe, ungemessen. Auf dem Mac laut Michael nicht
+   relevant.
+3. Optional: Store-Build einreichen.
+4. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
 
 ## Nachtrag 04.09.2026 (Nachmittag) – Download-Knopf gebaut, Codex-Review, React-Produktionsbuild, Parakeet-Bewertung
@@ -73,6 +66,39 @@ lesbar. Ohne registrierten Host zeigte der Dialog nur Chromes Rohmeldung „Spec
 native messaging host not found." – `videoFormate` nutzt jetzt dieselbe Aufbereitung
 (`hostFehler()`) wie der Audio-Weg. Ungeprüft: Ladezustand (Fehler kam nach 0,3 s),
 Radio-Auswahl und laufender Download im Browser, Drag-Griff.
+
+### Standardroute war nirgends installierbar – Installer richtet sie jetzt ein
+
+Befund aus der Parakeet-Bewertung: `parakeet-primeline` (Standard auf allen drei
+Plattformen, sherpa-onnx auf der CPU – **eine CoreML-Route gibt es in diesem Projekt
+nicht**, der FluidAudio-Weg war nur der Messprototyp) erwartete `sherpa_onnx`/`numpy` im
+System-Python und vier von Hand aus HuggingFace geholte Modelldateien; weder Installer
+noch README erwähnten beides. Jetzt: `install-macos.sh` (deckt Linux mit, fünf
+`~/.config/…`-Ziele) und `install-windows.ps1` legen ein venv neben dem Modellordner an
+(`~/Library/Application Support/yt-summary-chat/venv` bzw. `%LOCALAPPDATA%`/XDG – bewusst
+nicht im Projektordner, der liegt in der Dropbox), installieren `sherpa-onnx numpy` (uv,
+sonst pip), laden die vier Dateien per `curl -fL --retry 3` als `.part` (Ordner und Repo
+werden aus dem Host importiert, nicht geraten), Wrapper zeigt aufs venv. `selfcheck.py`
+prüft venv und Modell per subprocess gegen das venv-Python (8 statt 6 Prüfungen). **Auf
+diesem Mac durchgelaufen:** Dateigrössen byte-genau wie HF (Encoder 652.282.298 Bytes),
+zweiter Lauf lädt nichts erneut, echter Lauf von `transcribe_primeline` auf 45 s TEDx
+`9CZBIaaiPRI` liefert deutschen Text in 1,8 s.
+
+**Codex-Review des Installer-Aufbaus (acht Befunde, alle behoben und gemessen):** Der
+Wrapper fixierte nur den Python-Pfad, der Host berechnete den Modellordner zur Laufzeit
+neu aus `HOME`/`LOCALAPPDATA`/`XDG_DATA_HOME` – jetzt schreibt der Installer
+`YT_SUMMARY_BASIS` in den Wrapper, `primeline_ordner()` nimmt sie zuerst. `selfcheck.py`
+berechnete das venv selbst statt das des Wrappers zu prüfen – liest jetzt `run-host.sh`
+bzw. `run-host.bat` und prüft genau dieses Python; ohne Wrapper schlägt es mit „noch nicht
+gelaufen" fehl (getestet). Vorhandene Dateien galten ungeprüft als gültig – jetzt
+Grössenvergleich gegen `Content-Length` per HEAD vor dem Überspringen und nach dem Laden;
+Negativtest: `tokens.txt` um 7 Bytes gekürzt, Installer lädt sie neu, `cmp` inhaltsgleich.
+Windows: `-Encoding OEM` statt ASCII (Umlaute im Pfad), `$LASTEXITCODE` nach venv und pip,
+`-UseBasicParsing`, drei Versuche. Host: leeres oder relatives `XDG_DATA_HOME` fällt auf
+`~/.local/share` zurück (getestet). Ungeprüft: der gesamte Windows-Pfad (kein pwsh auf
+diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chrome selbst
+über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
+ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
 ### React lief bisher als Entwicklungsfassung – behoben
 
@@ -187,9 +213,10 @@ Merkmal-Spalte und je einer Spalte pro verglichener Sache, danach „Kurz gesagt
 einem Satz je Seite und „Unterschied, der zählt" als Schlusszeile. Sagt das Video zu
 einer Seite nichts, steht „nicht gesagt" statt eines Umkehrschlusses.
 
-**Noch nicht visuell geprüft**, ob fünf Knöpfe in Reihe 2 bei 500 px Breite noch
-umbruchfrei passen (Reihe 1 und 3 waren bei vier Knöpfen gemessen, siehe
-[docs/messungen.md](docs/messungen.md)).
+**Visuell geprüft am 04.09.2026** (headless, `uiScale` 110): bei 500 px passen alle fünf
+Knöpfe in eine Zeile, bei der Standardbreite von 440 px steht „Vergleich" allein in einer
+dritten Zeile. **Michaels Entscheidung: hinnehmen** – 13 Knöpfe in drei Reihen gehen bei
+440 px nicht ohne Umbruch, und die Breite ist verstellbar.
 
 ### Videodownload: Machbarkeit und Recht erforscht, Backend gebaut, UI offen
 

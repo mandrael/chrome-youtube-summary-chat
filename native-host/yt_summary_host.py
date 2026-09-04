@@ -469,13 +469,23 @@ MODELL_PRIMELINE = "x-ian/sherpa-onnx-parakeet-primeline-de-int8"
 
 
 def primeline_ordner() -> Path:
-    """Wo das deutsche Modell liegt. Ein fester Ort, damit es nur einmal geladen wird."""
+    """Wo das deutsche Modell liegt. Ein fester Ort, damit es nur einmal geladen wird.
+
+    Der Installer schreibt den Basisordner als YT_SUMMARY_BASIS in den Wrapper, weil
+    Chrome den Host mit einer eigenen Umgebung startet, in der HOME, LOCALAPPDATA oder
+    XDG_DATA_HOME von der Installationsumgebung abweichen koennen.
+    """
+    fest = os.environ.get("YT_SUMMARY_BASIS", "").strip()
+    if fest:
+        return Path(fest) / "parakeet-primeline-de"
     if sys.platform == "darwin":
         basis = Path.home() / "Library" / "Application Support"
     elif sys.platform.startswith("win"):
         basis = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     else:
-        basis = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        # XDG-Spezifikation: leer oder relativ gilt als nicht gesetzt.
+        xdg = os.environ.get("XDG_DATA_HOME", "")
+        basis = Path(xdg) if xdg and os.path.isabs(xdg) else Path.home() / ".local" / "share"
     return basis / "yt-summary-chat" / "parakeet-primeline-de"
 
 

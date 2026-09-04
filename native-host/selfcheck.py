@@ -2,19 +2,25 @@
 """Selbstpruefung des Native-Hosts. Aufruf: python3 selfcheck.py
 
 Geprueft wird, was still falsch sein koennte: der Parser fuer die parakeet-mlx-
-Ausgabe, der Video-ID-Filter und der Nachrichtenrahmen. Kein Test-Framework.
+Ausgabe, der Video-ID-Filter, der Nachrichtenrahmen und die Installation der
+Standardroute (venv, sherpa-onnx, Modelldateien). Kein Test-Framework.
 """
 import json
+import os
+import re
 import struct
+import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+HIER = Path(__file__).parent
+sys.path.insert(0, str(HIER))
 from yt_summary_host import (  # noqa: E402
     MODELS_WITH_TIMESTAMPS,
     STT_MODELS,
     VIDEO_ID,
     parse_parakeet_segments,
+    primeline_ordner,
 )
 
 checks = 0
@@ -116,5 +122,58 @@ def _framing():
 
 
 check("4-Byte-Laengenpraefix, little endian", _framing)
+
+print("Standardroute parakeet-primeline")
+
+# Gefragt ist nicht das Python, das diesen Selbsttest ausfuehrt, sondern das, mit dem
+# run-host.sh bzw. run-host.bat den Host startet. Deshalb wird der Wrapper gelesen und
+# nicht der Pfad ein zweites Mal berechnet - sonst koennte hier venv B bestehen, waehrend
+# Chrome venv A startet.
+if sys.platform.startswith("win"):
+    WRAPPER = HIER / "run-host.bat"
+    MUSTER_PY = re.compile(r'^"([^"]+python\.exe)" "', re.M)
+    MUSTER_BASIS = re.compile(r'^set "YT_SUMMARY_BASIS=(.+)"\s*$', re.M)
+else:
+    WRAPPER = HIER / "run-host.sh"
+    MUSTER_PY = re.compile(r'^exec "([^"]+)" "', re.M)
+    MUSTER_BASIS = re.compile(r'^export YT_SUMMARY_BASIS="([^"]+)"', re.M)
+
+
+def _wrapper():
+    assert WRAPPER.is_file(), (
+        f"{WRAPPER.name} fehlt - install-macos.sh bzw. install-windows.ps1 ist noch "
+        "nicht gelaufen.")
+    text = WRAPPER.read_text()
+    py = MUSTER_PY.search(text)
+    basis = MUSTER_BASIS.search(text)
+    assert py and basis, f"{WRAPPER.name} hat nicht die erwartete Form (Installer erneut ausfuehren)."
+    return Path(py.group(1)), basis.group(1)
+
+
+def _venv():
+    venv_py, basis = _wrapper()
+    assert venv_py.is_file(), f"venv-Python aus {WRAPPER.name} fehlt: {venv_py}"
+    res = subprocess.run([str(venv_py), "-c", "import sherpa_onnx, numpy"],
+                         capture_output=True, text=True,
+                         env={**os.environ, "YT_SUMMARY_BASIS": basis})
+    assert res.returncode == 0, (
+        "sherpa-onnx oder numpy fehlt im venv, Installer erneut ausfuehren. "
+        f"Ausgabe: {res.stderr.strip()[-300:]}")
+
+
+check("Wrapper zeigt auf ein venv mit sherpa-onnx und numpy", _venv)
+
+
+def _modell():
+    # Mit dem Basisordner aus dem Wrapper, so wie der Host ihn unter Chrome sieht.
+    os.environ["YT_SUMMARY_BASIS"] = _wrapper()[1]
+    ordner = primeline_ordner()
+    fehlend = [n for n in ("encoder.int8.onnx", "decoder.int8.onnx",
+                           "joiner.int8.onnx", "tokens.txt")
+               if not (ordner / n).is_file() or (ordner / n).stat().st_size == 0]
+    assert not fehlend, f"Modelldateien fehlen in {ordner}: {', '.join(fehlend)}"
+
+
+check("vier Modelldateien vorhanden", _modell)
 
 print(f"\n{checks} Pruefungen bestanden.")

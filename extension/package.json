@@ -7,10 +7,10 @@
   "type": "module",
   "scripts": {
     "dev": "wxt",
-    "build": "wxt build --mode full",
-    "build:store": "wxt build --mode store",
-    "zip": "wxt zip --mode full",
-    "zip:store": "wxt zip --mode store",
+    "build": "NODE_ENV=production wxt build --mode full",
+    "build:store": "NODE_ENV=production wxt build --mode store",
+    "zip": "NODE_ENV=production wxt zip --mode full",
+    "zip:store": "NODE_ENV=production wxt zip --mode store",
     "compile": "tsc --noEmit",
     "postinstall": "wxt prepare",
     "check": "node scripts/selfcheck.ts"

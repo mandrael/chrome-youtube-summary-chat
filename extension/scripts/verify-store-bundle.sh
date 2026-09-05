@@ -155,6 +155,18 @@ for B in "$OUT" "$FULL"; do
     echo "  Ursache meist: WXT setzt NODE_ENV auf den Modusnamen; siehe Hook in wxt.config.ts."
     FAIL=1
   fi
+  # Die JSX-Übersetzung muss zur React-Fassung passen. Am 05.09.2026 war React Produktion,
+  # das JSX aber noch über jsx-dev-runtime übersetzt: „jsxDEV is not a function" beim
+  # ersten Render, keine Sidebar. Der Dateiname jsx-dev-runtime steht nur im kaputten
+  # Bundle (gemessen: 2 gegen 0 Treffer); das Wort jsxDEV allein reicht nicht, es kommt
+  # in hast-util-to-jsx-runtime legitim vor.
+  if grep -qF "jsx-dev-runtime" "$CS"; then
+    echo "  FEHLGESCHLAGEN – $B übersetzt JSX über jsx-dev-runtime (Vite sieht keine Produktion)."
+    echo "  Ursache meist: NODE_ENV=production fehlt vor dem wxt-Aufruf in package.json."
+    FAIL=1
+  else
+    echo "  ok – $B: kein react/jsx-dev-runtime im Bundle"
+  fi
 done
 
 echo

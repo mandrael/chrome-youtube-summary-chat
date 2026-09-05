@@ -100,6 +100,23 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Extension lud nicht mehr – Ursache der React-Umstellung, behoben
+
+Michaels Meldung: keine Sidebar mehr. Headless reproduziert (Playwright-Chromium 1208):
+`pageerror: (0, import_jsx_dev_runtime.jsxDEV) is not a function`. Ursache: Das
+`configResolved`-Plugin stellte nur den define-Wert auf Produktion, Vites eigenes
+`isProduction` blieb falsch, weil WXT `NODE_ENV` auf den Modusnamen setzt – der
+React-Plugin übersetzte JSX deshalb weiter über `jsx-dev-runtime`, dessen `jsxDEV` in
+der Produktionsfassung `undefined` ist. Erster Render wirft, kein Mount. **Lösung:**
+`NODE_ENV=production` vor jedem `wxt`-Aufruf in package.json (WXT übernimmt eine gesetzte
+Variable per `??=`), das Plugin bleibt für den define-Wert. Beide Builds 1,76 MB, kein
+`react/jsx-dev-runtime` mehr im Bundle, Sidebar mountet (Screenshot geprüft), alle vier
+Prüfungen grün. `verify-store-bundle.sh` Test 4 prüft jetzt zusätzlich, dass
+`react/jsx-dev-runtime` fehlt – der erste Test 4 hatte genau diesen Bruch nicht gesehen.
+Lehre für den Aufbau: eine Bundle-Prüfung, die nur Dateinamen zählt, ersetzt keinen
+Ladeversuch; der headless-Repro-Lauf (`scratchpad/repro.py`, Konsole und `pageerror`
+einsammeln) gehört vor jede Fertigmeldung mit Build-Änderung.
+
 ### React lief bisher als Entwicklungsfassung – behoben
 
 Befund aus dem visuellen Test: Konsole „Download the React DevTools", Bundle enthielt

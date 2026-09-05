@@ -53,10 +53,12 @@ export function startChat(args: StreamArgs): StreamHandle {
           break;
       }
     });
-    // Trennt der Service Worker die Verbindung, ohne "done" gesendet zu haben, gilt der
-    // Lauf als beendet – ein hängender Promise wäre schlimmer als ein früher Abschluss.
+    // Trennt der Service Worker die Verbindung, ohne "done" gesendet zu haben, ist das
+    // ein Fehler und wird als solcher gezeigt – vorher galt der Lauf still als beendet,
+    // und eine leere Antwort stand kommentarlos im Chat. Schon empfangener Text bleibt
+    // stehen, die Sidebar hängt nur die Fehlermarke an.
     port.onDisconnect.addListener(() => {
-      if (!finished) resolve();
+      if (!finished) reject(new Error("Verbindung zum Hintergrundprozess verloren."));
     });
   });
 
@@ -94,7 +96,15 @@ export function startFallback(
   job: HelperJob,
   onProgress: (p: FallbackProgress) => void,
 ): { promise: Promise<Transcript>; cancel: () => void } {
-  const port = chrome.runtime.connect({ name: "fallback" });
+  // Nach Update der Erweiterung wirft connect() synchron („Extension context
+  // invalidated"); der Wurf muss als Ablehnung ankommen, sonst bleibt der Aufrufer
+  // ohne catch dauerhaft auf „läuft" stehen (Codex-Befund 05.09.2026).
+  let port: chrome.runtime.Port;
+  try {
+    port = chrome.runtime.connect({ name: "fallback" });
+  } catch (e) {
+    return { promise: Promise.reject(e instanceof Error ? e : new Error(String(e))), cancel: () => {} };
+  }
   let settled = false;
 
   const promise = new Promise<Transcript>((resolve, reject) => {
@@ -125,7 +135,15 @@ export function startDownload(
   onProgress: (p: FallbackProgress) => void,
   target?: string,
 ): { promise: Promise<DownloadErgebnis>; cancel: () => void } {
-  const port = chrome.runtime.connect({ name: "download" });
+  // Nach Update der Erweiterung wirft connect() synchron („Extension context
+  // invalidated"); der Wurf muss als Ablehnung ankommen, sonst bleibt der Aufrufer
+  // ohne catch dauerhaft auf „läuft" stehen (Codex-Befund 05.09.2026).
+  let port: chrome.runtime.Port;
+  try {
+    port = chrome.runtime.connect({ name: "download" });
+  } catch (e) {
+    return { promise: Promise.reject(e instanceof Error ? e : new Error(String(e))), cancel: () => {} };
+  }
   let settled = false;
 
   const promise = new Promise<DownloadErgebnis>((resolve, reject) => {

@@ -134,7 +134,9 @@ warf – ein Bundle-Grep ersetzt keinen Ladeversuch.
 (status.md, 03.09.2026), an zwei Stellen: `extension/wxt.config.ts` (Manifest) und
 `extension/package.json`. Die Optionsseite zeigt die Nummer mit dem Build dahinter –
 ohne Erhöhung ist beim Testen nicht erkennbar, was im Browser steckt. Am 04.09.2026
-wurde das über drei Commits vergessen.
+wurde das über drei Commits vergessen. **Ein Commit ist genau ein Sprung**, nie einer
+pro enthaltener Funktion: 0.6.0 → 0.7.0, auch wenn drei Funktionen drinstecken. Am
+05.09.2026 sprang ein Commit fälschlich von 0.6.0 auf 0.8.0.
 
 ## Sprache
 

@@ -100,6 +100,25 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.8.1 – „Nur Luna geht“ war ein totes Content-Script
+
+Michaels Fehlertext: `Uncaught Error: Extension context invalidated` aus content.js.
+Ursache: nach dem Update in chrome://extensions lebt das alte Content-Script im
+offenen YouTube-Tab weiter, aber `chrome.runtime.connect` wirft. Der Wurf kam
+synchron aus `startChat()` vor dem `try` – im Chat stand die Frage, sonst nichts, der
+Knopf blieb auf Stopp. Kein Modellproblem: Luna war vor dem Update getestet worden,
+die anderen danach. Fix: `startChat` im try, Meldung „Die Erweiterung wurde
+aktualisiert oder neu geladen. Bitte die Seite neu laden (F5).“; Trennung des Ports
+ohne „done“ ist jetzt ein Fehler statt eines stillen Endes; Codex-Befund:
+`startFallback`/`startDownload` warfen ebenso synchron, jetzt Ablehnung statt
+hängendem „läuft“. Offen gelassen (Codex, niedrig): Banner ohne Klick bei
+Kontextverlust, `lastError` beim Disconnect.
+
+**Versionsfehler:** 0.6.0 → 0.8.0 in einem Commit war falsch (0.7.0 war zwischendurch
+nur uncommittet gesetzt und dann für dieselbe Änderung noch einmal erhöht). Regel in
+CLAUDE.md: ein Commit, ein Sprung. Nichts gepusht (58 Commits voraus), eine
+Umnummerierung per Rewrite wäre möglich, nur auf Michaels Ja.
+
 ### 05.09.2026: Version 0.8.0 – Modellmenü im Chat, Empfehlungsliste gemessen, Mistral-Modellliste war leer, Schnellbefehl „Zusammenfassung“
 
 **Modellmenü im Chat (Michaels Wunsch, Vorbild Brave Leo):** unter dem Eingabefeld

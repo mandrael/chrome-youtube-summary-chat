@@ -297,6 +297,10 @@ export function Sidebar({
     if (code === "NO_KEY") return mistralAktiv ? t("noKeyMistral") : t("noKey");
     if (code === "NO_MODEL") return t("noModelMistral");
     if (code === "WEB_ONLY_OPENROUTER") return t("webOnlyOpenRouter");
+    // Nach Update oder Neuladen der Erweiterung lebt das alte Content-Script weiter,
+    // aber ohne Verbindung: `chrome.runtime.connect` wirft. Vorher stand dann nur die
+    // Frage im Chat und nichts passierte (Michael, 05.09.2026).
+    if (/context invalidated/i.test(code)) return t("contextLost");
     return code;
   }
 
@@ -374,44 +378,43 @@ export function Sidebar({
     setPresetsOpen(false);
     setTab("chat");
 
-    const handle = startChat({
-      model: activeModel,
-      supportsReasoning: modelInfo?.supportsReasoning ?? true,
-      reasoning: settings.reasoning,
-      system: buildSystem(settings, transcript, systemOverride),
-      messages: next,
-      web,
-      onSources: (quellen) =>
-        setMessages((m) => {
-          const copy = [...m];
-          const last = copy.at(-1);
-          if (last?.role === "assistant") {
-            const bekannt = new Set((last.sources ?? []).map((q) => q.url));
-            last.sources = [
-              ...(last.sources ?? []),
-              ...quellen.filter((q) => !bekannt.has(q.url)),
-            ];
-          }
-          return copy;
-        }),
-      onDelta: (d) =>
-        setMessages((m) => {
-          const copy = [...m];
-          const last = copy.at(-1);
-          if (last?.role === "assistant") last.content += d;
-          return copy;
-        }),
-      onUsage: (u) =>
-        setMessages((m) => {
-          const copy = [...m];
-          const last = copy.at(-1);
-          if (last?.role === "assistant") last.usage = u;
-          return copy;
-        }),
-    });
-    stopRef.current = handle.stop;
-
     try {
+      const handle = startChat({
+        model: activeModel,
+        supportsReasoning: modelInfo?.supportsReasoning ?? true,
+        reasoning: settings.reasoning,
+        system: buildSystem(settings, transcript, systemOverride),
+        messages: next,
+        web,
+        onSources: (quellen) =>
+          setMessages((m) => {
+            const copy = [...m];
+            const last = copy.at(-1);
+            if (last?.role === "assistant") {
+              const bekannt = new Set((last.sources ?? []).map((q) => q.url));
+              last.sources = [
+                ...(last.sources ?? []),
+                ...quellen.filter((q) => !bekannt.has(q.url)),
+              ];
+            }
+            return copy;
+          }),
+        onDelta: (d) =>
+          setMessages((m) => {
+            const copy = [...m];
+            const last = copy.at(-1);
+            if (last?.role === "assistant") last.content += d;
+            return copy;
+          }),
+        onUsage: (u) =>
+          setMessages((m) => {
+            const copy = [...m];
+            const last = copy.at(-1);
+            if (last?.role === "assistant") last.usage = u;
+            return copy;
+          }),
+      });
+      stopRef.current = handle.stop;
       await handle.done;
     } catch (e) {
       const msg = String((e as Error)?.message ?? e);

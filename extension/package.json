@@ -1,6 +1,6 @@
 {
   "name": "chrome-youtube-summary-chat",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Chat-Sidebar für YouTube-Videos: mit dem Transkript chatten, zusammenfassen, übersetzen – über OpenRouter.",
   "license": "MIT",
   "private": true,

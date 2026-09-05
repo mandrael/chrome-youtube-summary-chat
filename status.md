@@ -100,10 +100,11 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
-### 05.09.2026: Version 0.3.0 – Versionskonvention war über drei Commits vergessen
+### 05.09.2026: Version 0.3.1 – Versionskonvention war über drei Commits vergessen
 
 Michaels Einwand: die Versionsnummer blieb bei 0.2.0, obwohl Vergleich-Preset, Tabellen,
-Videodownload, Installer und React-Produktionsbuild dazukamen. Jetzt 0.3.0 in
+Videodownload, Installer und React-Produktionsbuild dazukamen. Die neuen Funktionen
+wären 0.3.0 gewesen, der Ladefehler-Fix macht daraus 0.3.1 – so steht es jetzt in
 `wxt.config.ts` und `package.json`; die Pflicht steht in CLAUDE.md unter „Prüfungen".
 Ausserdem festgehalten: Michaels Fehlermeldung nach dem Fix nannte `content.js:57725`,
 der neue Build hat 56.023 Zeilen – der Browser lief noch mit dem alten Bundle. Eine

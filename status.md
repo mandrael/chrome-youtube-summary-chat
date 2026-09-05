@@ -113,13 +113,13 @@ entpackte Erweiterung übernimmt geänderte Dateien erst nach „Aktualisieren" 
 ### 05.09.2026: Extension lud nicht mehr – Ursache der React-Umstellung, behoben
 
 Michaels Meldung: keine Sidebar mehr. Headless reproduziert (Playwright-Chromium 1208):
-`pageerror: (0, import_jsx_dev_runtime.jsxDEV) is not a function`. Ursache: Das
-`configResolved`-Plugin stellte nur den define-Wert auf Produktion, Vites eigenes
-`isProduction` blieb falsch, weil WXT `NODE_ENV` auf den Modusnamen setzt – der
+`pageerror: (0, import_jsx_dev_runtime.jsxDEV) is not a function`. Ursache: Der
+WXT-Hook `vite:build:extendConfig` stellte nur den define-Wert auf Produktion, Vites
+eigenes `isProduction` blieb falsch, weil WXT `NODE_ENV` auf den Modusnamen setzt – der
 React-Plugin übersetzte JSX deshalb weiter über `jsx-dev-runtime`, dessen `jsxDEV` in
 der Produktionsfassung `undefined` ist. Erster Render wirft, kein Mount. **Lösung:**
 `NODE_ENV=production` vor jedem `wxt`-Aufruf in package.json (WXT übernimmt eine gesetzte
-Variable per `??=`), das Plugin bleibt für den define-Wert. Beide Builds 1,76 MB, kein
+Variable per `??=`), der Hook bleibt für den define-Wert. Beide Builds 1,76 MB, kein
 `react/jsx-dev-runtime` mehr im Bundle, Sidebar mountet (Screenshot geprüft), alle vier
 Prüfungen grün. `verify-store-bundle.sh` Test 4 prüft jetzt zusätzlich, dass
 `react/jsx-dev-runtime` fehlt – der erste Test 4 hatte genau diesen Bruch nicht gesehen.

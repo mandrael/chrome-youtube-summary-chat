@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
   // handlich bleibt; darüber wächst sie schneller als der sichtbare Gewinn.
   downloadHeight: 720,
   downloadTarget: "",
+  downloadAsk: false,
   preferLocalTranslate: false,
   uiScale: 110,
   // Knapp über YouTubes eigenem Wert (400 bis 490 px je nach Fenster): spürbar mehr

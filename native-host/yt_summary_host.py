@@ -723,7 +723,59 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
         raise HostError("Der Download ist fehlgeschlagen:\n" + "\n".join(schwanz)[-800:])
     if not pfad or not Path(pfad).is_file():
         raise HostError("yt-dlp hat keinen Dateipfad gemeldet:\n" + "\n".join(schwanz)[-800:])
-    return {"type": "downloaded", "path": pfad, "height": hoehe}
+    datei = Path(pfad)
+    return {
+        "type": "downloaded", "path": pfad, "height": hoehe,
+        "dir": kurzer_pfad(datei.parent), "name": datei.name,
+    }
+
+
+def kurzer_pfad(p: Path) -> str:
+    """~ statt des Home-Verzeichnisses - so, wie ein Mensch den Ordner nennt."""
+    try:
+        return "~/" + p.relative_to(Path.home()).as_posix() if p != Path.home() else "~"
+    except ValueError:
+        return str(p)
+
+
+def choose_folder() -> dict[str, Any]:
+    """Systemeigener Ordnerdialog. Niemand tippt Pfade, und ein getippter Pfad ist ein Risiko.
+
+    Abbruch liefert path None, kein Fehler. Der Dialog gehoert dem Nutzer, er hat ihn
+    per Klick angefordert.
+    """
+    if sys.platform == "darwin":
+        cmd = ["osascript", "-e",
+               'POSIX path of (choose folder with prompt "Zielordner für Videodownloads")']
+    elif sys.platform.startswith("win"):
+        cmd = ["powershell", "-NoProfile", "-STA", "-Command",
+               # UTF-8 erzwingen: die Konsolen-Codepage von PowerShell ist sonst nicht die,
+               # mit der Python die Ausgabe liest - Umlaute im Pfad kaemen kaputt an.
+               "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(); "
+               "Add-Type -AssemblyName System.Windows.Forms; "
+               "$d = New-Object System.Windows.Forms.FolderBrowserDialog; "
+               "$d.Description = 'Zielordner für Videodownloads'; "
+               "if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }"]
+    else:
+        cmd = ["zenity", "--file-selection", "--directory", "--title=Zielordner für Videodownloads"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", check=False)
+    except FileNotFoundError as e:
+        raise HostError(f"Kein Ordnerdialog verfügbar ({e.filename} fehlt).") from e
+    # Nur das Zeilenende weg; Leerzeichen sind in Ordnernamen erlaubt. Den Schraegstrich,
+    # den osascript anhaengt, nimmt Path() selbst heraus - "/" und "C:\\" bleiben heil.
+    gewaehlt = (res.stdout or "").strip("\r\n")
+    if res.returncode != 0:
+        # Abbruch: osascript -128 (Text in stderr), zenity Exit 1. Alles andere ist ein Defekt.
+        abbruch = "-128" in (res.stderr or "") or (cmd[0] == "zenity" and res.returncode == 1)
+        if abbruch:
+            return {"type": "folder", "path": None}
+        raise HostError(f"Ordnerdialog fehlgeschlagen:\n{(res.stderr or res.stdout)[-400:]}")
+    if not gewaehlt:
+        return {"type": "folder", "path": None}
+    ordner = Path(gewaehlt)
+    return {"type": "folder", "path": str(ordner), "dir": kurzer_pfad(ordner)}
 
 
 def reveal_file(pfad: str, ziel: str) -> dict[str, Any]:
@@ -859,6 +911,8 @@ def main() -> None:
             kind = msg.get("type")
             if kind == "ping":
                 send({"version": VERSION, "tools": tool_status()})
+            elif kind == "chooseFolder":
+                send(choose_folder())
             elif kind == "transcribe":
                 handle_transcribe(msg)
             else:

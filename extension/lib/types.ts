@@ -123,6 +123,8 @@ export interface Settings {
   downloadHeight: 360 | 480 | 720 | 1080;
   /** Zielordner; leer bedeutet den Downloads-Ordner des Systems. */
   downloadTarget: string;
+  /** Vor jedem Download den Ordnerdialog zeigen statt den Zielordner zu nehmen. */
+  downloadAsk: boolean;
   /** Chrome-eigene Translator API statt OpenRouter fürs Übersetzen. */
   preferLocalTranslate: boolean;
   uiScale: number;
@@ -170,6 +172,13 @@ export interface KeyStatus {
   limitRemaining?: number | null;
   isFreeTier?: boolean;
   error?: string;
+}
+
+/** Ergebnis eines Downloads: voller Pfad plus Ordner (mit ~) und Dateiname getrennt. */
+export interface DownloadErgebnis {
+  path: string;
+  dir: string;
+  name: string;
 }
 
 /** Eine im Video vorhandene Auflösung, wie der Helfer sie meldet. */

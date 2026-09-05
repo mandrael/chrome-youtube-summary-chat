@@ -1,4 +1,4 @@
-import type { Cue, SttRoute, Transcript, VideoFormat } from "./types";
+import type { Cue, DownloadErgebnis, SttRoute, Transcript, VideoFormat } from "./types";
 
 /**
  * Native-Messaging-Brücke zum lokalen Audio-Fallback.
@@ -55,6 +55,18 @@ export async function videoFormate(videoId: string): Promise<VideoFormat[]> {
   return res.formats ?? [];
 }
 
+/** Systemeigener Ordnerdialog über den Helfer. null bei Abbruch. */
+export async function ordnerWaehlen(): Promise<string | null> {
+  let res: { type?: string; path?: string | null; message?: string } | undefined;
+  try {
+    res = await chrome.runtime.sendNativeMessage(HOST_NAME, { type: "chooseFolder" });
+  } catch (e) {
+    throw new Error(hostFehler((e as Error)?.message));
+  }
+  if (res?.type === "error") throw new Error(res.message || "Ordnerdialog fehlgeschlagen");
+  return res?.path ?? null;
+}
+
 /** Zeigt die geladene Datei im Dateimanager (Finder, Explorer, xdg). */
 export async function videoZeigen(videoId: string, path: string, target: string): Promise<void> {
   let res: { type?: string; message?: string } | undefined;
@@ -89,10 +101,10 @@ export function videoLaden(
   height: number,
   target: string,
   onProgress: (p: FallbackProgress) => void,
-): { promise: Promise<string>; cancel: () => void } {
+): { promise: Promise<DownloadErgebnis>; cancel: () => void } {
   const port = chrome.runtime.connectNative(HOST_NAME);
-  const promise = new Promise<string>((auf, ab) => {
-    port.onMessage.addListener((msg: HostResponse & { path?: string }) => {
+  const promise = new Promise<DownloadErgebnis>((auf, ab) => {
+    port.onMessage.addListener((msg: HostResponse & Partial<DownloadErgebnis>) => {
       if (msg.type === "progress") {
         onProgress({
           stage: msg.stage ?? "download",
@@ -108,7 +120,7 @@ export function videoLaden(
       }
       if ((msg as { type?: string }).type === "downloaded") {
         port.disconnect();
-        auf((msg as { path?: string }).path || "");
+        auf({ path: msg.path ?? "", dir: msg.dir ?? "", name: msg.name ?? "" });
       }
     });
     port.onDisconnect.addListener(() => {

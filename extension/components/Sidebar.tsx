@@ -716,7 +716,7 @@ export function Sidebar({
     brichDownloadAb();
     const lauf = dlLauf.current;
     // Öffnen lädt nur die Formatliste – der Download selbst wartet auf den zweiten Klick.
-    setDl({ formate: null, fehler: "", hoehe: null, status: "wahl", fortschritt: "", pfad: "" });
+    setDl({ formate: null, fehler: "", hoehe: null, status: "wahl", fortschritt: "", pfad: "", ordner: "", name: "", ziel: "" });
     ask<VideoFormat[]>("videoFormats", { videoId })
       .then((formate) => {
         if (lauf !== dlLauf.current) return;
@@ -736,21 +736,41 @@ export function Sidebar({
       });
   }
 
-  function starteDownload() {
+  async function starteDownload() {
     if (!__FALLBACK__ || !dl || dl.hoehe == null) return;
     const lauf = dlLauf.current;
-    setDl({ ...dl, status: "laeuft", fehler: "", fortschritt: "" });
-    const job = startDownload(videoId, dl.hoehe, (p) => {
+    const hoehe = dl.hoehe;
+    let ziel: string | undefined;
+    if (settings?.downloadAsk) {
+      // Ordnerdialog des Systems über den Helfer; Abbruch dort heisst: kein Download.
+      setDl({ ...dl, status: "laeuft", fehler: "", fortschritt: t("downloadChoosing") });
+      try {
+        const gewaehlt = await ask<string | null>("chooseFolder");
+        if (lauf !== dlLauf.current) return;
+        if (!gewaehlt) {
+          setDl((d) => d && { ...d, status: "wahl", fortschritt: "" });
+          return;
+        }
+        ziel = gewaehlt;
+      } catch (e) {
+        if (lauf === dlLauf.current)
+          setDl((d) => d && { ...d, status: "wahl", fehler: String((e as Error)?.message ?? e) });
+        return;
+      }
+    }
+    setDl((d) => d && { ...d, status: "laeuft", fehler: "", fortschritt: "" });
+    const job = startDownload(videoId, hoehe, (p) => {
       if (lauf !== dlLauf.current) return;
       setDl((d) => d && {
         ...d,
         fortschritt: `${p.message}${p.percent != null ? ` (${p.percent}%)` : ""}`,
       });
-    });
+    }, ziel);
     dlRef.current = job;
     job.promise
-      .then((pfad) => {
-        if (lauf === dlLauf.current) setDl((d) => d && { ...d, status: "fertig", pfad });
+      .then((erg) => {
+        if (lauf === dlLauf.current)
+          setDl((d) => d && { ...d, status: "fertig", pfad: erg.path, ordner: erg.dir, name: erg.name, ziel: ziel ?? "" });
       })
       .catch((e) => {
         if (lauf === dlLauf.current)
@@ -899,7 +919,7 @@ export function Sidebar({
             setDl(null);
           }}
           onReveal={(pfad) =>
-            void ask("revealFile", { videoId, path: pfad })
+            void ask("revealFile", { videoId, path: pfad, target: dl.ziel })
               .then(() => setDl((d) => d && { ...d, fehler: "" }))
               .catch((e) => setDl((d) => d && { ...d, fehler: String(e?.message ?? e) }))
           }
@@ -1380,6 +1400,11 @@ interface DownloadLage {
   status: "wahl" | "laeuft" | "fertig";
   fortschritt: string;
   pfad: string;
+  /** Ordner mit ~ und Dateiname getrennt, wie der Helfer sie meldet. */
+  ordner: string;
+  name: string;
+  /** Absoluter Ordner aus dem Ordnerdialog; leer heisst Einstellung bzw. Downloads. */
+  ziel: string;
 }
 
 /**
@@ -1456,13 +1481,24 @@ function DownloadDialog({
       )}
 
       {lage.status === "fertig" && (
-        <div className="mb-3 flex items-start gap-2">
-          <p className="min-w-0 flex-1 break-all">
-            {t("downloadDone")}: <span className="font-mono text-xs">{lage.pfad}</span>
-          </p>
-          <Button size="iconSm" variant="outline" title={t("downloadReveal")} onClick={() => onReveal(lage.pfad)}>
-            <FolderOpen />
-          </Button>
+        <div className="mb-3">
+          <p className="font-medium">{t("downloadDone")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("downloadFolder")}</p>
+          <p className="break-all font-mono text-xs">{lage.ordner}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("downloadFile")}</p>
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 break-all font-mono text-xs">{lage.name}</p>
+            <Button size="iconSm" variant="outline" title={t("downloadReveal")} onClick={() => onReveal(lage.pfad)}>
+              <FolderOpen />
+            </Button>
+          </div>
+          <button
+            type="button"
+            className="mt-3 cursor-pointer text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            onClick={() => void chrome.runtime.sendMessage({ type: "openOptions" })}
+          >
+            {t("downloadFolderAdjust")}
+          </button>
         </div>
       )}
 

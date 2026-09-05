@@ -1,4 +1,4 @@
-import type { ChatMessage, HelperJob, ReasoningEffort, Transcript, Usage } from "./types";
+import type { ChatMessage, HelperJob, ReasoningEffort, Transcript, Usage, DownloadErgebnis } from "./types";
 import type { FallbackProgress } from "./fallback";
 
 /**
@@ -123,17 +123,18 @@ export function startDownload(
   videoId: string,
   height: number,
   onProgress: (p: FallbackProgress) => void,
-): { promise: Promise<string>; cancel: () => void } {
+  target?: string,
+): { promise: Promise<DownloadErgebnis>; cancel: () => void } {
   const port = chrome.runtime.connect({ name: "download" });
   let settled = false;
 
-  const promise = new Promise<string>((resolve, reject) => {
+  const promise = new Promise<DownloadErgebnis>((resolve, reject) => {
     port.onMessage.addListener((msg: any) => {
       if (msg?.type === "progress") {
         onProgress({ stage: msg.stage, message: msg.message, percent: msg.percent });
       } else if (msg?.type === "downloaded") {
         settled = true;
-        resolve(String(msg.path ?? ""));
+        resolve({ path: String(msg.path ?? ""), dir: String(msg.dir ?? ""), name: String(msg.name ?? "") });
       } else if (msg?.type === "error") {
         settled = true;
         reject(new Error(msg.message));
@@ -144,7 +145,7 @@ export function startDownload(
     });
   });
 
-  port.postMessage({ type: "start", videoId, height });
+  port.postMessage({ type: "start", videoId, height, target });
   return { promise, cancel: () => port.disconnect() };
 }
 

@@ -44,6 +44,8 @@ export function Options() {
   const [stt, setStt] = React.useState<SttModelInfo[] | null>(null);
   const [keyStatus, setKeyStatus] = React.useState<KeyStatus | null>(null);
   const [testing, setTesting] = React.useState(false);
+  const [ordnerFehler, setOrdnerFehler] = React.useState("");
+  const [ordnerDialog, setOrdnerDialog] = React.useState(false);
   const [host, setHost] = React.useState<{ ok: boolean; detail: string } | null>(null);
   const [cacheMeldung, setCacheMeldung] = React.useState<string | null>(null);
 
@@ -537,13 +539,38 @@ export function Options() {
 
           <Field
             label="Videodownload: Zielordner"
-            hint="Leer lassen für den Downloads-Ordner des Systems. Der Ordner muss vorhanden sein."
+            hint="Leer lassen für den Downloads-Ordner des Systems. Gewählt wird über den Ordnerdialog des Systems, nicht getippt."
           >
-            <Input
-              value={s.downloadTarget}
-              placeholder="~/Downloads"
-              onChange={(e) => patch({ downloadTarget: e.target.value })}
-            />
+            <div className="flex items-center gap-2">
+              <Input value={s.downloadTarget} placeholder="Downloads-Ordner des Systems" readOnly />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={ordnerDialog}
+                onClick={() => {
+                  // Gesperrt, solange der Dialog offen ist: ein zweiter Klick öffnete sonst
+                  // einen zweiten Dialog, und der zuletzt geschlossene gewönne.
+                  setOrdnerDialog(true);
+                  setOrdnerFehler("");
+                  void ask<string | null>("chooseFolder")
+                    .then((p) => p && patch({ downloadTarget: p }))
+                    .catch((e) => setOrdnerFehler(String(e?.message ?? e)))
+                    .finally(() => setOrdnerDialog(false));
+                }}
+              >
+                Ordner wählen …
+              </Button>
+              {s.downloadTarget && (
+                <Button variant="ghost" size="sm" onClick={() => patch({ downloadTarget: "" })}>
+                  Standard
+                </Button>
+              )}
+            </div>
+            {ordnerFehler && <p className="mt-1 text-xs text-destructive">{ordnerFehler}</p>}
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <Switch checked={s.downloadAsk} onCheckedChange={(v) => patch({ downloadAsk: v })} />
+              Vor jedem Download nach dem Zielordner fragen
+            </label>
           </Field>
 
           <Field label="Voraussetzungen installieren">

@@ -96,7 +96,7 @@ echo
 echo "== 2d. Videodownload (§4a): kein Weg zum Helfer im Store-Bundle =="
 # Gesucht sind die Funktionen der Bruecke und der Port-Handler im Service Worker, nicht
 # die i18n-Texte des Dialogs – die sind Text, kein Code (siehe 2b).
-DOWNLOAD='videoFormate|videoLaden|kind: "download"|kind: "formats"|kind: "reveal"|videoZeigen|function handleDownloadPort|function startDownload'
+DOWNLOAD='videoFormate|videoLaden|kind: "download"|kind: "formats"|kind: "reveal"|videoZeigen|ordnerWaehlen|type: "chooseFolder"|function handleDownloadPort|function startDownload'
 DHITS=$(grep -rInE "$DOWNLOAD" "$OUT" --include='*.js' 2>/dev/null || true)
 if [ -n "$DHITS" ]; then
   echo "  FEHLGESCHLAGEN – Download-Code im Store-Bundle:"

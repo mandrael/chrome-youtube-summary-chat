@@ -149,7 +149,11 @@ const de = {
   downloadLegal:
     "Nur für eigene, gemeinfreie oder lizenzfreie Inhalte – bei allem anderen ist der Download in Deutschland und Österreich nicht risikofrei.",
   downloadStart: "Herunterladen",
-  downloadDone: "Gespeichert unter",
+  downloadDone: "Gespeichert",
+  downloadFolder: "Ordner",
+  downloadFile: "Datei",
+  downloadFolderAdjust: "Downloadordner anpassen",
+  downloadChoosing: "Ordnerdialog ist offen …",
   downloadReveal: "Im Ordner zeigen",
   close: "Schliessen",
 } as const;
@@ -290,7 +294,11 @@ const en: Record<Keys, string> = {
   downloadLegal:
     "Only for your own, public-domain or royalty-free content – for anything else the download is not free of legal risk.",
   downloadStart: "Download",
-  downloadDone: "Saved to",
+  downloadDone: "Saved",
+  downloadFolder: "Folder",
+  downloadFile: "File",
+  downloadFolderAdjust: "Change download folder",
+  downloadChoosing: "Folder dialog is open …",
   downloadReveal: "Show in folder",
   close: "Close",
 };

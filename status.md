@@ -100,6 +100,24 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.5.0 – Ordnerdialog, Zielordner-Anzeige mit ~, „vor jedem Download fragen"
+
+Michaels Vorgaben nach dem ersten echten Download: Ordner und Dateiname getrennt
+anzeigen, Ordner ab `~`, darunter klein „Downloadordner anpassen" mit Sprung zu den
+Einstellungen; in den Einstellungen ein Dateiwähler statt Tippfeld („niemand tippt Pfad
+ein und das ist Risiko") und ein Schalter „vor jedem Download fragen". Umsetzung: Der
+Host liefert im `downloaded`-Ergebnis `dir` (per `kurzer_pfad()`, `~/Downloads`) und
+`name`; neue Host-Nachricht `chooseFolder` → `choose_folder()` mit dem Dialog des Systems
+(`osascript … choose folder`, PowerShell `FolderBrowserDialog`, `zenity --directory`),
+Abbruch = `path null`, kein Fehler. Eine Chrome-Extension kann keinen absoluten Pfad aus
+`<input webkitdirectory>` lesen, deshalb zwingend über den Helfer. Optionsseite:
+Zielordner nur lesbar, „Ordner wählen …", „Standard" (leer = Downloads des Systems),
+Schalter `downloadAsk`. Sidebar: bei `downloadAsk` erst der Dialog, dann der Download mit
+dem gewählten Ordner als `target` (schlägt die Einstellung im Service Worker). Nach
+„Gespeichert" zwei Zeilen (Ordner, Datei), Ordner-Knopf daneben, darunter der Link zu den
+Einstellungen. Test 2d prüft `ordnerWaehlen` und `type: "chooseFolder"`. Ungeprüft: die
+Dialoge selbst (würden hier ein Fenster nach vorn holen), Windows und Linux.
+
 ### 05.09.2026: Version 0.4.1 – ein gemeinsamer Fortschritt über Ton und Bild
 
 Michaels Wunsch: Hinweise „Ton wird geladen", dann „Bild wird geladen", dann

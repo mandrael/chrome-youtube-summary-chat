@@ -86,6 +86,15 @@ export default defineBackground(() => {
             sendResponse({ ok: true, data: await videoFormate(String(msg.videoId)) });
             break;
           }
+          case "chooseFolder": {
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const { ordnerWaehlen } = await import("@/lib/fallback");
+            sendResponse({ ok: true, data: await ordnerWaehlen() });
+            break;
+          }
           case "revealFile": {
             if (!__FALLBACK__) {
               sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
@@ -93,7 +102,8 @@ export default defineBackground(() => {
             }
             const { videoZeigen } = await import("@/lib/fallback");
             const { downloadTarget } = await getSettings();
-            await videoZeigen(String(msg.videoId), String(msg.path), downloadTarget);
+            // Bei „vor jedem Download fragen" liegt die Datei im ad hoc gewählten Ordner.
+            await videoZeigen(String(msg.videoId), String(msg.path), String(msg.target || downloadTarget));
             sendResponse({ ok: true, data: null });
             break;
           }
@@ -164,7 +174,7 @@ function handleDownloadPort(port: chrome.runtime.Port) {
   });
 
   port.onMessage.addListener((raw: unknown) => {
-    const req = raw as { type: string; videoId: string; height: number };
+    const req = raw as { type: string; videoId: string; height: number; target?: string };
     if (req.type !== "start") return;
 
     void (async () => {
@@ -173,11 +183,12 @@ function handleDownloadPort(port: chrome.runtime.Port) {
         const { downloadTarget } = await getSettings();
         // Trennung während der beiden awaits: dann darf der Host gar nicht erst starten.
         if (abgebrochen) return;
-        const job = videoLaden(req.videoId, req.height, downloadTarget, (p) =>
+        // Ein eben im Dialog gewählter Ordner schlägt die Einstellung.
+        const job = videoLaden(req.videoId, req.height, req.target || downloadTarget, (p) =>
           port.postMessage({ type: "progress", ...p }),
         );
         cancel = job.cancel;
-        port.postMessage({ type: "downloaded", path: await job.promise });
+        port.postMessage({ type: "downloaded", ...(await job.promise) });
       } catch (e) {
         port.postMessage({ type: "error", message: String((e as Error)?.message ?? e) });
       } finally {

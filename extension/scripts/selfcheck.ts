@@ -22,7 +22,7 @@ import {
 } from "../lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
-import { deltaText, verarbeiteSse, type MistralChunk } from "../lib/mistral.ts";
+import { deltaText, modelleAusListe, verarbeiteSse, type MistralChunk, type RawModel } from "../lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
@@ -228,6 +228,40 @@ check("SSE-Parser verträgt zerschnittene Ereignisse, Kommentare und [DONE]", ()
   assert.equal(rest, null, "[DONE] beendet den Strom");
   assert.deepEqual(gesehen, ["Hal", "x", "yz", "lo"]);
   assert.deepEqual(usage, [3]);
+});
+
+check("Mistral-Modellliste: Aliase ergeben je Modell einen Eintrag, nie eine leere Liste", () => {
+  const chat = { completion_chat: true };
+  const data: RawModel[] = [
+    // symmetrisch (der Fall vom 05.09.2026, der alte Filter strich alles)
+    { id: "mistral-small-2506", aliases: ["mistral-small-latest"], capabilities: chat, created: 2 },
+    { id: "mistral-small-latest", aliases: ["mistral-small-2506"], capabilities: chat, created: 2 },
+    // einseitig: nur der Alias nennt den Grund
+    { id: "mistral-medium-latest", aliases: ["mistral-medium-3-5"], capabilities: chat, created: 3 },
+    { id: "mistral-medium-3-5", aliases: [], capabilities: chat, created: 3 },
+    // einseitig andersherum, dazu ein nummernloser Kurzname
+    { id: "codestral-2508", aliases: ["codestral-latest", "codestral"], capabilities: chat, created: 4 },
+    { id: "codestral-latest", capabilities: chat, created: 4 },
+    { id: "codestral", capabilities: chat, created: 4 },
+    // ein Alias auf zwei Grundmodelle: beide bleiben
+    { id: "ministral-8b-2410", aliases: ["ministral-8b-latest"], capabilities: chat, created: 1 },
+    { id: "ministral-8b-2512", aliases: ["ministral-8b-latest"], capabilities: chat, created: 5 },
+    { id: "ministral-8b-latest", aliases: ["ministral-8b-2512"], capabilities: chat, created: 5 },
+    { id: "codestral-embed", aliases: [], capabilities: { completion_chat: false } },
+    { id: "ohne-alias", capabilities: chat, created: 0 },
+  ];
+  const ids = modelleAusListe(data).map((m) => m.id);
+  assert.deepEqual(ids, [
+    "ministral-8b-2512",
+    "codestral-2508",
+    "mistral-medium-3-5",
+    "mistral-small-2506",
+    "ministral-8b-2410",
+    "ohne-alias",
+  ]);
+  // Nur bewegliche Namen ohne versionierten Partner: sie bleiben, statt zu verschwinden.
+  const nurLatest: RawModel[] = [{ id: "mistral-neu-latest", aliases: ["mistral-neu"], capabilities: chat }];
+  assert.deepEqual(modelleAusListe(nurLatest).map((m) => m.id), ["mistral-neu-latest"]);
 });
 
 check("Mistral-Delta ohne Inhalt ergibt leeren Text", () => {

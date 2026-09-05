@@ -54,6 +54,14 @@ bekommt YouTube seine eigene Breite zurück. Der Regler in den Einstellungen tut
 Wem die Schrift zu klein ist, stellt dort die **Schriftgrösse der Oberfläche** höher
 (Default 110 %, Bereich 90–220 %).
 
+**Modell wechseln im Chat:** Unter dem Eingabefeld steht klein das aktive Modell. Ein
+Klick öffnet die empfohlene Auswahl mit Marken (schnell, günstig, schlau), Kontextgrösse
+und dem ungefähren Preis je Anfrage; „Alle Modelle …“ führt in die Einstellungen. Die
+Empfehlung ist gemessen, nicht geraten: jedes Modell hat am 05.09.2026 mit dem
+Anfragekörper der Erweiterung und einem Prompt von rund 65.000 Token geantwortet,
+„schnell“ heisst erstes Token nach höchstens 7 s. Bei Mistral AI führt der Knopf in die
+Einstellungen, weil die Modellliste dort geladen wird.
+
 **Das Symbol in der Werkzeugleiste** holt die Sidebar auf einer Videoseite hervor oder
 klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
 die Einstellungen.
@@ -62,8 +70,8 @@ Die dreizehn Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere
 nimmt das ganze Video, die mittlere schneidet einen Zweck heraus, die untere hilft beim
 Aneignen und Weiterverfolgen:
 
-- **Fazit** – was behauptet wird und wozu es kommt, ein bis zwei Absätze, ohne Zeitstempel.
-- **Kernaussagen** – Hauptaussage plus die drei bis fünf tragenden Punkte mit Begründung.
+- **In Kürze** – was behauptet wird und wozu es kommt, höchstens sechs Sätze, ohne Zeitstempel.
+- **Zusammenfassung** – drei bis sechs Absätze, je einer pro Thema, das Thema fett vorneweg.
 - **Ausführlich** – jede Sachfrage als eigener Abschnitt, mit Zahlen, Namen, Zeitstempeln.
 - **Kapitel** – Sprungmarken entlang des Videos, mit Aussage statt Themennamen.
 - **Fakten** – Zahlen, Namen, Daten und Zitate als Liste, je Angabe ein Zeitstempel als Beleg.
@@ -75,7 +83,7 @@ Aneignen und Weiterverfolgen:
   „Alternativen" und „Nicht geprüft", soweit das Video sie hergibt.
 - **Vergleich** – stellt die im Video verglichenen Dinge als Tabelle gegenüber, dazu
   eine Kurzfassung je Seite und der eine Unterschied, an dem eine Entscheidung hängt.
-  Vergleicht das Video nichts, sagt die Antwort das und bietet die Kernaussagen an.
+  Vergleicht das Video nichts, sagt die Antwort das und bietet die Zusammenfassung an.
 - **Begriffe** – Fachbegriffe, Methoden und Verfahren mit der Erklärung, die der Sprecher
   selbst gibt; erklärt er einen Begriff nicht, steht das da, statt Wissen zu ergänzen.
 - **Verweise** – Bücher, Studien, Personen, Werkzeuge und Websites, die genannt werden,

@@ -138,6 +138,15 @@ export default defineBackground(() => {
 
 function handleChatPort(port: chrome.runtime.Port) {
   const controller = new AbortController();
+  // Chrome beendet einen MV3-Service-Worker nach 30 s ohne Ereignis; ein laufender
+  // fetch zählt nicht, Port-Nachrichten und API-Aufrufe schon. Bis zum ersten Token
+  // fliesst aber nichts über den Port – bei langem Transkript und Denkmodell kann das
+  // länger als 30 s dauern, dann stirbt der Worker mitten im Stream und die Sidebar
+  // meldet „Verbindung zum Hintergrundprozess verloren". Der Aufruf alle 20 s setzt
+  // den Zähler zurück (developer.chrome.com, Service-Worker-Lifecycle).
+  let wach: ReturnType<typeof setInterval> | undefined;
+  let gestartet = false;
+  port.onDisconnect.addListener(() => clearInterval(wach));
   // Trennt der Nutzer den Port (Abbrechen-Knopf, Videowechsel, Tab zu), stirbt der
   // laufende Request mit – sonst zahlt er für eine Antwort, die niemand mehr liest.
   port.onDisconnect.addListener(() => controller.abort());
@@ -145,6 +154,11 @@ function handleChatPort(port: chrome.runtime.Port) {
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as ChatPortRequest;
     if (req.type !== "start") return;
+    // Ein Port, eine Anfrage: ein zweites "start" würde einen zweiten bezahlten Request
+    // starten, dessen Antwort sich mit der ersten auf demselben Port mischt.
+    if (gestartet) return;
+    gestartet = true;
+    wach = setInterval(() => void chrome.runtime.getPlatformInfo(), 20_000);
 
     void (async () => {
       try {
@@ -194,6 +208,7 @@ function handleChatPort(port: chrome.runtime.Port) {
           message: String((e as Error)?.message ?? e),
         });
       } finally {
+        clearInterval(wach);
         try {
           port.disconnect();
         } catch {

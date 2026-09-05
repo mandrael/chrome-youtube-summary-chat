@@ -319,3 +319,49 @@ Hier ist die strukturierte Recherche für einen Einzelunternehmer in Österreich
 9. **Aleph Alpha:** *PhariaAI & Responses API Specification*, [aleph-alpha.com](https://aleph-alpha.com/), Stand: 2026.
 10. **Microsoft Azure:** *Azure OpenAI Service EU Data Boundary, Privacy & Endpoints*, [learn.microsoft.com/azure/ai-services/openai/](https://learn.microsoft.com/azure/ai-services/openai/), Stand: 2026.
 11. **Google Cloud:** *Vertex AI OpenAI Compatibility & Data Residency in Europe*, [cloud.google.com/vertex-ai/docs](https://cloud.google.com/vertex-ai/docs), Stand: 2026.
+
+
+---
+
+## Nachtrag 05.09.2026 (Abend): Preise global vs. EU (agy, effort medium)
+
+Auftrag: konkrete Preise pro 1 Mio. Tokens und der Aufpreis des EU-Endpunkts. Ungeprüft gegen die Seite selbst; auffällig ist, dass „Mistral Large 3“ billiger als „Medium 3.5“ steht.
+
+### A) Mistral AI API-Preise für Chat-/Generierungsmodelle
+
+Stand: **05.09.2026** – Quelle: [https://mistral.ai/pricing/api/](https://mistral.ai/pricing/api/) (Standard-Tarif in USD / EUR pro 1 Million Tokens):
+
+| Modell | Modell-ID | Input (pro 1M Tokens) | Output (pro 1M Tokens) | Quelle |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mistral Medium 3.5** | `mistral-medium-latest` | **$1.50** (1,25 €) | **$7.50** (6,40 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **Mistral Small 4** | `mistral-small-latest` | **$0.15** (0,12 €) | **$0.60** (0,50 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **Mistral Large 3** | `mistral-large-latest` | **$0.50** (0,44 €) | **$1.50** (1,30 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **Codestral** | `codestral-latest` | **$0.30** (0,26 €) | **$0.90** (0,79 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **Ministral 3 (3B)** | `ministral-3b-latest` | **$0.10** (0,088 €) | **$0.10** (0,088 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **Ministral 3 (8B)** | `ministral-8b-latest` | **$0.15** (0,13 €) | **$0.15** (0,13 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **Ministral 3 (14B)** | `ministral-14b-latest` | **$0.20** (0,18 €) | **$0.20** (0,18 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+| **GLM 5.2** | `zai-glm-5-2` | **$1.40** (1,19 €) *(Cached: $0.14)* | **$4.40** (3,74 €) | [mistral.ai/pricing/api](https://mistral.ai/pricing/api/) |
+
+*(Hinweis: Modelle wie „Magistral“ oder „Devstral“ existieren im offiziellen Mistral-Portfolio nicht und werden auf der Preisliste nicht geführt.)*
+
+---
+
+### B) Regional Inference / EU-Endpunkt (`api.eu.mistral.ai`)
+
+#### 1. Aufpreis & Dokumentation
+* **Dokumentationsseite:** [https://docs.mistral.ai/inference/regional-inference](https://docs.mistral.ai/inference/regional-inference)
+* **Aufpreis:** **10 %** (Multiplikator **1,1×** der Standard-Listenpreise).
+* **Exaktes Zitat:**
+  > *"Regional inference is billed at **1.1× standard list pricing** (a 10% upcharge) for input tokens, output tokens, cached reads, and cache writes."*  
+  *(Quelle: [docs.mistral.ai/inference/regional-inference](https://docs.mistral.ai/inference/regional-inference))*
+
+---
+
+#### 2. Vergleich Global (`api.mistral.ai`) vs. EU (`api.eu.mistral.ai`)
+
+| Modell | Token-Typ | Global (`api.mistral.ai`) | EU-Endpunkt (`api.eu.mistral.ai`, Faktor 1.1) | Quelle |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mistral Medium 3.5** | **Input** | **$1.50** / 1M (1,25 €) | **$1.65** / 1M (1,375 €) | [docs.mistral.ai](https://docs.mistral.ai/inference/regional-inference) / [mistral.ai](https://mistral.ai/pricing/api/) |
+| | **Output** | **$7.50** / 1M (6,40 €) | **$8.25** / 1M (7,040 €) | [docs.mistral.ai](https://docs.mistral.ai/inference/regional-inference) / [mistral.ai](https://mistral.ai/pricing/api/) |
+| **Mistral Small 4** | **Input** | **$0.15** / 1M (0,12 €) | **$0.165** / 1M (0,132 €) | [docs.mistral.ai](https://docs.mistral.ai/inference/regional-inference) / [mistral.ai](https://mistral.ai/pricing/api/) |
+| | **Output** | **$0.60** / 1M (0,50 €) | **$0.660** / 1M (0,550 €) | [docs.mistral.ai](https://docs.mistral.ai/inference/regional-inference) / [mistral.ai](https://mistral.ai/pricing/api/) |

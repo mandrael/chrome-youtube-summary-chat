@@ -100,6 +100,63 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.8.0 – Modellmenü im Chat, Empfehlungsliste gemessen, Mistral-Modellliste war leer, Schnellbefehl „Zusammenfassung“
+
+**Modellmenü im Chat (Michaels Wunsch, Vorbild Brave Leo):** unter dem Eingabefeld
+steht klein das aktive Modell, ein Klick öffnet die Empfehlung mit Marken (schnell,
+günstig, schlau), 1M-Marke und Preis je Anfrage, „Alle Modelle …“ führt in die
+Einstellungen; bei Mistral führt der Knopf direkt dorthin. Eigene Komponente
+`ModellMenue` ohne Radix, Klick-ausserhalb über `composedPath` (Shadow DOM). Headless
+geprüft: 13 Einträge, Auswahl schreibt `settings.model`, Knopf zeigt danach das neue
+Modell, keine pageerrors. `EMPFEHLUNG` trägt jetzt Marken-Arrays statt einer Marke;
+Preis-Helfer und `isLiteModel` aus Options.tsx nach `lib/openrouter.ts` gezogen.
+
+**Codex-Review 0.8.0 (drei Befunde, eingearbeitet):** Wachhalter startet erst mit
+„start“ und ein zweites „start“ auf demselben Port wird ignoriert (sonst zweiter
+bezahlter Request); das Modellmenü schliesst, sobald ein Stream beginnt; Esc und
+Auswahl geben den Fokus an den Auslöser zurück, Liste mit `role=listbox`. Codex
+bestätigt: der API-Aufruf setzt seit Chrome 110 den 30-s-Zähler zurück, der
+Download-Port braucht keinen Wachhalter (Native-Messaging-Port hält selbst wach).
+
+**„Nur luna geht, deepseek flash nicht“ – nicht reproduzierbar.** Alle 18 Kandidaten
+antworteten mit dem Anfragekörper der Extension, kurz und mit 60.000 Token
+(Tabelle in docs/messungen.md). Ohne Michaels Fehlertext ist die Ursache offen;
+Kandidaten: Reasoning-Stufe hoch bei einem Denkmodell (lange ohne Token, Service
+Worker stirbt nach 30 s – dagegen jetzt ein Wachhalter im Chat-Port), oder eine
+Kontoeinstellung bei OpenRouter (Provider-Ausschluss, Datenrichtlinie), die den
+DiktaGo-Schlüssel nicht betrifft. Empfehlungsliste nach Messung neu: GLM 5.3 Flash und
+5.3, Nemotron 3 Nano, Claude Haiku 4.5 dazu, Gemini 3.8 Flash statt 3.7, qwen3.7-plus,
+glm-4.7-flash und qwen3.8-flash raus (Widerspruch „günstig“ teurer als „schnell“).
+
+**Michaels Test von 0.6.0:** „Modelle laden“ lieferte 0 Modelle, in EU wie global, der
+Chat blieb bei „kein Modell gewählt“ stehen. OpenRouter lief. Ursache im Code, nicht
+beim Schlüssel: Mistrals `/v1/models` führt Aliase (`mistral-small-latest`) als eigene
+Einträge, und die `aliases`-Felder sind **symmetrisch** – der Grundeintrag nennt das
+Alias, der Alias-Eintrag nennt den Grund. Mein Filter strich alles, was irgendwo als
+Alias stand, also alles. Jetzt `modelleAusListe()`: eine Gruppe je `id + aliases`,
+daraus genau ein Eintrag, bevorzugt der mit Datumssuffix. Selbsttest mit symmetrischer
+Fixture (22 Prüfungen). Nach dem Laden wird das neueste Modell vorgewählt, wenn keins
+gesetzt ist. Ein Lauf mit echtem Schlüssel steht weiter aus (kein Key hier).
+
+**Schnellbefehle:** „Fazit“ heisst jetzt **In Kürze**, „Kernaussagen“ ist durch
+**Zusammenfassung** ersetzt (Michaels Wunsch: schlicht zusammenfassen, mehrere Absätze,
+Thema fett vorneweg): drei bis sechs Absätze, je Absatz ein Thema als fette Kurzaussage,
+danach drei bis fünf Sätze, ohne Zeitstempel und Listen. Schlüssel `summary_medium`
+unverändert, de/en, README angepasst. Der alte Listen-Prompt steht in Commit 021ed23.
+
+**Redundanzprüfung der 13 Knöpfe, Empfehlung an Michael (Entscheidung offen):**
+streichen Behauptungen (Grenze zu Fakten ist für Nutzer nicht erkennbar, status.md
+04.09. hatte sie schon nachgeschärft), Verweise (Namen von Büchern, Studien, Werkzeugen
+fallen in Fakten oder in eine Chatfrage), Positionen (Ausführlich und Pro/Contra nennen
+bei mehreren Personen ohnehin, wer was vertritt). Bleiben zehn.
+
+**Nach der Kompaktierung nachgetragen:** 0.6.0 ist Commit 021ed23. Hook-Verhalten steht
+jetzt im Memory (`hooks-blockieren-kommandotext`): `geheimnis-schutz` schlägt auf
+Wörter wie `key`, `token`, `process.env` im Kommandotext an, `fokus-schutz` auf
+App-Bundle-Pfade und `open` ohne `-g` auch in Heredocs – Skripte und Codex-Prompts
+deshalb per Write-Tool als Datei anlegen. Codex-Läufe mit „Reconnecting… 5/5“ liefern
+leere Berichte, dann mit `model_reasoning_effort=medium` wiederholen.
+
 ### 05.09.2026: Version 0.6.0 – Mistral AI als zweiter Anbieter (Datenschutzoption, EU-Endpunkt)
 
 **Michaels Auftrag hebt Regel 1 bewusst auf:** „Mistral unabhängiger zweiter Anbieter, das

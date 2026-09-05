@@ -32,33 +32,78 @@ const MIN_CONTEXT = 128_000;
 export const ONE_M_CONTEXT = 1_000_000;
 
 /**
- * Kuratierte Auswahl, Stand 02.09.2026. Der zweite Wert ist die Marke in der Liste,
+ * Kuratierte Auswahl, Stand 05.09.2026. Der zweite Wert sind die Marken in der Liste,
  * die Reihenfolge hier ist die Reihenfolge dort.
  *
  * Massstab ist diese Aufgabe, nicht die Bestenliste: ein langes Transkript lesen,
  * Fragen dazu beantworten, nichts erfinden. Denkmodelle wie o1-pro (5,70 $ je Anfrage)
  * oder GPT-5.5 Pro (1,26 $) kosten hier das Hundert- bis Siebenhundertfache der
  * Empfehlung, ohne besser zu antworten – sie stehen deshalb nicht oben, sind über den
- * Filter aber weiter erreichbar. Ebenso fällt jede ältere Generation heraus, deren
- * Nachfolger dasselbe kostet: Gemini 3.6 Flash und 3.7 Flash liegen beide bei
- * 0,0300 $ mit gleichem Kontextfenster.
+ * Filter aber weiter erreichbar.
+ *
+ * Jeder Eintrag ist am 05.09.2026 mit dem Anfragekörper der Extension gemessen worden
+ * (Selbsttest-Skript, Prompt mit rund 65.000 Token, reasoning minimal):
+ * „schnell" heisst erstes Token nach höchstens 7 s, „günstig" heisst Eingabe höchstens
+ * 0,10 $ je Million Token. Herausgefallen: qwen3.7-plus (21 s bis zum ersten Token),
+ * glm-4.7-flash (32 s), qwen3.8-flash (teurer und langsamer als qwen3.7-flash, die
+ * alte Marke „günstig" widersprach dem Preis daneben). Gemini 3.7 Flash ist durch
+ * 3.8 Flash ersetzt (gleicher Preis, schneller). GLM, Nemotron Nano und Claude Haiku
+ * sind Brave Leos Auswahl entlehnt; alle drei antworten hier.
  *
  * Ein Eintrag, den OpenRouter nicht mehr führt, verschwindet von selbst – gerendert
  * wird nur, was auch in der geladenen Liste steht.
  */
-export const EMPFEHLUNG: [id: string, marke: string][] = [
-  ["openai/gpt-5.6-luna", "Standard"],
-  ["qwen/qwen3.7-plus", "Sweet Spot"],
-  ["google/gemini-3.7-flash", "Sweet Spot"],
-  ["openai/gpt-5-nano", "günstig"],
-  ["deepseek/deepseek-v4-flash", "günstig"],
-  ["qwen/qwen3.8-flash", "günstig"],
-  ["qwen/qwen3.7-flash", "schnell"],
-  ["google/gemini-3.5-flash-lite", "schnell"],
-  ["openai/gpt-5.6-sol", "schlau"],
-  ["anthropic/claude-sonnet-5", "schlau"],
-  ["anthropic/claude-opus-5", "schlau"],
+export const EMPFEHLUNG: [id: string, marken: string[]][] = [
+  ["openai/gpt-5.6-luna", ["Standard", "schnell"]],
+  ["google/gemini-3.8-flash", ["schnell"]],
+  ["google/gemini-3.5-flash-lite", ["schnell"]],
+  ["z-ai/glm-5.3-flash", ["günstig", "schnell"]],
+  ["nvidia/nemotron-3-nano-30b-a3b", ["günstig", "schnell"]],
+  ["openai/gpt-5-nano", ["günstig", "schnell"]],
+  ["qwen/qwen3.7-flash", ["günstig"]],
+  ["deepseek/deepseek-v4-flash", ["günstig"]],
+  ["anthropic/claude-haiku-4.5", ["schnell"]],
+  ["z-ai/glm-5.3", ["schlau"]],
+  ["openai/gpt-5.6-sol", ["schlau"]],
+  ["anthropic/claude-sonnet-5", ["schlau"]],
+  ["anthropic/claude-opus-5", ["schlau"]],
 ];
+
+/** Die Empfehlung, soweit die geladene Liste sie führt – in ihrer Reihenfolge. */
+export function empfohleneModelle(liste: ModelInfo[]): (readonly [ModelInfo, string[]])[] {
+  return EMPFEHLUNG.flatMap(([id, marken]) => {
+    const m = liste.find((k) => k.id === id);
+    return m ? [[m, marken] as const] : [];
+  });
+}
+
+/**
+ * Was eine Anfrage ungefähr kostet – 30.000 Token Transkript hinein, 2.000 heraus.
+ * Das Preispaar je Million verlangt Kopfrechnen, dieser Betrag nicht. Die Eingabe macht
+ * über 90 % davon aus; Reasoning-Tokens zählen als Ausgabe und können den Betrag bei
+ * hoher Stufe übersteigen.
+ */
+const ANFRAGE_EIN = 30_000;
+const ANFRAGE_AUS = 2_000;
+
+export function preisProAnfrage(m: ModelInfo): number | null {
+  if (m.pricePrompt == null) return null;
+  return m.pricePrompt * ANFRAGE_EIN + (m.priceCompletion ?? 0) * ANFRAGE_AUS;
+}
+
+export function formatPreis(usd: number): string {
+  if (usd === 0) return "gratis";
+  // Unter einem Cent in Cent, sonst stünde bei 0,0012 $ und 0,0084 $ dasselbe „< 0,01 $"
+  // – gerade in der Empfehlung liegen fast alle Werte dort. Zwei Nachkommastellen, weil
+  // drei sich als Tausender lesen lassen.
+  if (usd < 0.01) return `${(usd * 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} ¢`;
+  return `${usd.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+}
+
+/** Lite-Modelle bekommen Reasoning minimal vorbelegt – dort kostet es mehr, als es bringt. */
+export function isLiteModel(id: string): boolean {
+  return /lite|mini|flash-8b|haiku|small|nano/i.test(id);
+}
 
 /**
  * Rückfallliste, wenn /models nicht erreichbar ist. Ohne Preise – geraten wird hier

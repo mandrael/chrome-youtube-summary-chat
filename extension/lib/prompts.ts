@@ -123,28 +123,23 @@ export const PRESETS = {
       "Fließtext ohne Überschriften, ohne Aufzählung und ohne Zeitstempel – auch dann keine Sprungmarken, wenn das Transkript welche enthält. " +
       "Beginne direkt mit dem ersten Satz, ohne Vorspann.",
     summary_medium:
-      "Schreib für jemanden, der das Video nicht ansieht, aber die Aussagen nachvollziehen " +
-      "und einordnen will. " +
-      "Zuerst ein Absatz mit der Hauptaussage und dem Ergebnis, als Behauptung formuliert, " +
-      "nicht als Thema. " +
-      "Danach die drei bis fünf tragenden Punkte als Liste. Jeder Punkt beginnt fett mit " +
-      "der Aussage als ganzem Satz (nicht mit einem Schlagwort) und sagt in zwei bis drei " +
-      "Sätzen, womit sie begründet wird (Zahl, Beispiel, Beleg) und was der Sprecher " +
-      "selbst einschränkt oder offen lässt. " +
+      "Fasse das Video zusammen, für jemanden, der es nicht ansieht und in wenigen " +
+      "Minuten wissen will, was darin gesagt wird. " +
+      "Je Thema ein Absatz, höchstens sechs; hat das Video nur ein Thema, ist es ein " +
+      "Absatz, hat es mehr als sechs (Nachrichten, Podcast), kommen die sechs " +
+      "wichtigsten. Jeder Absatz beginnt fett mit dem " +
+      "Thema als kurzer Aussage von drei bis acht Wörtern, kein Schlagwort: nicht " +
+      "„**Akku**“, sondern „**Der Akku hält zwei Tage.**“ Danach in derselben Zeile drei " +
+      "bis fünf Sätze: was der Sprecher dazu sagt, womit er es begründet (Zahl, " +
+      "Beispiel, Beleg) und was er selbst einschränkt. " +
       "Reihenfolge nach Gewicht, nicht nach Ablauf im Video. Kommt ein Thema mehrfach " +
-      "vor, gehört alles dazu in einen Punkt. " +
-      "Zeitstempel in der Schreibweise des Transkripts nur dort, wo man hinspringen " +
-      "möchte: eine konkrete Zahl, ein " +
-      "Zitat, eine Demonstration. Höchstens eine Marke je Punkt, am Satzende; eine " +
-      "Klammer mit mehreren Stellen zählt als eine. " +
-      "Zum Schluss ein Satz, nur wenn es ihn im Video gibt: was der Sprecher dem " +
-      "Zuschauer rät oder wovor er warnt. Sonst entfällt er – der Absatz am Anfang hat " +
-      "das Ergebnis schon. " +
-      "Nicht: Aufzählung der behandelten Themen, Beschreibung des Gesprächsverlaufs, " +
-      "Wendungen wie „es wird diskutiert“. " +
-      "Der erste Absatz höchstens drei Sätze, jeder Punkt höchstens vier Sätze " +
-      "einschließlich des fetten, der Schluss einer; bei einem langen Video nicht mehr " +
-      "Punkte, sondern strenger ausgewählt. Beginne direkt mit dem Inhalt, ohne Vorspann.",
+      "vor, gehört alles dazu in einen Absatz. " +
+      "Keine Überschriften, keine Aufzählungen, keine Zeitstempel – auch dann keine " +
+      "Sprungmarken, wenn das Transkript welche enthält. " +
+      "Keine Wiedergabe des Ablaufs und keine Wendungen wie „das Video behandelt“, " +
+      "„es wird gesprochen über“, „der Moderator erklärt“. " +
+      "Weglassen: Begrüßung, Werbung, Anekdoten ohne Aussage. " +
+      "Beginne direkt mit dem ersten Absatz, ohne Vorspann.",
     summary_long:
       "Schreib für jemanden, der das Video durch den Text ersetzen will. " +
       "Zuerst ein Absatz mit Hauptaussage und Ergebnis, als Behauptung formuliert, " +
@@ -309,7 +304,7 @@ export const PRESETS = {
       "Zum Schluss eine Zeile **Unterschied, der zählt:** - der eine Punkt, an dem sich " +
       "eine Entscheidung zwischen ihnen entscheidet. " +
       "Vergleicht das Video gar nichts, schreib das in einem Satz und biete stattdessen " +
-      "die Kernaussagen an. " +
+      "die Zusammenfassung an. " +
       "Keine Zeitstempel in der Tabelle; wenn eine Aussage eine Sprungmarke verdient, " +
       "setz sie in die Kurzfassung.",
     glossary:
@@ -388,25 +383,23 @@ export const PRESETS = {
       "Prose, no headings, no bullet points and no timestamps – no jump marks even if the transcript carries them. " +
       "Start with the first sentence, no preamble.",
     summary_medium:
-      "Write for someone who will not watch the video but wants to follow and weigh " +
-      "the claims. " +
-      "First a paragraph with the main point and the conclusion, phrased as a claim, " +
-      "not a topic. " +
-      "Then the three to five points that carry it, as a list. Each item starts in bold " +
-      "with the claim as a full sentence (not a keyword) and says in two or three " +
-      "sentences what supports it (figure, example, evidence) and what the speaker " +
-      "qualifies or leaves open. " +
+      "Summarise the video for someone who will not watch it and wants to know in a " +
+      "few minutes what is said in it. " +
+      "One paragraph per topic, six at most; a video with a single topic gets one " +
+      "paragraph, one with more than six (news, podcast) gets the six most important. " +
+      "Each paragraph opens in bold " +
+      "with the topic as a short statement of three to eight words, not a keyword: not " +
+      "\"**Battery**\" but \"**The battery lasts two days.**\" Then, on the same line, three " +
+      "to five sentences: what the speaker says about it, what supports it (figure, " +
+      "example, evidence) and what the speaker qualifies. " +
       "Order by weight, not by position in the video. If a topic comes up more than " +
-      "once, everything about it goes into one item. " +
-      "Timestamps written the way the transcript writes them only where one would want " +
-      "to jump to: a specific figure, a " +
-      "quote, a demonstration. At most one per item, at the end of the sentence. " +
-      "Close with one sentence: what follows from this. " +
-      "Not: a list of topics covered, a description of how the conversation went, " +
-      "phrases like \"they discuss\". " +
-      "The first paragraph three sentences at most, each item four at most including " +
-      "the bold one, the closing sentence one; for a long video not more items, but " +
-      "selected more strictly. Start with the content, no preamble.",
+      "once, everything about it goes into one paragraph. " +
+      "No headings, no lists, no timestamps – no jump marks even if the transcript has " +
+      "them. " +
+      "Do not retell the flow and avoid phrases like \"the video covers\", \"they talk " +
+      "about\", \"the host explains\". " +
+      "Leave out greetings, ads and anecdotes without a point. " +
+      "Start with the first paragraph, no preamble.",
     summary_long:
       "Write for someone who wants to replace the video with the text. " +
       "First a paragraph with the main point and the conclusion, phrased as a claim, " +
@@ -549,7 +542,7 @@ export const PRESETS = {
       "sentence putting it in its own terms. " +
       "Finally one line **The difference that matters:** - the single point a decision " +
       "between them turns on. " +
-      "If the video compares nothing, say so in one sentence and offer the key points " +
+      "If the video compares nothing, say so in one sentence and offer the summary " +
       "instead. " +
       "No timestamps inside the table; if a statement deserves a jump mark, put it in " +
       "the short section.",

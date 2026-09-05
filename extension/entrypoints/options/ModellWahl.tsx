@@ -31,8 +31,8 @@ export function ModellWahl({
   onChange: (id: string) => void;
   models: ModelInfo[];
   /** Kuratierte Auswahl, wird ungefiltert oben gezeigt, solange nicht gesucht wird. */
-  empfehlung: readonly (readonly [ModelInfo, string])[];
-  zeile: (m: ModelInfo, marke?: string) => React.ReactNode;
+  empfehlung: readonly (readonly [ModelInfo, string[]])[];
+  zeile: (m: ModelInfo, marken?: string[]) => React.ReactNode;
   auslöser: (m: ModelInfo | undefined) => React.ReactNode;
 }) {
   const [offen, setOffen] = React.useState(false);
@@ -156,14 +156,14 @@ export function ModellWahl({
               <>
                 {!sucht && empfehlung.length > 0 && (
                   <Abschnitt titel="Empfohlen">
-                    {empfehlung.map(([m, marke], i) => (
+                    {empfehlung.map(([m, marken], i) => (
                       <Eintrag
                         key={`tipp-${m.id}`}
                         aktiv={reihenfolge[aktiv]?.id === m.id && i === aktiv}
                         gewaehlt={m.id === value}
                         onClick={() => waehle(m.id)}
                       >
-                        {zeile(m, marke)}
+                        {zeile(m, marken)}
                       </Eintrag>
                     ))}
                   </Abschnitt>

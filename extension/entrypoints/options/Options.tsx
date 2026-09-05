@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/select";
 import { ask } from "@/lib/chat-client";
 import { ModellWahl } from "./ModellWahl";
-import { EMPFEHLUNG, FALLBACK_MODELS, ONE_M_CONTEXT } from "@/lib/openrouter";
+import {
+  empfohleneModelle,
+  FALLBACK_MODELS,
+  formatPreis,
+  isLiteModel,
+  ONE_M_CONTEXT,
+  preisProAnfrage,
+} from "@/lib/openrouter";
 import { clearCache, DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
 import { parseWoerterbuch } from "@/lib/korrektur";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/prompts";
@@ -35,11 +42,6 @@ const REASONING_STEPS: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
  * Mistral nach dem Zurücksetzen still bei OpenRouter.
  */
 const ZUGANGSFELDER: ReadonlyArray<keyof Settings> = ["apiKey", "mistralApiKey", "provider", "mistralModel"];
-
-/** Lite-Modelle bekommen minimal vorbelegt – dort kostet Reasoning mehr, als es bringt. */
-function isLiteModel(id: string): boolean {
-  return /lite|mini|flash-8b|haiku|small/i.test(id);
-}
 
 export function Options() {
   const [s, setS] = React.useState<Settings | null>(null);
@@ -99,13 +101,7 @@ export function Options() {
    */
   const eintraege = React.useMemo(() => parseWoerterbuch(s?.dictionary ?? ""), [s?.dictionary]);
 
-  const empfohlen = React.useMemo(() => {
-    const liste = models ?? FALLBACK_MODELS;
-    return EMPFEHLUNG.flatMap(([id, marke]) => {
-      const m = liste.find((k) => k.id === id);
-      return m ? [[m, marke] as const] : [];
-    });
-  }, [models]);
+  const empfohlen = React.useMemo(() => empfohleneModelle(models ?? FALLBACK_MODELS), [models]);
 
   React.useEffect(() => {
     void getSettings().then((s0) => {
@@ -196,7 +192,17 @@ export function Options() {
       .then((liste) => {
         setMistralModels(liste);
         // Ein gespeichertes Modell, das die Liste nicht mehr führt, bleibt stehen und
-        // wird als solches angezeigt – nichts wird still umgestellt.
+        // wird als solches angezeigt – nichts wird still umgestellt. Ist noch keins
+        // gewählt, wird das neueste vorgewählt, sonst steht der Chat nach „Modelle
+        // laden" weiter mit „kein Modell gewählt" da.
+        const erstes = liste[0]?.id;
+        if (erstes) {
+          setS((akt) => {
+            if (!akt || akt.mistralModel) return akt;
+            void setSettings({ mistralModel: erstes });
+            return { ...akt, mistralModel: erstes };
+          });
+        }
       })
       .catch((e) => setMistralFehler(String(e?.message ?? e)))
       .finally(() => setMistralLaedt(false));
@@ -404,7 +410,7 @@ export function Options() {
                 <span className="truncate text-muted-foreground">{s.model}</span>
               )
             }
-            zeile={(m, marke) => <ModelRow m={m} marke={marke} />}
+            zeile={(m, marken) => <ModelRow m={m} marken={marken} />}
           />
         </Field>
 
@@ -916,30 +922,7 @@ function KontextMarke({ n }: { n: number }) {
   );
 }
 
-/**
- * Was eine Anfrage ungefähr kostet – 30.000 Token Transkript hinein, 2.000 heraus.
- * Das Preispaar je Million verlangt Kopfrechnen, dieser Betrag nicht. Die Eingabe macht
- * über 90 % davon aus; Reasoning-Tokens zählen als Ausgabe und können den Betrag bei
- * hoher Stufe übersteigen.
- */
-const ANFRAGE_EIN = 30_000;
-const ANFRAGE_AUS = 2_000;
-
-export function preisProAnfrage(m: ModelInfo): number | null {
-  if (m.pricePrompt == null) return null;
-  return m.pricePrompt * ANFRAGE_EIN + (m.priceCompletion ?? 0) * ANFRAGE_AUS;
-}
-
-function formatPreis(usd: number): string {
-  if (usd === 0) return "gratis";
-  // Unter einem Cent in Cent, sonst stünde bei 0,0012 $ und 0,0084 $ dasselbe „< 0,01 $"
-  // – gerade in der Empfehlung liegen fast alle Werte dort. Zwei Nachkommastellen, weil
-  // drei sich als Tausender lesen lassen.
-  if (usd < 0.01) return `${(usd * 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} ¢`;
-  return `${usd.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
-}
-
-function ModelRow({ m, marke }: { m: ModelInfo; marke?: string }) {
+function ModelRow({ m, marken }: { m: ModelInfo; marken?: string[] }) {
   // Zwei Zeilen: oben, was man sucht (Name, Kontextgrösse, fehlendes Reasoning), unten
   // die Kennung mit dem Preis je Anfrage dahinter. Der Auslöser zeigt nur die obere.
   const preis = preisProAnfrage(m);
@@ -948,11 +931,11 @@ function ModelRow({ m, marke }: { m: ModelInfo; marke?: string }) {
       <span className="flex items-center gap-1.5">
         {m.name}
         <KontextMarke n={m.contextLength} />
-        {marke && (
-          <span className="shrink-0 rounded bg-accent px-1 text-xs text-accent-foreground">
+        {marken?.map((marke) => (
+          <span key={marke} className="shrink-0 rounded bg-accent px-1 text-xs text-accent-foreground">
             {marke}
           </span>
-        )}
+        ))}
         {!m.supportsReasoning && (
           <span
             className="shrink-0 rounded border border-border px-1 text-xs text-muted-foreground"

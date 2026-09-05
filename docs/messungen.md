@@ -890,3 +890,47 @@ Checkpoint, bezieht sich auf den Gesamtdurchschnitt „All" aus dieser Tabelle.
 **Nutzervorgabe (04.09.2026):** Whisper-Wege werden nicht mehr weiterverfolgt oder
 gemessen, die Recherche konzentriert sich auf Parakeet und dessen Ableitungen. Bei
 einem deutschen Parakeet-Derivat gilt ValentinWeyer als bevorzugte Wahl.
+
+## Empfohlene OpenRouter-Modelle: Antwort, Zeit bis zum ersten Token, Kosten (05.09.2026)
+
+Anlass: Michaels Bericht „nur luna scheint zu gehen, alle anderen Modelle haben nicht
+funktioniert, deepseek flash geht z. B. nicht“, ohne Fehlertext. Gemessen mit dem
+Anfragekörper aus `lib/openrouter.ts` (stream, usage, reasoning minimal) über den
+DiktaGo-Schlüssel, zwei Läufe: kurzer Prompt (zwei Sätze) und ein Transkript von rund
+214.000 Zeichen (60.000 bis 110.000 Token je Tokenizer). **Alle 18 Kandidaten
+antworteten in beiden Läufen mit HTTP 200 und Text**, auch deepseek-v4-flash. Der
+Fehler liegt also nicht am Anfragekörper und nicht am Modell; er ist ohne Michaels
+Fehlertext nicht zuzuordnen.
+
+| Modell | 1. Token kurz | 1. Token lang | Kosten lang | Eingabe $/M |
+|---|---|---|---|---|
+| openai/gpt-5.6-luna | 1,9 s | 4,0 s | 0,015 $ | 0,20 |
+| google/gemini-3.8-flash | 2,2 s | 6,6 s | 0,052 $ | 0,75 |
+| google/gemini-3.5-flash-lite | 1,3 s | 2,5 s | 0,021 $ | 0,30 |
+| z-ai/glm-5.3-flash | – | 5,4 s | 0,005 $ | ≈ 0,07 |
+| nvidia/nemotron-3-nano-30b-a3b | 1,7 s | 5,2 s | 0,003 $ | 0,05 |
+| openai/gpt-5-nano | 3,1 s | 3,0 s | 0,003 $ | 0,05 |
+| qwen/qwen3.7-flash | 3,5 s | 8,0 s | 0,007 $ | 0,03 |
+| deepseek/deepseek-v4-flash | 3,5 s | 10,7 s | 0,009 $ | 0,08 |
+| anthropic/claude-haiku-4.5 | 2,0 s | 5,2 s | 0,084 $ | 1,00 |
+| z-ai/glm-5.3 | – | 4,9 s | 0,093 $ | ≈ 1,4 |
+| openai/gpt-5.6-sol | 2,4 s | 5,1 s | 0,151 $ | 2,00 |
+| anthropic/claude-sonnet-5 | 1,4 s | 4,8 s | 0,223 $ | 2,00 |
+| qwen/qwen3.8-flash | 2,8 s | 12,2 s | 0,010 $ | 0,15 |
+| qwen/qwen3.7-plus | 27,3 s | 21,1 s | 0,022 $ | 0,32 |
+| z-ai/glm-5.1 | 9,4 s | 11,2 s | 0,062 $ | 0,97 |
+| z-ai/glm-5.2 | – | 13,9 s | 0,048 $ | – |
+| z-ai/glm-4.7-flash | 31,6 s | – | – | 0,06 |
+| qwen/qwen3.5-35b-a3b | 3,5 s | – | – | 0,31 |
+
+Folgerungen für `EMPFEHLUNG`: „schnell“ = erstes Token nach höchstens 7 s im langen
+Lauf, „günstig“ = Eingabe höchstens 0,10 $/M. Gestrichen: qwen3.7-plus (21 s),
+glm-4.7-flash (32 s), qwen3.8-flash (teurer und langsamer als qwen3.7-flash; die alte
+Marke „günstig“ neben 0,54 ¢ je Anfrage widersprach dem „schnell“ neben 0,12 ¢).
+Gemini 3.7 Flash durch 3.8 Flash ersetzt (gleicher Preis, kürzere Zeit). Aus Brave Leos
+Liste übernommen: GLM (5.3 Flash und 5.3 statt Leos 4.7 Flash und 5.1, beide dort
+gemessen langsamer), Nemotron 3 Nano 30B, Claude Haiku 4.5; Qwen 3.5 35B nicht, weil
+qwen3.7-flash billiger ist und 1M Kontext hat. Kein Modell überschritt die 30 s, nach
+denen Chrome einen untätigen Service Worker beendet; der Wachhalter in
+`handleChatPort` ist trotzdem eingebaut, weil ein Denkmodell mit hoher Stufe die
+Grenze reissen kann.

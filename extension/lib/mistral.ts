@@ -44,7 +44,7 @@ async function fehlertext(res: Response): Promise<string> {
   return text;
 }
 
-interface RawModel {
+export interface RawModel {
   id: string;
   name?: string | null;
   created?: number;
@@ -63,15 +63,33 @@ export async function listModels(apiKey: string, region: MistralRegion): Promise
   const res = await fetch(`${basis(region)}/models`, { headers: headers(apiKey) });
   if (!res.ok) throw new Error(`HTTP ${res.status} – ${await fehlertext(res)}`);
   const { data } = (await res.json()) as { data: RawModel[] };
-  const jetzt = Date.now();
-  // Aliase wie „mistral-small-latest" stehen als eigener Eintrag in der Liste UND im
-  // `aliases`-Feld ihres Grundmodells; die Alias-Einträge fliegen, sonst steht jedes
-  // Modell doppelt da.
-  const aliase = new Set(data.flatMap((m) => m.aliases ?? []));
-  return data
-    .filter((m) => m.capabilities?.completion_chat)
-    .filter((m) => !m.deprecation || Date.parse(m.deprecation) > jetzt)
-    .filter((m) => !aliase.has(m.id))
+  return modelleAusListe(data);
+}
+
+/**
+ * Rein, damit der Selbsttest sie mit einer echten Antwortform füttern kann. Aliase
+ * wie „mistral-small-latest" stehen als eigener Eintrag in der Liste und nennen im
+ * `aliases`-Feld ihr Grundmodell, das Grundmodell nennt sie zurück. Wer alles
+ * streicht, was irgendwo als Alias steht, streicht deshalb alles – so kam am
+ * 05.09.2026 eine leere Liste zustande. Die Spec garantiert keine Symmetrie
+ * (Codex-Befund), darum keine Gruppenbildung: Ein Eintrag mit Versionsnummer am Ende
+ * (mistral-small-2506, mistral-medium-3-5) bleibt immer. Ein beweglicher Name
+ * (-latest, oder ganz ohne Nummer) fliegt nur, wenn ein versionierter Partner in der
+ * Liste steht – als sein Alias oder ihn nennend. Abgekündigte Modelle bleiben drin,
+ * sie laufen bis zur Abschaltung weiter; die Sortierung nach Datum stellt sie ans Ende.
+ */
+export function modelleAusListe(data: RawModel[]): ModelInfo[] {
+  const chat = data.filter((m) => m.capabilities?.completion_chat);
+  const versioniert = (id: string) => /\d$/.test(id);
+  const versionierte = new Set(chat.filter((m) => versioniert(m.id)).map((m) => m.id));
+  const genanntVon = new Map<string, string[]>();
+  for (const m of chat) for (const a of m.aliases ?? []) genanntVon.set(a, [...(genanntVon.get(a) ?? []), m.id]);
+  return chat
+    .filter((m) => {
+      if (versioniert(m.id)) return true;
+      const partner = [...(m.aliases ?? []), ...(genanntVon.get(m.id) ?? [])];
+      return !partner.some((p) => versionierte.has(p));
+    })
     .map(
       (m): ModelInfo => ({
         id: m.id,

@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Copy,
   Download,
@@ -26,7 +27,15 @@ import {
   webKontext,
   webLookupPrompt,
 } from "@/lib/prompts";
-import { FALLBACK_MODELS, listModels } from "@/lib/openrouter";
+import {
+  empfohleneModelle,
+  FALLBACK_MODELS,
+  formatPreis,
+  isLiteModel,
+  listModels,
+  ONE_M_CONTEXT,
+  preisProAnfrage,
+} from "@/lib/openrouter";
 import {
   collapsedItem,
   deleteConversation,
@@ -1185,8 +1194,27 @@ export function Sidebar({
               )}
             </div>
 
+            {/*
+              Das Modell steht klein unter dem Eingabefeld und lässt sich dort wechseln,
+              ohne die Einstellungen zu öffnen (Vorbild Brave Leo). Bei Mistral führt der
+              Knopf in die Einstellungen – dort liegt die geladene Modellliste.
+            */}
+            <div className="mt-1 flex items-center justify-between gap-1">
+              <ModellMenue
+                t={t}
+                models={models}
+                activeModel={activeModel}
+                mistral={mistralAktiv}
+                disabled={streaming}
+                onPick={(id) =>
+                  void speichereSettings({
+                    model: id,
+                    reasoning: isLiteModel(id) ? "minimal" : (settings?.reasoning ?? "minimal"),
+                  })
+                }
+              />
             {messages.length > 0 && (
-              <div className="mt-1 flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 <Button size="iconSm" variant="ghost" title={t("copy")} onClick={() => void kopiereMitFormat(chatMarkdown(), chatHtml())}>
                   <Copy />
                 </Button>
@@ -1207,6 +1235,7 @@ export function Sidebar({
                 </Button>
               </div>
             )}
+            </div>
           </div>
         </>
       )}
@@ -1689,4 +1718,127 @@ function languageToCode(name: string): string {
   };
   const key = name.trim().toLowerCase();
   return map[key] ?? (key.length === 2 ? key : "de");
+}
+
+/** Kurzname ohne Anbieter: aus „Google: Gemini 3.8 Flash" wird „Gemini 3.8 Flash". */
+function kurzName(m: ModelInfo | undefined, id: string): string {
+  return m ? m.name.replace(/^[^:]+:\s*/, "") : id || "–";
+}
+
+function ModellMenue({
+  t,
+  models,
+  activeModel,
+  mistral,
+  disabled,
+  onPick,
+}: {
+  t: T;
+  models: ModelInfo[];
+  activeModel: string;
+  mistral: boolean;
+  disabled: boolean;
+  onPick: (id: string) => void;
+}) {
+  const [offen, setOffen] = React.useState(false);
+  const huelle = React.useRef<HTMLDivElement>(null);
+  const ausloeser = React.useRef<HTMLButtonElement>(null);
+
+  // Beginnt ein Stream, während das Menü offen ist, schliesst es – sonst liesse sich
+  // das Modell mitten in der laufenden Antwort umstellen.
+  React.useEffect(() => {
+    if (disabled) setOffen(false);
+  }, [disabled]);
+
+  const schliessen = () => {
+    setOffen(false);
+    ausloeser.current?.focus();
+  };
+
+  React.useEffect(() => {
+    if (!offen) return;
+    // composedPath statt contains: die Sidebar sitzt im Shadow DOM, dort zeigt
+    // event.target am Dokument nur noch auf den Host.
+    const zu = (e: MouseEvent) => {
+      if (huelle.current && !e.composedPath().includes(huelle.current)) setOffen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") schliessen();
+    };
+    document.addEventListener("mousedown", zu);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", zu);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [offen]);
+
+  const oeffneOptionen = () => void chrome.runtime.sendMessage({ type: "openOptions" });
+  const aktiv = models.find((m) => m.id === activeModel);
+  const empfohlen = empfohleneModelle(models);
+
+  return (
+    <div ref={huelle} className="relative min-w-0">
+      <button
+        ref={ausloeser}
+        type="button"
+        disabled={disabled}
+        title={t("modelPick")}
+        aria-haspopup="listbox"
+        aria-expanded={offen}
+        aria-controls="yt-summary-modellmenue"
+        className="flex max-w-full items-center gap-0.5 rounded px-1 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+        onClick={() => (mistral ? oeffneOptionen() : setOffen((v) => !v))}
+      >
+        <span className="truncate">{kurzName(aktiv, activeModel)}</span>
+        <ChevronDown className="size-3 shrink-0" />
+      </button>
+      {offen && (
+        <div
+          id="yt-summary-modellmenue"
+          className="absolute bottom-full left-0 z-50 mb-1 w-72 overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-md"
+        >
+          <ul role="listbox" aria-label={t("modelPick")} className="max-h-80 overflow-y-auto py-1">
+            {empfohlen.map(([m, marken]) => {
+              const preis = preisProAnfrage(m);
+              return (
+                <li key={m.id} role="option" aria-selected={m.id === activeModel}>
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex w-full flex-col items-start px-2.5 py-1.5 text-left hover:bg-secondary",
+                      m.id === activeModel && "bg-primary/10",
+                    )}
+                    onClick={() => {
+                      onPick(m.id);
+                      schliessen();
+                    }}
+                  >
+                    <span className="flex items-center gap-1.5 text-sm">
+                      {kurzName(m, m.id)}
+                      {m.contextLength >= ONE_M_CONTEXT && (
+                        <span className="rounded border border-border px-1 text-[10px] text-muted-foreground">1M</span>
+                      )}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {marken.join(" · ")}
+                      {preis != null && ` · ≈ ${formatPreis(preis)} je Anfrage`}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between border-t border-border px-2.5 py-1.5 text-sm hover:bg-secondary"
+            onClick={oeffneOptionen}
+          >
+            {t("allModels")}
+            <ChevronRight className="size-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

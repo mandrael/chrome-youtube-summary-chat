@@ -100,6 +100,23 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.3.2 – Download-Knopf in den Kopf, Web-Schalter ans Eingabefeld
+
+Michaels Befund nach dem Neuladen: kein Download-Knopf sichtbar (er sass in der
+Werkzeugleiste des Transkript-Tabs, die erst mit geladenem Transkript erscheint), und die
+Weltkugel wechselte beim Klick die Farbe nicht und stand schlecht. Jetzt: **Download-Knopf
+(`FileVideo`) im Header links vom Zahnrad**, in allen Tabs und ohne Transkript sichtbar,
+weiterhin nur im `full`-Build (`onVideoDownload` hängt an `__FALLBACK__`); aus
+TranscriptView entfernt. **Web-Schalter direkt links neben dem Senden-Knopf** im
+Eingabefeld – er gilt für die nächste getippte Frage, also gehört er dorthin, nicht in
+die Werkzeugzeile darunter, die ohne Nachrichten fast leer ist. An-Zustand jetzt
+`bg-primary/15 text-primary ring-1 ring-primary`; das vorherige `bg-secondary` war im
+hellen Thema vom Kartengrund nicht zu unterscheiden, daher „ändert Farbe nicht".
+Headless geprüft (Screenshots im Sitzungs-Scratchpad): Knopf sichtbar, `aria-pressed`
+wechselt, Ring sichtbar, Dialog öffnet. Dabei gefunden: `sendNativeMessage` verwirft bei
+fehlendem Host die Promise statt `lastError` zu setzen, die Rohmeldung stand im Dialog –
+`videoFormate` fängt das jetzt und läuft durch `hostFehler()`.
+
 ### 05.09.2026: Version 0.3.1 – Versionskonvention war über drei Commits vergessen
 
 Michaels Einwand: die Versionsnummer blieb bei 0.2.0, obwohl Vergleich-Preset, Tabellen,

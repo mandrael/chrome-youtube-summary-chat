@@ -41,15 +41,16 @@ interface HostResponse {
  */
 export async function videoFormate(videoId: string): Promise<VideoFormat[]> {
   // `type: "transcribe"` ist der Verteiler des Hosts; `kind` wählt darin den Zweig.
-  const res = (await chrome.runtime.sendNativeMessage(HOST_NAME, {
-    type: "transcribe",
-    videoId,
-    kind: "formats",
-  })) as { type?: string; formats?: VideoFormat[]; message?: string } | undefined;
-  // Fehlt der Host, kommt keine Antwort, sondern lastError – mit derselben Aufbereitung
-  // wie beim Audio-Weg, sonst steht Chromes englische Rohmeldung im Dialog.
-  const err = chrome.runtime.lastError?.message;
-  if (err || !res) throw new Error(hostFehler(err));
+  let res: { type?: string; formats?: VideoFormat[]; message?: string } | undefined;
+  try {
+    res = await chrome.runtime.sendNativeMessage(HOST_NAME, { type: "transcribe", videoId, kind: "formats" });
+  } catch (e) {
+    // Fehlt der Host, verwirft die Promise-Form von sendNativeMessage mit Chromes
+    // englischer Rohmeldung („Specified native messaging host not found.", gemessen
+    // 05.09.2026) – dieselbe Aufbereitung wie beim Audio-Weg, sonst steht sie so im Dialog.
+    throw new Error(hostFehler((e as Error)?.message));
+  }
+  if (!res) throw new Error(hostFehler(chrome.runtime.lastError?.message));
   if (res.type === "error") throw new Error(res.message || "Formate nicht lesbar");
   return res.formats ?? [];
 }

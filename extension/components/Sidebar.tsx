@@ -7,6 +7,7 @@ import {
   Loader2,
   ArrowUp,
   BrushCleaning,
+  FileVideo,
   Globe,
   Settings,
   Square,
@@ -903,6 +904,7 @@ export function Sidebar({
         t={t}
         tab={tab}
         setTab={setTab}
+        onVideoDownload={__FALLBACK__ ? oeffneDownload : undefined}
         presetsToggle={
           tab === "chat" && messages.length > 0
             ? { open: presetsOpen, toggle: () => setPresetsOpen((v) => !v) }
@@ -1091,6 +1093,26 @@ export function Sidebar({
                 disabled={!transcript}
                 className="max-h-40 min-h-8 px-2.5 py-[5px] text-sm [field-sizing:content]"
               />
+              {/*
+                Der Schalter gilt für die nächste getippte Frage: Transkript und Netz
+                zusammen – deshalb steht er am Eingabefeld, nicht in der Werkzeugzeile.
+                Die Weltkugel unter einer Antwort ist etwas anderes, sie schlägt zu einer
+                schon beantworteten Frage nach. Der An-Zustand braucht eine eigene Farbe:
+                bg-secondary ist im hellen Thema vom Kartengrund kaum zu unterscheiden.
+              */}
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-pressed={webAn}
+                className={cn(
+                  "size-8 shrink-0 [&_svg]:size-[18px]",
+                  webAn && "bg-primary/15 text-primary ring-1 ring-primary hover:bg-primary/25",
+                )}
+                title={webAn ? t("webToggleOn") : t("webToggleOff")}
+                onClick={() => setWebAn((v) => !v)}
+              >
+                <Globe />
+              </Button>
               {streaming ? (
                 <Button size="icon" variant="destructive" className="size-8 shrink-0 [&_svg]:size-[18px]" onClick={() => stopRef.current?.()} title={t("stop")}>
                   <Square />
@@ -1112,9 +1134,8 @@ export function Sidebar({
               )}
             </div>
 
-            <div className="mt-1 flex items-center gap-1">
-              {messages.length > 0 && (
-                <>
+            {messages.length > 0 && (
+              <div className="mt-1 flex items-center gap-1">
                 <Button size="iconSm" variant="ghost" title={t("copy")} onClick={() => void kopiereMitFormat(chatMarkdown(), chatHtml())}>
                   <Copy />
                 </Button>
@@ -1133,24 +1154,8 @@ export function Sidebar({
                 >
                   <BrushCleaning />
                 </Button>
-                </>
-              )}
-              {/*
-                Der Schalter gilt für die nächste getippte Frage: Transkript und Netz
-                zusammen. Die Weltkugel unter einer Antwort ist etwas anderes – sie
-                schlägt zu einer schon beantworteten Frage nach.
-              */}
-              <Button
-                size="iconSm"
-                variant="ghost"
-                aria-pressed={webAn}
-                className={cn("ml-auto", webAn && "bg-secondary text-primary")}
-                title={webAn ? t("webToggleOn") : t("webToggleOff")}
-                onClick={() => setWebAn((v) => !v)}
-              >
-                <Globe />
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         </>
       )}
@@ -1176,7 +1181,6 @@ export function Sidebar({
           onMode={(m) => void speichereSettings({ transcriptMode: m })}
           getVideo={getVideo}
           onForceAudio={__FALLBACK__ ? () => runFallbackJob("audio") : undefined}
-          onVideoDownload={__FALLBACK__ ? oeffneDownload : undefined}
           busy={fallbackState}
         />
       )}
@@ -1205,12 +1209,15 @@ function Header({
   tab,
   setTab,
   presetsToggle,
+  onVideoDownload,
   onCollapse,
 }: {
   t: T;
   tab: Tab;
   setTab: (t: Tab) => void;
   presetsToggle?: { open: boolean; toggle: () => void };
+  /** Nur im Build "full" gesetzt (§4a): der Knopf muss sofort sichtbar sein, ohne Transkript. */
+  onVideoDownload?: () => void;
   onCollapse?: () => void;
 }) {
   const tabs: Array<[Tab, string]> = [
@@ -1244,6 +1251,11 @@ function Header({
             onClick={presetsToggle.toggle}
           >
             <WandSparkles />
+          </Button>
+        )}
+        {onVideoDownload && (
+          <Button size="iconSm" variant="ghost" title={t("downloadVideo")} onClick={onVideoDownload}>
+            <FileVideo />
           </Button>
         )}
         <Button size="iconSm" variant="ghost" title="Einstellungen" onClick={() => void chrome.runtime.sendMessage({ type: "openOptions" })}>

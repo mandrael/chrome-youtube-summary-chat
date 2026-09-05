@@ -56,7 +56,9 @@ export default defineConfig({
       : {}),
     description:
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
-    version: "0.2.0",
+    // Schema major.function.fix (status.md, 03.09.2026). 0.3.0: Vergleich-Preset, adaptive
+    // Tabellen, Videodownload, Installer für die Standardroute, React-Produktionsbuild.
+    version: "0.3.0",
     // Bewusst ohne `sidePanel`: Vivaldi trägt jede Extension, die diese Permission
     // deklariert, ungefragt in seine Panel-Leiste ein und öffnet dort beim Installieren
     // ein leeres Panel (Vivaldi-Bug VB-123452, Stand 8.1 offen). Verhindern lässt sich

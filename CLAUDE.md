@@ -120,6 +120,17 @@ Alle vier laufen, bevor etwas als fertig gemeldet wird. Was nicht geprüft werde
 steht im README-Abschnitt „Was nicht geprüft ist“ und wird dort gepflegt, nicht
 weggelassen.
 
+**Fünftens, nach jeder Build-Änderung: die Erweiterung einmal headless laden** und
+Konsole samt `pageerror` einsammeln (Playwright-Chromium, `--load-extension`). Am
+05.09.2026 bestanden alle vier Prüfungen, während das Content-Script beim ersten Render
+warf – ein Bundle-Grep ersetzt keinen Ladeversuch.
+
+**Version vor jedem Commit mit Nutzerwirkung erhöhen**, Schema `major.function.fix`
+(status.md, 03.09.2026), an zwei Stellen: `extension/wxt.config.ts` (Manifest) und
+`extension/package.json`. Die Optionsseite zeigt die Nummer mit dem Build dahinter –
+ohne Erhöhung ist beim Testen nicht erkennbar, was im Browser steckt. Am 04.09.2026
+wurde das über drei Commits vergessen.
+
 ## Sprache
 
 Doku, UI-Texte und Kommentare auf Deutsch mit echten Umlauten. Technische Begriffe im

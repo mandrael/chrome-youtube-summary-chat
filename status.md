@@ -100,6 +100,16 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.3.0 – Versionskonvention war über drei Commits vergessen
+
+Michaels Einwand: die Versionsnummer blieb bei 0.2.0, obwohl Vergleich-Preset, Tabellen,
+Videodownload, Installer und React-Produktionsbuild dazukamen. Jetzt 0.3.0 in
+`wxt.config.ts` und `package.json`; die Pflicht steht in CLAUDE.md unter „Prüfungen".
+Ausserdem festgehalten: Michaels Fehlermeldung nach dem Fix nannte `content.js:57725`,
+der neue Build hat 56.023 Zeilen – der Browser lief noch mit dem alten Bundle. Eine
+entpackte Erweiterung übernimmt geänderte Dateien erst nach „Aktualisieren" in
+`chrome://extensions`; die sichtbare Versionsnummer ist genau dafür da.
+
 ### 05.09.2026: Extension lud nicht mehr – Ursache der React-Umstellung, behoben
 
 Michaels Meldung: keine Sidebar mehr. Headless reproduziert (Playwright-Chromium 1208):
@@ -460,7 +470,7 @@ umgesetzt, Entscheidung offen.**
 
 ## Stand 03.09.2026 (achtzehnter Durchgang) – Version 0.2.0, drei Wege gemessen, vier neue Schnellbefehle
 
-**Versionsnummern ab jetzt geführt**, Schema `main.function.fix`. Die Version steht im
+**Versionsnummern ab jetzt geführt**, Schema `major.function.fix`. Die Version steht im
 Kopf der Optionsseite mit dem Build dahinter („0.2.0 full“ / „0.2.0 store“), damit beim
 Testen sichtbar ist, was im Browser steckt. 0.1.1 waren die zwei Befunde unten, 0.2.0
 sind die vier neuen Schnellbefehle.

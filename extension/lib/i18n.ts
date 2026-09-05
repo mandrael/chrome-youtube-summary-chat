@@ -59,9 +59,6 @@ const de = {
   presetFactsHint: "Bis zu 20 nachprüfbare Zahlen, Namen und Daten, je mit Zeitstempel.",
   presetChapters: "Kapitel",
   presetChaptersHint: "Zum Springen: die Abschnitte des Videos mit Zeitstempel und einem Satz.",
-  presetClaims: "Behauptungen",
-  presetClaimsHint:
-    "Bis zu 15 Behauptungen, je mit dem, was sie belegt – oder „Unbelegt“.",
   presetHowto: "Anleitung",
   presetHowtoHint:
     "Zum Nachmachen: Schritte in Reihenfolge, mit Befehlen, Werten und Zeitstempel.",
@@ -75,15 +72,9 @@ const de = {
   presetGlossary: "Begriffe",
   presetGlossaryHint:
     "Fachbegriffe und Methoden mit der Erklärung, die der Sprecher selbst gibt.",
-  presetReferences: "Verweise",
-  presetReferencesHint:
-    "Bücher, Studien, Personen, Werkzeuge und Websites, die genannt werden.",
   presetQuiz: "Lernfragen",
   presetQuizHint:
     "Zur Lernkontrolle: Fragen zum Stoff, je mit der Antwort aus dem Video.",
-  presetPositions: "Positionen",
-  presetPositionsHint:
-    "Bei Gesprächen: wer was vertritt, wo sie einig sind und wo nicht.",
   extraPrecedence:
     "Zusatz des Nutzers – hat Vorrang vor Form und Schwerpunkt, nicht vor den Regeln " +
     "zur Quellentreue:",
@@ -223,8 +214,6 @@ const en: Record<Keys, string> = {
   presetFactsHint: "Figures, names, dates and quotes as a list, one timestamp per item as evidence – no judgement.",
   presetChapters: "Chapters",
   presetChaptersHint: "For jumping: the sections of the video with timestamp and one sentence.",
-  presetClaims: "Claims",
-  presetClaimsHint: "Up to 15 claims, each with what backs it – or \"unsupported\".",
   presetHowto: "How-to",
   presetHowtoHint: "To follow along: the steps in order, with commands, values and timestamps.",
   presetProContra: "Pros/cons",
@@ -233,13 +222,8 @@ const en: Record<Keys, string> = {
   presetComparison: "Comparison",
   presetGlossary: "Terms",
   presetGlossaryHint: "Technical terms and methods with the explanation the speaker gives.",
-  presetReferences: "References",
-  presetReferencesHint: "Books, studies, people, tools and websites that are mentioned.",
   presetQuiz: "Self-check",
   presetQuizHint: "To test yourself: questions on the material, each with the answer from the video.",
-  presetPositions: "Positions",
-  presetPositionsHint:
-    "For conversations: who holds which position, where they agree and where they do not.",
   extraPrecedence:
     "User addition – takes precedence over form and focus, not over the rules on " +
     "staying true to the source:",

@@ -100,6 +100,25 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 06.09.2026: Version 0.9.0 – zehn Schnellbefehle statt dreizehn
+
+Michael: „a“ auf die Empfehlung – Behauptungen, Verweise und Positionen gestrichen
+(Prompts de/en, i18n, Sidebar-Reihen, README). Zwei Reihen zu fünf: In Kürze ·
+Zusammenfassung · Ausführlich · Kapitel · Fakten / Anleitung · Pro/Contra · Vergleich ·
+Begriffe · Lernfragen. Die gestrichenen Prompts stehen in Commit cc26a71.
+
+**„Nur Luna geht“, Stand nach Michaels Einwand:** er hatte den Tab neu geladen, das
+„context invalidated“ war also nicht die Ursache seines Chat-Versuchs. Der Befund
+„Frage im Chat, keine Antwort, keine Meldung“ passt exakt auf den alten stillen Pfad:
+Port getrennt ohne „done“ → `resolve()` → leere Antwort ohne Fehlermarke. Was den Port
+trennt, ist offen; seit 0.8.1 erscheint dort ein Fehlertext, und der Wachhalter hält
+den Service Worker. Nachgemessen mit Reasoning high und 65k Token: luna 1,7 s,
+deepseek-v4-flash 5,3 s, gemini-3.8-flash 6,1 s, glm-5.3-flash 9,5 s bis zum ersten
+Token – kein 30-s-Fall. qwen3.7-flash antwortete mit **HTTP 429 „temporarily
+rate-limited upstream“**; so ein Fehler wurde auch vorher angezeigt, ist aber ein
+realer Ausfallgrund bei Billigmodellen. Nächster Schritt liegt bei Michael: mit 0.9.0
+ein zweites Modell probieren und den Fehlertext aus der Sidebar schicken.
+
 ### 05.09.2026: Version 0.8.1 – „Nur Luna geht“ war ein totes Content-Script
 
 Michaels Fehlertext: `Uncaught Error: Extension context invalidated` aus content.js.

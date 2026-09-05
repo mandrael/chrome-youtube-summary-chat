@@ -66,7 +66,7 @@ Einstellungen, weil die Modellliste dort geladen wird.
 klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
 die Einstellungen.
 
-Die dreizehn Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe
+Die zehn Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe
 nimmt das ganze Video, die mittlere schneidet einen Zweck heraus, die untere hilft beim
 Aneignen und Weiterverfolgen:
 
@@ -75,8 +75,6 @@ Aneignen und Weiterverfolgen:
 - **Ausführlich** – jede Sachfrage als eigener Abschnitt, mit Zahlen, Namen, Zeitstempeln.
 - **Kapitel** – Sprungmarken entlang des Videos, mit Aussage statt Themennamen.
 - **Fakten** – Zahlen, Namen, Daten und Zitate als Liste, je Angabe ein Zeitstempel als Beleg.
-- **Behauptungen** – bis zu 15 Behauptungen, jede mit ihrer Belegart: Gemessen, Quelle,
-  Gezeigt, Erfahrung oder Unbelegt. Der Vorlauf zur Internetrecherche.
 - **Anleitung** – die Schritte in der Reihenfolge des Nachmachens, mit Befehlen, Werten
   und Zeitstempeln; was der Sprecher nur zeigt und nicht ausspricht, wird nicht erraten.
 - **Pro/Contra** – Argumente beider Seiten mit ihren Belegen, dazu „Für wen",
@@ -86,12 +84,8 @@ Aneignen und Weiterverfolgen:
   Vergleicht das Video nichts, sagt die Antwort das und bietet die Zusammenfassung an.
 - **Begriffe** – Fachbegriffe, Methoden und Verfahren mit der Erklärung, die der Sprecher
   selbst gibt; erklärt er einen Begriff nicht, steht das da, statt Wissen zu ergänzen.
-- **Verweise** – Bücher, Studien, Personen, Werkzeuge und Websites, die genannt werden,
-  je mit dem, wozu der Sprecher sie anführt. Nennt er keine Quelle, steht das so.
 - **Lernfragen** – acht bis zwölf Fragen zum Stoff, jede mit der Antwort aus dem Video
   und der Zeitmarke, an der sie steht.
-- **Positionen** – bei Gesprächen: je Person Rolle, Positionen und Begründungen, danach
-  Übereinstimmungen und Widersprüche, soweit sie ausdrücklich fallen.
 
 Passt ein Knopf nicht zum Video, sagt seine Antwort das in einem Satz – ausgeblendet wird
 keiner, denn das liesse sich nur raten.

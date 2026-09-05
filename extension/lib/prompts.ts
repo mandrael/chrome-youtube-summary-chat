@@ -252,31 +252,6 @@ export const PRESETS = {
       "Keine eigene Wertung und kein eigenes Argument: was hier steht, hat jemand im " +
       "Video gesagt. Fehlt eine Seite im Video, steht das in einem Satz statt einer " +
       "erfundenen Liste. Beginne direkt mit dem ersten Satz.",
-    claims:
-      "Schreib für jemanden, der prüfen will, ob stimmt, was im Video gesagt wird, und " +
-      "dafür wissen muss, was genau behauptet wird und worauf es sich stützt. " +
-      "Eine Liste der Behauptungen, die das Video tragen: Tatsachen, Zahlen, Ursache " +
-      "und Wirkung, Vergleiche, Vorhersagen. Nicht: Geschmack, Selbstverständliches, " +
-      "Beiläufiges. Eine blosse Angabe ohne Aussage – ein Preis, ein Datum, eine " +
-      "Version – ist keine Behauptung und gehört in die Faktenliste. " +
-      "Jede Behauptung als ein Satz, so formuliert, dass man sie ohne das Video prüfen " +
-      "kann: mit Gegenstand, Zahl, Zeitraum und Ort, wie der Sprecher sie nennt; bei " +
-      "einer Vorhersage mit dem Zeitpunkt, für den sie gilt. " +
-      "Darunter eine Zeile, womit der Sprecher sie stützt, mit einem dieser Etiketten " +
-      "vorneweg: **Gemessen** (eigener Test, eigene Zahl), **Quelle** (Studie, Bericht, " +
-      "Person – mit dem Namen, den er nennt; nennt er keinen: „Quelle, nicht benannt“), " +
-      "**Gezeigt** (Vorführung im Video), **Erfahrung** (eigenes Erleben), **Unbelegt** " +
-      "(nur behauptet). Am Ende dieser Zeile der Zeitstempel in der Schreibweise des " +
-      "Transkripts, mehrere Stellen in einer Klammer. " +
-      "Was der Sprecher selbst einschränkt („wahrscheinlich“, „schätze ich“) oder als " +
-      "fremde Meinung wiedergibt, ohne sie zu übernehmen, behält diese Einschränkung. " +
-      "Reihenfolge: zuerst die Behauptungen, ohne die das Video seine Aussage verliert, " +
-      "dann die übrigen. Höchstens 15; hat das Video mehr, die 15, deren Widerlegung " +
-      "dem Video am meisten schadet. " +
-      "Keine Bewertung, ob eine Behauptung stimmt, keine Einleitung, kein Schluss – die " +
-      "Liste ist die ganze Antwort. Enthält das Video keine prüfbaren Behauptungen, " +
-      "steht das in einem Satz, danach nichts. Beginne direkt mit der ersten " +
-      "Behauptung.",
     chapters:
       "Gliedere das Video in Kapitel, für jemanden, der zu einer Stelle springen will. " +
       "Ein neues Kapitel beginnt, wo eine neue Frage oder ein neuer Gegenstand beginnt, " +
@@ -324,21 +299,6 @@ export const PRESETS = {
       "Kein Einleitungs- und kein Schlusssatz, die Liste ist die ganze Antwort. Enthält " +
       "das Video kein Fachvokabular, steht das in einem Satz, danach nichts. Beginne " +
       "direkt mit der ersten Zeile.",
-    references:
-      "Schreib für jemanden, der nach dem Video weiterlesen oder weitersuchen will. " +
-      "Eine Liste dessen, worauf der Sprecher verweist: Bücher, Studien, Artikel, " +
-      "Personen und ihre Rolle, Organisationen, Werkzeuge, Produkte, Websites, Kurse, " +
-      "frühere Videos. " +
-      "Je Verweis eine Zeile: der Name fett und genau so, wie er ihn nennt (Autor, " +
-      "Titel, Jahr, Version, soweit genannt), dann in einem Satz, wozu er ihn anführt " +
-      "und wie er ihn bewertet – empfiehlt, widerspricht, zitiert nur. Am Zeilenende " +
-      "der Zeitstempel in der Schreibweise des Transkripts. " +
-      "Nichts ergänzen, was er nicht sagt: kein Autor, kein Jahr, keine Adresse aus " +
-      "eigenem Wissen. Nennt er eine Quelle ohne Namen („eine Studie zeigt“), steht " +
-      "**Quelle nicht benannt** und wozu sie angeführt wird. " +
-      "Reihenfolge nach dem Gewicht, das er dem Verweis gibt. " +
-      "Kein Einleitungs- und kein Schlusssatz. Nennt das Video keine Verweise, steht " +
-      "das in einem Satz, danach nichts. Beginne direkt mit der ersten Zeile.",
     quiz:
       "Schreib für jemanden, der prüfen will, ob er den Stoff des Videos verstanden hat. " +
       "Acht bis zwölf Fragen zu dem, was das Video lehrt oder behauptet – Zusammenhänge, " +
@@ -352,19 +312,6 @@ export const PRESETS = {
       "einem Absatz. " +
       "Keine Frage, deren Antwort im Video fehlt. Reihenfolge des Videos. " +
       "Kein Einleitungs- und kein Schlusssatz. Beginne direkt mit der ersten Frage.",
-    positions:
-      "Schreib für jemanden, der wissen will, wer in diesem Gespräch was vertritt. " +
-      "Ordne die Aussagen nach Person oder Organisation, je eine Überschrift (##) mit " +
-      "dem Namen, wie er im Video fällt, und der Rolle, soweit sie genannt wird. " +
-      "Je Beteiligtem: die Positionen als ganze Sätze, die Begründung dazu und die " +
-      "Einschränkungen, die er selbst macht, jeweils mit Zeitstempel in der Schreibweise " +
-      "des Transkripts. Vermische keine Sprecher; ist unklar, wer spricht, steht die " +
-      "Aussage unter „Nicht zuzuordnen“. " +
-      "Danach zwei kurze Abschnitte, jeweils nur, wenn es sie ausdrücklich gibt: worin " +
-      "sie übereinstimmen und worin sie sich widersprechen, je Punkt ein Satz mit den " +
-      "Namen. Nichts konstruieren, was nicht gesagt wird. " +
-      "Spricht im Video nur eine Person, steht das in einem Satz, danach ihre Positionen " +
-      "in derselben Form. Beginne direkt mit der ersten Überschrift.",
   },
   en: {
     summary_short:
@@ -496,27 +443,6 @@ export const PRESETS = {
       "No judgement and no argument of your own: what stands here was said by someone " +
       "in the video. If one side is missing from the video, say so in one sentence " +
       "instead of inventing a list. Start with the first sentence.",
-    claims:
-      "Write for someone who wants to check whether what the video says is true, and " +
-      "needs to know what exactly is claimed and what it rests on. " +
-      "A list of the claims the video rests on: facts, figures, cause and effect, " +
-      "comparisons, predictions. Not: taste, the obvious, the incidental. " +
-      "Every claim as one sentence, phrased so it can be checked without the video: " +
-      "with subject, figure, period and place as the speaker gives them; for a " +
-      "prediction with the point in time it applies to. " +
-      "Below it one line on what the speaker rests it on, led by one of these labels: " +
-      "**Measured** (own test, own figure), **Source** (study, report, person – with " +
-      "the name he gives; if he gives none: \"source, not named\"), **Shown** " +
-      "(demonstration in the video), **Experience** (own experience), **Unsupported** " +
-      "(merely asserted). At the end of that line the timestamp written the way the " +
-      "transcript writes it, several spots in one bracket. " +
-      "What the speaker qualifies himself (\"probably\", \"I reckon\") or reports as " +
-      "someone else's view without adopting it keeps that qualification. " +
-      "Order: first the claims without which the video loses its point, then the rest. " +
-      "At most 15; if the video has more, the 15 whose refutation would damage it most. " +
-      "No assessment of whether a claim is true, no introduction, no conclusion – the " +
-      "list is the whole answer. If the video contains no checkable claims, say so in " +
-      "one sentence and nothing more. Start with the first claim.",
     chapters:
       "Break the video down into chapters, for someone who wants to jump to a spot. " +
       "A new chapter starts where a new question or subject starts, not at every change " +
@@ -563,20 +489,6 @@ export const PRESETS = {
       "No opening or closing sentence – the list is the whole answer. If the video " +
       "contains no technical vocabulary, say so in one sentence and nothing more. Start " +
       "with the first line.",
-    references:
-      "Write for someone who wants to read on or search further after the video. " +
-      "A list of what the speaker refers to: books, studies, articles, people and their " +
-      "role, organisations, tools, products, websites, courses, earlier videos. " +
-      "One line per reference: the name in bold and exactly as he gives it (author, " +
-      "title, year, version as far as named), then in one sentence why he brings it up " +
-      "and how he rates it – recommends, disputes, merely cites. At the end of the line " +
-      "the timestamp written the way the transcript writes it. " +
-      "Add nothing he does not say: no author, year or address from your own knowledge. " +
-      "If he cites a source without naming it (\"a study shows\"), write **source not " +
-      "named** and what it is cited for. " +
-      "Order by the weight he gives the reference. " +
-      "No opening or closing sentence. If the video names no references, say so in one " +
-      "sentence and nothing more. Start with the first line.",
     quiz:
       "Write for someone who wants to check whether they have understood the material " +
       "of the video. " +
@@ -591,20 +503,6 @@ export const PRESETS = {
       "paragraph. " +
       "No question whose answer the video does not contain. Keep the order of the " +
       "video. No opening or closing sentence. Start with the first question.",
-    positions:
-      "Write for someone who wants to know who holds which position in this " +
-      "conversation. " +
-      "Group the statements by person or organisation, one heading (##) each with the " +
-      "name as it is given in the video and the role as far as it is named. " +
-      "Per participant: the positions as full sentences, the reasoning behind them and " +
-      "the limits they set themselves, each with the timestamp written the way the " +
-      "transcript writes it. Do not mix speakers; where it is unclear who is speaking, " +
-      "the statement goes under \"Unattributed\". " +
-      "Then two short sections, each only if they exist explicitly: where they agree " +
-      "and where they contradict each other, one sentence per point with the names. " +
-      "Construct nothing that is not said. " +
-      "If only one person speaks in the video, say so in one sentence and give their " +
-      "positions in the same form. Start with the first heading.",
   },
 } as const;
 

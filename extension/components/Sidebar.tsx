@@ -439,14 +439,11 @@ export function Sidebar({
     summary_long: "presetLong",
     summary_facts: "presetFacts",
     chapters: "presetChapters",
-    claims: "presetClaims",
     howto: "presetHowto",
     pro_contra: "presetProContra",
     comparison: "presetComparison",
     glossary: "presetGlossary",
-    references: "presetReferences",
     quiz: "presetQuiz",
-    positions: "presetPositions",
   } as const;
 
   /**
@@ -1000,19 +997,14 @@ export function Sidebar({
                 ["summary_medium", "presetMedium", "presetMediumHint"],
                 ["summary_long", "presetLong", "presetLongHint"],
                 ["chapters", "presetChapters", "presetChaptersHint"],
+                ["summary_facts", "presetFacts", "presetFactsHint"],
               ],
               [
-                ["summary_facts", "presetFacts", "presetFactsHint"],
-                ["claims", "presetClaims", "presetClaimsHint"],
                 ["howto", "presetHowto", "presetHowtoHint"],
                 ["pro_contra", "presetProContra", "presetProContraHint"],
                 ["comparison", "presetComparison", "presetComparisonHint"],
-              ],
-              [
                 ["glossary", "presetGlossary", "presetGlossaryHint"],
-                ["references", "presetReferences", "presetReferencesHint"],
                 ["quiz", "presetQuiz", "presetQuizHint"],
-                ["positions", "presetPositions", "presetPositionsHint"],
               ],
             ].map((reihe, n) => (
               <div key={n} className={`flex flex-wrap items-center gap-1${n ? " mt-1" : ""}`}>

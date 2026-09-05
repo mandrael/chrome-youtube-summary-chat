@@ -636,17 +636,37 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     if not ordner.is_dir():
         raise HostError(f"Der Zielordner existiert nicht: {ordner}")
 
-    meldung = f"Video wird geladen ({hoehe}p) ..."
-    progress("download", meldung)
-    wahl = f"bestvideo[height<={hoehe}]+bestaudio/best[height<={hoehe}]"
+    progress("download", "Spuren werden ermittelt ...")
+    # Ton zuerst: yt-dlp laedt die Spuren in der Reihenfolge des Formatausdrucks, und die
+    # kleine Tonspur vorweg gibt sofort sichtbaren Fortschritt (Michaels Wunsch, 05.09.2026).
+    wahl = f"bestaudio+bestvideo[height<={hoehe}]/best[height<={hoehe}]"
+    url = f"https://www.youtube.com/watch?v={video_id}"
+
+    # Erst die Spuren samt Groesse erfragen (ein Metadaten-Abruf, rund 1-2 s): nur so gibt
+    # es einen gemeinsamen Fortschritt ueber Ton und Bild statt zweimal 0 bis 100.
+    res = run([exe, "-f", wahl, "--dump-single-json", "--no-playlist", "--no-warnings", url])
+    if res.returncode != 0:
+        raise HostError(f"yt-dlp konnte das Video nicht lesen:\n{(res.stderr or res.stdout)[-800:]}")
+    daten = json.loads(res.stdout)
+    spuren = daten.get("requested_formats") or [daten]
+    groesse = {
+        str(f.get("format_id")): int(f.get("filesize") or f.get("filesize_approx") or 0)
+        for f in spuren
+    }
+    ton = {str(f.get("format_id")) for f in spuren if f.get("vcodec") in (None, "none")}
+    gesamt = sum(groesse.values())
+
     cmd = [
         exe, "-f", wahl, "--merge-output-format", "mp4", "--no-playlist", "--no-warnings",
-        # --newline: eine Fortschrittszeile je Aktualisierung statt Wagenruecklauf, sonst
-        # kommt der Fortschritt erst am Ende als ein Block an.
+        # --newline: eine Zeile je Aktualisierung statt Wagenruecklauf. Die Vorlage nennt
+        # Spur und geladene Bytes, daraus wird der gemeinsame Stand gerechnet.
+        # --no-quiet: --print schaltet yt-dlp stumm, dann fehlt die [Merger]-Zeile.
+        "--newline", "--progress", "--no-quiet",
+        "--progress-template", "download:FORT=%(info.format_id)s %(progress.downloaded_bytes)s",
         # Eindeutiger Praefix: so entscheidet kein Zeilenformat, welche Zeile der Pfad ist.
-        "--newline", "--progress", "--print", "after_move:PFAD=%(filepath)s",
+        "--print", "after_move:PFAD=%(filepath)s",
         "-o", str(ordner / "%(title).150B [%(id)s] %(height)sp.%(ext)s"),
-        f"https://www.youtube.com/watch?v={video_id}",
+        url,
     ]
     global _KIND
     kw: dict[str, Any] = (
@@ -661,21 +681,35 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     pfad = ""
     schwanz: list[str] = []
     letzter = -1
+    geladen: dict[str, int] = {}
+    aktuell = ""
     try:
         assert p.stdout is not None
         for zeile in p.stdout:
             zeile = zeile.rstrip("\n")
             schwanz = (schwanz + [zeile])[-12:]
-            m = PROZENT.match(zeile)
-            if m:
-                # ponytail: Bild- und Tonspur laufen nacheinander je 0 bis 100 %; ein
-                # gewichteter Gesamtwert braeuchte die Groessen beider Spuren vorab.
-                pz = min(100, int(float(m.group(1))))
-                if pz != letzter:
-                    letzter = pz
-                    progress("download", meldung, pz)
+            if zeile.startswith("FORT="):
+                spur, _, wert = zeile[len("FORT="):].partition(" ")
+                text = "Tonspur wird geladen ..." if spur in ton else f"Bildspur wird geladen ({hoehe}p) ..."
+                if spur != aktuell:
+                    aktuell = spur
+                    progress("download", text)
+                try:
+                    geladen[spur] = int(float(wert))
+                except ValueError:
+                    continue
+                # Stand je Spur merken statt "Spurwechsel = vorige fertig": DASH-Spuren
+                # koennen sich abwechseln. Fehlt fuer eine gemeldete Spur die Groesse
+                # (anderer Formatausdruck als beim Dump, keine Angabe), lieber keine Zahl
+                # als eine falsche; der Wert faellt nie zurueck.
+                if gesamt and all(groesse.get(f) for f in geladen):
+                    stand = sum(min(b, groesse[f]) for f, b in geladen.items())
+                    pz = max(letzter, min(100, int(100 * stand / gesamt)))
+                    if pz != letzter:
+                        letzter = pz
+                        progress("download", text, pz)
             elif zeile.startswith("[Merger]"):
-                progress("download", "Bild und Ton werden zusammengefügt ...")
+                progress("download", "Ton und Bild werden zusammengefügt ...", 100 if gesamt else None)
             elif zeile.startswith("PFAD="):
                 pfad = zeile[len("PFAD="):]
         p.wait()
@@ -690,9 +724,6 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     if not pfad or not Path(pfad).is_file():
         raise HostError("yt-dlp hat keinen Dateipfad gemeldet:\n" + "\n".join(schwanz)[-800:])
     return {"type": "downloaded", "path": pfad, "height": hoehe}
-
-
-PROZENT = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
 
 
 def reveal_file(pfad: str, ziel: str) -> dict[str, Any]:

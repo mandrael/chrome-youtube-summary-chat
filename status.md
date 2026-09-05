@@ -100,6 +100,22 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.4.1 – ein gemeinsamer Fortschritt über Ton und Bild
+
+Michaels Wunsch: Hinweise „Ton wird geladen", dann „Bild wird geladen", dann
+„zusammengefügt" – und die Frage, ob ein gemeinsamer Balken überhaupt geht. Er geht:
+`download_video` holt vor dem Download `--dump-single-json` für genau den gewählten
+Formatausdruck (ein Metadaten-Abruf, 1 bis 2 s) und kennt damit `requested_formats`
+samt Grösse und Spurart (`vcodec == "none"` = Ton). Der Formatausdruck lautet jetzt
+`bestaudio+bestvideo[height<=H]` – yt-dlp lädt in dieser Reihenfolge, die kleine Tonspur
+zuerst. `--progress-template "download:FORT=%(info.format_id)s
+%(progress.downloaded_bytes)s"` liefert je Zeile Spur und Bytes; der Host rechnet
+(fertige Spuren + laufende Bytes) / Gesamt. Gemessen bei Big Buck Bunny 720p: Tonspur
+0 → 12 %, Bildspur 12 → 100 %, 46 Meldungen, 18 s; Container hat Ton als Spur 0, Bild
+als Spur 1 (ffprobe), spielt normal. `--no-quiet` nötig, weil `--print` yt-dlp stumm
+schaltet und die `[Merger]`-Zeile sonst fehlt. Ohne bekannte Grössen (beide 0) gibt es
+keine Zahl statt einer falschen.
+
 ### 05.09.2026: Version 0.4.0 – Download-Fortschritt und „Im Ordner zeigen"
 
 Michaels Wahl aus 16 gerenderten Kandidaten: **Icon Nr. 1 `Download`** (statt

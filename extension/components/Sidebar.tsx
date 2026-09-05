@@ -439,6 +439,7 @@ export function Sidebar({
     summary_long: "presetLong",
     summary_facts: "presetFacts",
     chapters: "presetChapters",
+    claims: "presetClaims",
     howto: "presetHowto",
     pro_contra: "presetProContra",
     comparison: "presetComparison",
@@ -998,6 +999,7 @@ export function Sidebar({
                 ["summary_long", "presetLong", "presetLongHint"],
                 ["chapters", "presetChapters", "presetChaptersHint"],
                 ["summary_facts", "presetFacts", "presetFactsHint"],
+                ["claims", "presetClaims", "presetClaimsHint"],
               ],
               [
                 ["howto", "presetHowto", "presetHowtoHint"],

@@ -136,7 +136,10 @@ warf – ein Bundle-Grep ersetzt keinen Ladeversuch.
 ohne Erhöhung ist beim Testen nicht erkennbar, was im Browser steckt. Am 04.09.2026
 wurde das über drei Commits vergessen. **Ein Commit ist genau ein Sprung**, nie einer
 pro enthaltener Funktion: 0.6.0 → 0.7.0, auch wenn drei Funktionen drinstecken. Am
-05.09.2026 sprang ein Commit fälschlich von 0.6.0 auf 0.8.0.
+05.09.2026 sprang ein Commit fälschlich von 0.6.0 auf 0.8.0. **„function“ heisst neue
+Fähigkeit** – ein zweiter Anbieter, ein Downloadweg, ein Modellmenü. Prompts ändern,
+Kacheln umbenennen, hinzufügen oder streichen, Texte, Layout: das ist **„fix“**. Am
+06.09.2026 wurde das Streichen dreier Kacheln fälschlich als 0.9.0 gezählt.
 
 ## Sprache
 

@@ -125,12 +125,11 @@ export const PRESETS = {
     summary_medium:
       "Fasse das Video zusammen, für jemanden, der es nicht ansieht und in wenigen " +
       "Minuten wissen will, was darin gesagt wird. " +
-      "Je Thema ein Absatz, höchstens sechs; hat das Video nur ein Thema, ist es ein " +
-      "Absatz, hat es mehr als sechs (Nachrichten, Podcast), kommen die sechs " +
-      "wichtigsten. Jeder Absatz beginnt fett mit dem " +
+      "Je Thema ein Absatz, höchstens vier; hat das Video mehr Themen (Nachrichten, " +
+      "Podcast), kommen die vier wichtigsten. Jeder Absatz beginnt fett mit dem " +
       "Thema als kurzer Aussage von drei bis acht Wörtern, kein Schlagwort: nicht " +
-      "„**Akku**“, sondern „**Der Akku hält zwei Tage.**“ Danach in derselben Zeile drei " +
-      "bis fünf Sätze: was der Sprecher dazu sagt, womit er es begründet (Zahl, " +
+      "„**Akku**“, sondern „**Der Akku hält zwei Tage.**“ Danach in derselben Zeile zwei " +
+      "bis vier weitere Sätze: was der Sprecher dazu sagt, womit er es begründet (Zahl, " +
       "Beispiel, Beleg) und was er selbst einschränkt. " +
       "Reihenfolge nach Gewicht, nicht nach Ablauf im Video. Kommt ein Thema mehrfach " +
       "vor, gehört alles dazu in einen Absatz. " +
@@ -177,8 +176,9 @@ export const PRESETS = {
       "Sprechers, Vorgänger 9 Stunden“. " +
       "Nicht hierher gehört, was sich nur mit Argumenten prüfen lässt – Ursache und " +
       "Wirkung, Vorhersagen, Vergleichsurteile: das ist eine Behauptung, keine Angabe. " +
-      "Je Angabe eine Zeile, höchstens ein Satz: die Angabe selbst fett, dann worauf sie " +
-      "sich bezieht und, falls der Sprecher eine nennt, die Quelle. Am Zeilenende der " +
+      "Jede Angabe ein Aufzählungspunkt (die Zeile beginnt mit „- “), höchstens ein Satz: " +
+      "die Angabe selbst fett, dann worauf sie " +
+      "sich bezieht und, falls der Sprecher eine nennt, die Quelle. Am Ende des Punktes der " +
       "Zeitstempel als Beleg, in der Schreibweise des Transkripts; fehlen Zeitstempel im " +
       "Transkript, entfällt er und die Angabe bleibt. " +
       "Was der Sprecher selbst als Schätzung, Erinnerung oder Gerücht kennzeichnet, " +
@@ -242,7 +242,9 @@ export const PRESETS = {
       "Ablauf. Ein Argument, das der Sprecher selbst entkräftet, steht mit dieser " +
       "Entkräftung, nicht als offenes Argument. Bei mehreren Personen steht, wer es " +
       "vertritt. " +
-      "Zum Schluss bis zu drei Zeilen, jede nur, wenn das Video sie hergibt: „Für wen“ " +
+      "Die Punkte beider Listen beginnen mit „- “. " +
+      "Zum Schluss ein Abschnitt mit Überschrift (##) und bis zu drei Aufzählungspunkten, " +
+      "jeder nur, wenn das Video ihn hergibt: „**Für wen**“ " +
       "– wem der Sprecher es empfiehlt und wem nicht; „Alternativen“ – was er " +
       "stattdessen nennt, mit seinem Grund; „Nicht geprüft“ – was er ausdrücklich offen " +
       "lässt oder nicht getestet hat. " +
@@ -252,13 +254,42 @@ export const PRESETS = {
       "Keine eigene Wertung und kein eigenes Argument: was hier steht, hat jemand im " +
       "Video gesagt. Fehlt eine Seite im Video, steht das in einem Satz statt einer " +
       "erfundenen Liste. Beginne direkt mit dem ersten Satz.",
+    claims:
+      "Schreib für jemanden, der prüfen will, ob stimmt, was im Video gesagt wird, und " +
+      "dafür wissen muss, was genau behauptet wird und worauf es sich stützt. " +
+      "Eine Liste der Behauptungen, die das Video tragen: Tatsachen, Zahlen, Ursache " +
+      "und Wirkung, Vergleiche, Vorhersagen. Nicht: Geschmack, Selbstverständliches, " +
+      "Beiläufiges. Eine blosse Angabe ohne Aussage – ein Preis, ein Datum, eine " +
+      "Version – ist keine Behauptung und gehört in die Faktenliste. " +
+      "Jede Behauptung ein eigener Absatz, durch eine Leerzeile vom nächsten getrennt " +
+      "(ein blosser Zeilenumbruch reicht nicht, der wird zu Fliesstext). Der Absatz " +
+      "beginnt mit der Behauptung als einem fetten Satz, so formuliert, dass man sie " +
+      "ohne das Video prüfen kann: mit Gegenstand, Zahl, Zeitraum und Ort, wie der " +
+      "Sprecher sie nennt; bei einer Vorhersage mit dem Zeitpunkt, für den sie gilt. " +
+      "Danach im selben Absatz ein Satz, womit der Sprecher sie stützt, mit einem dieser " +
+      "Etiketten vorneweg: **Gemessen** (eigener Test, eigene Zahl), **Quelle** (Studie, Bericht, " +
+      "Person – mit dem Namen, den er nennt; nennt er keinen: „Quelle, nicht benannt“), " +
+      "**Gezeigt** (Vorführung im Video), **Erfahrung** (eigenes Erleben), **Unbelegt** " +
+      "(nur behauptet). Am Ende dieses Satzes der Zeitstempel in der Schreibweise des " +
+      "Transkripts, mehrere Stellen in einer Klammer; fehlen Zeitstempel im Transkript, " +
+      "entfällt er. " +
+      "Was der Sprecher selbst einschränkt („wahrscheinlich“, „schätze ich“) oder als " +
+      "fremde Meinung wiedergibt, ohne sie zu übernehmen, behält diese Einschränkung. " +
+      "Reihenfolge: zuerst die Behauptungen, ohne die das Video seine Aussage verliert, " +
+      "dann die übrigen. Höchstens 15; hat das Video mehr, die 15, deren Widerlegung " +
+      "dem Video am meisten schadet. " +
+      "Keine Bewertung, ob eine Behauptung stimmt, keine Einleitung, kein Schluss – die " +
+      "Liste ist die ganze Antwort. Enthält das Video keine prüfbaren Behauptungen, " +
+      "steht das in einem Satz, danach nichts. Beginne direkt mit der ersten " +
+      "Behauptung.",
     chapters:
       "Gliedere das Video in Kapitel, für jemanden, der zu einer Stelle springen will. " +
       "Ein neues Kapitel beginnt, wo eine neue Frage oder ein neuer Gegenstand beginnt, " +
       "nicht bei jedem Sprecherwechsel oder Beispiel; ein zehnminütiges Video hat meist " +
       "vier bis acht Kapitel, ein zweistündiges selten mehr als zwanzig. " +
-      "Je Kapitel eine Zeile mit Zeitstempel in der Schreibweise des Transkripts und " +
-      "Überschrift, darunter ein bis zwei Sätze, die sagen, was dort behauptet oder " +
+      "Je Kapitel ein Aufzählungspunkt (die Zeile beginnt mit „- “): Zeitstempel in der " +
+      "Schreibweise des Transkripts und Überschrift fett, dann nach einem Gedankenstrich " +
+      "ein bis zwei Sätze, die sagen, was dort behauptet oder " +
       "gezeigt wird: nicht „hier spricht er über den Akku“, sondern „Der Akku hält zwei " +
       "Tage, gemessen ohne 5G“. " +
       "Reihenfolge des Videos. Beginne direkt mit dem ersten Kapitel.",
@@ -276,7 +307,8 @@ export const PRESETS = {
       "Das wichtigste Wort einer Zelle darf **fett** stehen, höchstens eines je Zelle. " +
       "Danach ein Abschnitt **Kurz gesagt:** mit einem Aufzählungspunkt je verglichener " +
       "Sache, jeder ein Satz, der sie aus ihrer eigenen Sicht auf den Punkt bringt. " +
-      "Zum Schluss eine Zeile **Unterschied, der zählt:** - der eine Punkt, an dem sich " +
+      "Zum Schluss, nach einer Leerzeile als eigener Absatz, **Unterschied, der zählt:** " +
+      "– der eine Punkt, an dem sich " +
       "eine Entscheidung zwischen ihnen entscheidet. " +
       "Vergleicht das Video gar nichts, schreib das in einem Satz und biete stattdessen " +
       "die Zusammenfassung an. " +
@@ -287,7 +319,8 @@ export const PRESETS = {
       "will. " +
       "Eine Liste der Fachbegriffe, Methoden, Modelle und Verfahrensnamen, die der " +
       "Sprecher benutzt und erklärt oder erkennbar voraussetzt. " +
-      "Je Begriff eine Zeile: der Begriff fett und im Original, dann in ein bis zwei " +
+      "Jeder Begriff ein Aufzählungspunkt (die Zeile beginnt mit „- “): der Begriff fett " +
+      "und im Original, dann in ein bis zwei " +
       "Sätzen, was er laut Sprecher bedeutet und wofür er ihn verwendet – seine " +
       "Erklärung, nicht eine allgemeine. Erklärt er ihn nicht, steht „(nicht erklärt)“ " +
       "und es wird nichts ergänzt. Grenzt er ihn von einem anderen Begriff ab, steht " +
@@ -307,7 +340,8 @@ export const PRESETS = {
       "Die Frage steht fett und nummeriert in einer eigenen Zeile. " +
       "Darunter die Antwort als Zitatblock – die Zeile beginnt mit „> “ –, in ein bis " +
       "zwei Sätzen, so wie der Sprecher sie gibt, mit seinen Zahlen und Begriffen, am " +
-      "Ende der Zeitstempel der Stelle in der Schreibweise des Transkripts. Der " +
+      "Ende der Zeitstempel der Stelle in der Schreibweise des Transkripts. Nach jedem " +
+      "Zitatblock eine Leerzeile, sonst hängt die nächste Frage im Zitat. Der " +
       "Zitatblock trennt Antwort von Frage sichtbar; ohne ihn verschwimmt beides zu " +
       "einem Absatz. " +
       "Keine Frage, deren Antwort im Video fehlt. Reihenfolge des Videos. " +
@@ -332,12 +366,12 @@ export const PRESETS = {
     summary_medium:
       "Summarise the video for someone who will not watch it and wants to know in a " +
       "few minutes what is said in it. " +
-      "One paragraph per topic, six at most; a video with a single topic gets one " +
-      "paragraph, one with more than six (news, podcast) gets the six most important. " +
+      "One paragraph per topic, four at most; a video with more topics (news, podcast) " +
+      "gets the four most important. " +
       "Each paragraph opens in bold " +
       "with the topic as a short statement of three to eight words, not a keyword: not " +
-      "\"**Battery**\" but \"**The battery lasts two days.**\" Then, on the same line, three " +
-      "to five sentences: what the speaker says about it, what supports it (figure, " +
+      "\"**Battery**\" but \"**The battery lasts two days.**\" Then, on the same line, two " +
+      "to four further sentences: what the speaker says about it, what supports it (figure, " +
       "example, evidence) and what the speaker qualifies. " +
       "Order by weight, not by position in the video. If a topic comes up more than " +
       "once, everything about it goes into one paragraph. " +
@@ -379,7 +413,7 @@ export const PRESETS = {
       "Include what can be checked independently of the speaker's opinion: not \"the " +
       "battery is good\" but \"**14 hours** of battery life in the speaker's test, " +
       "predecessor 9 hours\". " +
-      "One line per fact, one sentence at most: the fact itself in bold, then what it " +
+      "One bullet per fact (the line starts with \"- \"), one sentence at most: the fact itself in bold, then what it " +
       "refers to and, if the speaker names one, the source. At the end of the line the " +
       "timestamp as evidence, written the way the transcript writes it; if the " +
       "transcript has no timestamps, drop it and keep the fact. " +
@@ -434,7 +468,9 @@ export const PRESETS = {
       "Order by the weight the speaker gives the argument, not by sequence. An argument " +
       "the speaker refutes himself appears with that refutation, not as an open one. " +
       "With several people, say who holds it. " +
-      "Close with up to three lines, each only if the video supplies it: \"For whom\" – " +
+      "Items in both lists start with \"- \". " +
+      "Close with a section under a heading (##) and up to three bullets, each only if " +
+      "the video supplies it: \"**For whom**\" – " +
       "who he recommends it to and who not; \"Alternatives\" – what he names instead, " +
       "with his reason; \"Not tested\" – what he explicitly leaves open. " +
       "If there are several contested questions (discussion, podcast), one For/Against " +
@@ -443,13 +479,39 @@ export const PRESETS = {
       "No judgement and no argument of your own: what stands here was said by someone " +
       "in the video. If one side is missing from the video, say so in one sentence " +
       "instead of inventing a list. Start with the first sentence.",
+    claims:
+      "Write for someone who wants to check whether what the video says is true, and " +
+      "needs to know what exactly is claimed and what it rests on. " +
+      "A list of the claims the video rests on: facts, figures, cause and effect, " +
+      "comparisons, predictions. Not: taste, the obvious, the incidental. " +
+      "Every claim is its own paragraph, separated from the next by a blank line (a " +
+      "bare line break is not enough, it collapses into running text). The paragraph " +
+      "opens with the claim as one bold sentence, phrased so it can be checked without " +
+      "the video: with subject, figure, period and place as the speaker gives them; for " +
+      "a prediction with the point in time it applies to. " +
+      "Then, in the same paragraph, one sentence on what the speaker rests it on, led by " +
+      "one of these labels: " +
+      "**Measured** (own test, own figure), **Source** (study, report, person – with " +
+      "the name he gives; if he gives none: \"source, not named\"), **Shown** " +
+      "(demonstration in the video), **Experience** (own experience), **Unsupported** " +
+      "(merely asserted). At the end of that sentence the timestamp written the way the " +
+      "transcript writes it, several spots in one bracket; if the transcript has no " +
+      "timestamps, it is omitted. " +
+      "What the speaker qualifies himself (\"probably\", \"I reckon\") or reports as " +
+      "someone else's view without adopting it keeps that qualification. " +
+      "Order: first the claims without which the video loses its point, then the rest. " +
+      "At most 15; if the video has more, the 15 whose refutation would damage it most. " +
+      "No assessment of whether a claim is true, no introduction, no conclusion – the " +
+      "list is the whole answer. If the video contains no checkable claims, say so in " +
+      "one sentence and nothing more. Start with the first claim.",
     chapters:
       "Break the video down into chapters, for someone who wants to jump to a spot. " +
       "A new chapter starts where a new question or subject starts, not at every change " +
       "of speaker or example; a ten-minute video usually has four to eight chapters, a " +
       "two-hour one rarely more than twenty. " +
-      "Per chapter one line with the timestamp written the way the transcript writes it " +
-      "and a heading, below it one or two sentences saying what is claimed or shown " +
+      "One bullet per chapter (the line starts with \"- \"): the timestamp written the way " +
+      "the transcript writes it and a heading in bold, then after a dash one or two " +
+      "sentences saying what is claimed or shown " +
       "there: not \"here he talks about the battery\" but \"The battery lasts two days, " +
       "measured without 5G\". " +
       "Keep the order of the video. Start with the first chapter.",
@@ -466,7 +528,8 @@ export const PRESETS = {
       "One word per cell may be **bold**, at most one. " +
       "Then a section **In short:** with one bullet per compared thing, each a single " +
       "sentence putting it in its own terms. " +
-      "Finally one line **The difference that matters:** - the single point a decision " +
+      "Finally, after a blank line as its own paragraph, **The difference that matters:** " +
+      "– the single point a decision " +
       "between them turns on. " +
       "If the video compares nothing, say so in one sentence and offer the summary " +
       "instead. " +
@@ -477,7 +540,8 @@ export const PRESETS = {
       "video. " +
       "A list of the terms, methods, models and named procedures the speaker uses and " +
       "explains or evidently takes for granted. " +
-      "One line per term: the term in bold and in the original language, then in one or " +
+      "One bullet per term (the line starts with \"- \"): the term in bold and in the " +
+      "original language, then in one or " +
       "two sentences what it means according to the speaker and what he uses it for – " +
       "his explanation, not a general one. If he does not explain it, write \"(not " +
       "explained)\" and add nothing. If he distinguishes it from another term, the " +
@@ -498,7 +562,8 @@ export const PRESETS = {
       "The question stands in bold and numbered on a line of its own. " +
       "Below it the answer as a block quote – the line starts with \"> \" – in one or " +
       "two sentences as the speaker gives it, with his figures and terms, ending with " +
-      "the timestamp of the spot, written the way the transcript writes it. The block " +
+      "the timestamp of the spot, written the way the transcript writes it. A blank line " +
+      "after every block quote, otherwise the next question hangs inside the quote. The block " +
       "quote keeps answer and question visibly apart; without it the two blur into one " +
       "paragraph. " +
       "No question whose answer the video does not contain. Keep the order of the " +

@@ -66,15 +66,17 @@ Einstellungen, weil die Modellliste dort geladen wird.
 klappt sie weg – in YouTubes eigener Spaltenbreite. Ausserhalb einer Videoseite öffnet es
 die Einstellungen.
 
-Die zehn Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe
+Die elf Knöpfe unterscheiden sich im Zweck, nicht in der Länge. Die obere Reihe
 nimmt das ganze Video, die mittlere schneidet einen Zweck heraus, die untere hilft beim
 Aneignen und Weiterverfolgen:
 
 - **In Kürze** – was behauptet wird und wozu es kommt, höchstens sechs Sätze, ohne Zeitstempel.
-- **Zusammenfassung** – drei bis sechs Absätze, je einer pro Thema, das Thema fett vorneweg.
+- **Zusammenfassung** – zwei bis vier Absätze, je einer pro Thema, das Thema fett vorneweg.
 - **Ausführlich** – jede Sachfrage als eigener Abschnitt, mit Zahlen, Namen, Zeitstempeln.
 - **Kapitel** – Sprungmarken entlang des Videos, mit Aussage statt Themennamen.
 - **Fakten** – Zahlen, Namen, Daten und Zitate als Liste, je Angabe ein Zeitstempel als Beleg.
+- **Behauptungen** – bis zu 15 Behauptungen, je ein Absatz: die Behauptung fett, dann
+  ihre Belegart (Gemessen, Quelle, Gezeigt, Erfahrung, Unbelegt) mit Zeitstempel.
 - **Anleitung** – die Schritte in der Reihenfolge des Nachmachens, mit Befehlen, Werten
   und Zeitstempeln; was der Sprecher nur zeigt und nicht ausspricht, wird nicht erraten.
 - **Pro/Contra** – Argumente beider Seiten mit ihren Belegen, dazu „Für wen",

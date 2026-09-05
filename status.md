@@ -100,6 +100,30 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 06.09.2026: Version 0.9.1 – Behauptungen zurück und lesbar, Listenform in allen Presets
+
+Michael: „In Kürze und Zusammenfassung, zwei statt einem, ist das berechtigt? In Kürze
+sehr knapp, Zusammenfassung fast keine Zusammenfassung mehr“ und „bei Behauptungen
+wird nicht strukturiert, nur fette Wörter im Text, bitte Leerzeilen“. Er benutzt
+Behauptungen also – zurückgeholt (die Streichung von 0.9.0 war auf mein „a“-Lesen
+gestützt), und die Ursache der fehlenden Struktur behoben: die Prompts verlangten
+„eine Zeile je Eintrag“, react-markdown ohne remark-breaks zieht einzelne
+Zeilenumbrüche aber zu einem Absatz zusammen. Jetzt: Behauptungen je ein Absatz mit
+Leerzeile (Behauptung fett, dann Etikett-Satz); Fakten, Kapitel, Begriffe als
+Aufzählungspunkte „- “; Pro/Contra mit Markern und Schlussabschnitt; Vergleich mit
+Schluss als eigenem Absatz; Lernfragen mit Leerzeile nach jedem Zitatblock (Codex:
+sonst hängt die nächste Frage im Blockquote). Zusammenfassung gestrafft: höchstens
+vier Absätze zu drei bis fünf Sätzen, damit die Stufen In Kürze (≤ 6 Sätze) ·
+Zusammenfassung (≤ 20 Sätze) · Ausführlich (offen) auseinanderliegen. Elf Knöpfe.
+
+Codex offen gelassen (niedrig): de/en-Prompts sind nicht mehr inhaltsgleich (en fehlt
+u. a. die Abgrenzung Angabe/Behauptung, körperliche Abläufe in Anleitung, die
+Überlaufregel in Ausführlich); Hinweistexte ebenso. Kein Nutzer hier arbeitet auf en.
+
+**Versionsregel nachgeschärft (Michael):** „function“ nur für neue Fähigkeit, Kacheln
+und Prompts sind „fix“. 0.9.0 hätte 0.8.2 heissen müssen; bleibt so, weil ein Rewrite
+mehr kostet als der Schönheitsfehler.
+
 ### 06.09.2026: Version 0.9.0 – zehn Schnellbefehle statt dreizehn
 
 Michael: „a“ auf die Empfehlung – Behauptungen, Verweise und Positionen gestrichen

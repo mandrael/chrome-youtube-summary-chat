@@ -52,7 +52,7 @@ export interface ChatMessage {
 export interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
-  /** USD, kommt direkt von OpenRouter. */
+  /** USD, kommt direkt von OpenRouter. Mistral liefert keinen Betrag – dann fehlt das Feld. */
   cost?: number;
 }
 
@@ -104,12 +104,28 @@ export type SttRoute =
  */
 export type HelperJob = "subtitles" | "audio";
 
+/** Genau zwei Gegenstellen: OpenRouter (Standard) und Mistral AI direkt (EU, Datenschutzoption). */
+export type Provider = "openrouter" | "mistral";
+export type MistralRegion = "eu" | "global";
+
 export type UiLang = "de" | "en";
 export type AnswerLang = "auto" | "de" | "en";
 
 export interface Settings {
+  provider: Provider;
+  /** OpenRouter-Key. */
   apiKey: string;
+  /** OpenRouter-Modell-Slug. */
   model: string;
+  /** Mistral-Key, geht nur an Mistrals eigene Endpunkte. */
+  mistralApiKey: string;
+  /**
+   * Regionaler Inferenz-Endpunkt. "eu" = api.eu.mistral.ai, Verarbeitung garantiert in der
+   * EU (rund 10 % Aufpreis laut Mistral-Doku „Regional inference"); "global" = api.mistral.ai.
+   */
+  mistralRegion: MistralRegion;
+  /** Mistral-Modell-ID; leer, bis „Modelle laden" gelaufen ist. */
+  mistralModel: string;
   reasoning: ReasoningEffort;
   systemPrompt: string;
   answerLang: AnswerLang;
@@ -147,7 +163,7 @@ export interface TranscriptTranslation {
   target: string;
   /** Anzeigename, "Deutsch". */
   targetName: string;
-  route: "chrome" | "openrouter";
+  route: "chrome" | "openrouter" | "mistral";
   /** In Cue-Reihenfolge; null = noch nicht übersetzt. */
   texts: (string | null)[];
   /** Zusammenhängend übersetzte Zeilen ab Anfang. */

@@ -57,8 +57,8 @@ export default defineConfig({
     description:
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
     // Schema major.function.fix (status.md, 03.09.2026). 0.3.0 wäre der Funktionssprung gewesen (Vergleich-Preset, adaptive
-    // Tabellen, Videodownload, Installer), 0.3.1 der Fix des Ladefehlers, 0.3.2 Download-Knopf im Kopf, 0.4.0 Fortschritt und „Im Ordner zeigen", 0.4.1 gemeinsamer Fortschritt Ton+Bild, 0.5.0 Ordnerdialog und Zielordner-Anzeige.
-    version: "0.5.0",
+    // Tabellen, Videodownload, Installer), 0.3.1 der Fix des Ladefehlers, 0.3.2 Download-Knopf im Kopf, 0.4.0 Fortschritt und „Im Ordner zeigen", 0.4.1 gemeinsamer Fortschritt Ton+Bild, 0.5.0 Ordnerdialog und Zielordner-Anzeige, 0.6.0 Mistral AI als zweiter Anbieter.
+    version: "0.6.0",
     // Bewusst ohne `sidePanel`: Vivaldi trägt jede Extension, die diese Permission
     // deklariert, ungefragt in seine Panel-Leiste ein und öffnet dort beim Installieren
     // ein leeres Panel (Vivaldi-Bug VB-123452, Stand 8.1 offen). Verhindern lässt sich
@@ -66,7 +66,15 @@ export default defineConfig({
     permissions: isFull(env.mode)
       ? ["storage", "nativeMessaging"]
       : ["storage"],
-    host_permissions: ["*://*.youtube.com/*", "https://openrouter.ai/*"],
+    // Genau zwei Cloud-Gegenstellen: OpenRouter (Standard) und Mistral AI direkt
+    // (Datenschutzoption, EU). Siehe Regel 1 in CLAUDE.md.
+    host_permissions: [
+      "*://*.youtube.com/*",
+      "https://openrouter.ai/*",
+      // Mistral direkt: EU-Endpunkt (Standard) und globaler Endpunkt.
+      "https://api.eu.mistral.ai/*",
+      "https://api.mistral.ai/*",
+    ],
     options_ui: {
       page: "options.html",
       open_in_tab: true,

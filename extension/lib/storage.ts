@@ -7,8 +7,15 @@ import type { Conversation, Settings, TranscriptTranslation } from "./types";
 export const DEFAULT_MODEL = "openai/gpt-5.6-luna";
 
 export const DEFAULT_SETTINGS: Settings = {
+  provider: "openrouter",
   apiKey: "",
   model: DEFAULT_MODEL,
+  mistralApiKey: "",
+  // EU ist der Sinn der Option: Datenschutz. Wer den globalen Endpunkt will, schaltet um.
+  mistralRegion: "eu",
+  // Bewusst leer: Mistrals Doku führt keine Tabelle stabiler Aliase, die Liste kommt
+  // per „Modelle laden" von /v1/models.
+  mistralModel: "",
   reasoning: "minimal",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   answerLang: "auto",

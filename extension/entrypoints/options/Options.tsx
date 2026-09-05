@@ -29,8 +29,12 @@ import type {
 
 const REASONING_STEPS: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
 
-/** Das eine Feld, das „Alles zurücksetzen" unangetastet lässt. */
-const ZUGANGSFELD: keyof Settings = "apiKey";
+/**
+ * Was „Alles zurücksetzen" unangetastet lässt: die Schlüssel beider Anbieter, die Wahl
+ * des Anbieters und das Mistral-Modell – ohne die drei letzten stünde jemand mit
+ * Mistral nach dem Zurücksetzen still bei OpenRouter.
+ */
+const ZUGANGSFELDER: ReadonlyArray<keyof Settings> = ["apiKey", "mistralApiKey", "provider", "mistralModel"];
 
 /** Lite-Modelle bekommen minimal vorbelegt – dort kostet Reasoning mehr, als es bringt. */
 function isLiteModel(id: string): boolean {
@@ -48,6 +52,15 @@ export function Options() {
   const [ordnerDialog, setOrdnerDialog] = React.useState(false);
   const [host, setHost] = React.useState<{ ok: boolean; detail: string } | null>(null);
   const [cacheMeldung, setCacheMeldung] = React.useState<string | null>(null);
+  /*
+   * Mistral: Liste und Schlüsselprobe brauchen beide den Schlüssel, deshalb wird hier
+   * nichts beim Öffnen geladen – erst auf Klick.
+   */
+  const [mistralModels, setMistralModels] = React.useState<ModelInfo[] | null>(null);
+  const [mistralFehler, setMistralFehler] = React.useState("");
+  const [mistralLaedt, setMistralLaedt] = React.useState(false);
+  const [mistralKeyStatus, setMistralKeyStatus] = React.useState<KeyStatus | null>(null);
+  const [mistralTesting, setMistralTesting] = React.useState(false);
 
   async function leeren() {
     const anzahl = await clearCache();
@@ -95,15 +108,19 @@ export function Options() {
   }, [models]);
 
   React.useEffect(() => {
-    void getSettings().then(setS);
-
-    ask<ModelInfo[]>("listModels")
-      .then(setModels)
-      .catch((e) => {
-        // Ohne Liste bleibt das Dropdown nutzbar – dann eben ohne Preise.
-        setModelsError(String(e?.message ?? e));
-        setModels(FALLBACK_MODELS);
-      });
+    void getSettings().then((s0) => {
+      setS(s0);
+      // OpenRouter nur ansprechen, wenn OpenRouter gewählt ist – bei Mistral keine
+      // einzige Anfrage dorthin, auch nicht für die Modellliste.
+      if (s0.provider !== "openrouter") return;
+      ask<ModelInfo[]>("listModels")
+        .then(setModels)
+        .catch((e) => {
+          // Ohne Liste bleibt das Dropdown nutzbar – dann eben ohne Preise.
+          setModelsError(String(e?.message ?? e));
+          setModels(FALLBACK_MODELS);
+        });
+    });
 
     if (__FALLBACK__) {
       ask<SttModelInfo[]>("listSttModels")
@@ -167,8 +184,23 @@ export function Options() {
 
   /** Weicht überhaupt etwas ab? Sonst ist „Alles zurücksetzen" ein toter Knopf. */
   const etwasVerstellt = (Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[]).some(
-    (k) => k !== ZUGANGSFELD && s[k] !== DEFAULT_SETTINGS[k],
+    (k) => !ZUGANGSFELDER.includes(k) && s[k] !== DEFAULT_SETTINGS[k],
   );
+
+  function mistralModelleLaden() {
+    setMistralLaedt(true);
+    setMistralFehler("");
+    // `s` ist hinter dem Lade-Guard gesetzt; die Verengung reicht nur nicht in eine
+    // verschachtelte Funktion hinein.
+    ask<ModelInfo[]>("listMistralModels", { apiKey: s?.mistralApiKey ?? "", region: s?.mistralRegion })
+      .then((liste) => {
+        setMistralModels(liste);
+        // Ein gespeichertes Modell, das die Liste nicht mehr führt, bleibt stehen und
+        // wird als solches angezeigt – nichts wird still umgestellt.
+      })
+      .catch((e) => setMistralFehler(String(e?.message ?? e)))
+      .finally(() => setMistralLaedt(false));
+  }
 
   return (
     <div className="mx-auto min-h-screen max-w-5xl bg-background p-8 text-foreground">
@@ -182,11 +214,126 @@ export function Options() {
         </span>
       </h1>
       <p className="mb-6 text-sm text-muted-foreground">
-        Alle Modellaufrufe laufen über OpenRouter. Es gibt keinen zweiten Anbieter und
-        kein eigenes Backend.
+        Modellaufrufe gehen direkt vom Browser an den gewählten Anbieter. Kein eigenes
+        Backend, kein Proxy, keine Telemetrie.
       </p>
 
-      {/* ---------- Zugang ---------- */}
+      {/* ---------- Anbieter ---------- */}
+      <Section title="Anbieter">
+        <Field
+          label="Wohin die Anfragen gehen"
+          hint="OpenRouter bündelt viele Modelle unter einem Schlüssel. Mistral AI ist ein Anbieter mit Sitz in der EU – die Datenschutzoption. Gewechselt wird hier; der jeweils andere Zugang bleibt gespeichert."
+        >
+          <Radio
+            value={s.provider}
+            onChange={(v) => patch({ provider: v as Settings["provider"] })}
+            options={[
+              ["openrouter", "OpenRouter (Standard)"],
+              ["mistral", "Mistral AI – EU-Anbieter, Datenschutzoption"],
+            ]}
+          />
+        </Field>
+      </Section>
+
+      {/* ---------- Mistral-Zugang: nur wenn gewählt ---------- */}
+      {s.provider === "mistral" && (
+        <Section title="Mistral-Zugang">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Anfragen gehen direkt an Mistral (EU-Unternehmen), nicht über OpenRouter. Mit dem
+            EU-Endpunkt findet die Verarbeitung garantiert in der EU statt; Mistral bewahrt
+            API-Eingaben standardmässig 30 Tage zur Missbrauchserkennung auf, kein Training.
+            Die Kostenanzeige entfällt, weil Mistrals API keine Preise liefert; ebenso die
+            Internetsuche und der Reasoning-Regler, beides sind OpenRouter-Funktionen.
+          </p>
+          <Field
+            label="Endpunkt"
+            hint="EU: api.eu.mistral.ai, Inferenz garantiert in der EU, laut Mistral rund 10 % Aufpreis. Global: api.mistral.ai."
+          >
+            <Select
+              value={s.mistralRegion}
+              onValueChange={(v) => patch({ mistralRegion: v as Settings["mistralRegion"] })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="eu">EU (Standard)</SelectItem>
+                <SelectItem value="global">Global</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="API-Key" hint="Wird in chrome.storage.local gespeichert und nur an den gewählten Mistral-Endpunkt geschickt.">
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                value={s.mistralApiKey}
+                autoComplete="off"
+                onChange={(e) => patch({ mistralApiKey: e.target.value })}
+              />
+              <Button
+                variant="outline"
+                disabled={!s.mistralApiKey || mistralTesting}
+                onClick={() => {
+                  setMistralTesting(true);
+                  ask<KeyStatus>("testMistralKey", { apiKey: s.mistralApiKey, region: s.mistralRegion })
+                    .then(setMistralKeyStatus)
+                    .catch((e) => setMistralKeyStatus({ ok: false, error: String(e?.message ?? e) }))
+                    .finally(() => setMistralTesting(false));
+                }}
+              >
+                {mistralTesting ? <Loader2 className="animate-spin" /> : null}
+                Schlüssel prüfen
+              </Button>
+            </div>
+            {mistralKeyStatus && <KeyResult status={mistralKeyStatus} />}
+          </Field>
+
+          <Field
+            label="Modell"
+            hint="Die Liste kommt von /v1/models und zeigt nur Chat-Modelle, die nicht abgekündigt sind. Ohne Wahl schickt die Sidebar nichts ab."
+          >
+            <div className="flex items-center gap-2">
+              <select
+                value={s.mistralModel}
+                onChange={(e) => patch({ mistralModel: e.target.value })}
+                className="spur-select h-8 max-w-md"
+                disabled={!mistralModels && !s.mistralModel}
+              >
+                <option value="">
+                  {mistralModels ? "– bitte wählen –" : "– erst „Modelle laden“ –"}
+                </option>
+                {s.mistralModel && !mistralModels?.some((m) => m.id === s.mistralModel) && (
+                  <option value={s.mistralModel}>{s.mistralModel} (gespeichert)</option>
+                )}
+                {(mistralModels ?? []).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} · {m.id}
+                    {m.contextLength ? ` · ${formatTokens(m.contextLength)}` : ""}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!s.mistralApiKey || mistralLaedt}
+                onClick={mistralModelleLaden}
+              >
+                {mistralLaedt ? <Loader2 className="animate-spin" /> : null}
+                Modelle laden
+              </Button>
+            </div>
+            {mistralFehler && (
+              <p className="mt-1 text-xs text-destructive whitespace-pre-wrap">{mistralFehler}</p>
+            )}
+            {mistralModels && (
+              <p className="mt-1 text-xs text-muted-foreground">{mistralModels.length} Modelle geladen.</p>
+            )}
+          </Field>
+        </Section>
+      )}
+
+      {/* ---------- OpenRouter-Zugang: nur wenn gewählt ---------- */}
+      {s.provider === "openrouter" && (
       <Section title="OpenRouter-Zugang">
         <Field label="API-Key" hint="Wird in chrome.storage.local gespeichert und nur an openrouter.ai geschickt.">
           <div className="flex gap-2">
@@ -215,8 +362,10 @@ export function Options() {
           {keyStatus && <KeyResult status={keyStatus} />}
         </Field>
       </Section>
+      )}
 
-      {/* ---------- Chat-Modell ---------- */}
+      {/* ---------- Chat-Modell (OpenRouter): Modellwahl und Reasoning ---------- */}
+      {s.provider === "openrouter" && (
       <Section title="Chat-Modell">
         {modelsError && (
           <p className="mb-2 text-xs text-muted-foreground">
@@ -293,6 +442,7 @@ export function Options() {
           </div>
         </Field>
       </Section>
+      )}
 
       {/* ---------- Sprache ---------- */}
       <Section title="Sprache">
@@ -649,7 +799,7 @@ export function Options() {
       <Section title="Anzeige">
         <Field
           label="Kosten pro Antwort anzeigen"
-          hint="Liest das usage-Feld der Antwort aus: Token und Betrag in USD."
+          hint="Liest das usage-Feld der Antwort aus: Token und Betrag in USD. Bei Mistral AI stehen nur die Token da – die API liefert keinen Betrag, und geraten wird keiner."
         >
           <Switch checked={s.showCost} onCheckedChange={(v) => patch({ showCost: v })} />
         </Field>
@@ -661,7 +811,8 @@ export function Options() {
           onClick={() => {
             // Der Zugang bleibt stehen: ihn beim Zurücksetzen der Darstellung
             // mitzulöschen wäre eine böse Überraschung.
-            const frisch = { ...DEFAULT_SETTINGS, apiKey: s.apiKey };
+            const frisch = { ...DEFAULT_SETTINGS };
+            for (const k of ZUGANGSFELDER) (frisch as Record<string, unknown>)[k] = s[k];
             setS(frisch);
             void setSettings(frisch);
           }}
@@ -843,6 +994,15 @@ function KeyResult({ status }: { status: KeyStatus }) {
       <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive">
         <X className="mt-0.5 size-3.5 shrink-0" />
         <span className="whitespace-pre-wrap">{status.error}</span>
+      </p>
+    );
+  }
+  // Mistral hat keinen /key-Endpunkt: geprüft wird nur, ob die Modellliste kommt.
+  if (status.usage == null && status.limit == null) {
+    return (
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-green-600 dark:text-green-400">
+        <Check className="mt-0.5 size-3.5 shrink-0" />
+        <span>Schlüssel gültig – api.mistral.ai hat die Modellliste geliefert.</span>
       </p>
     );
   }

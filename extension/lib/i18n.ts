@@ -119,6 +119,11 @@ const de = {
   liveCancel: "Abbrechen",
   noKey:
     "Es ist kein OpenRouter-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
+  noKeyMistral:
+    "Mistral AI ist als Anbieter gewählt, aber kein Mistral-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
+  noModelMistral:
+    "Für Mistral AI ist noch kein Modell gewählt. In den Einstellungen „Modelle laden“ und eines auswählen.",
+  webOnlyOpenRouter: "Internetsuche nur mit OpenRouter – bei Mistral AI nicht verfügbar.",
   openOptions: "Einstellungen öffnen",
   noTimestamps:
     "Diese Transkriptquelle liefert keine Zeitstempel. Sprungmarken stehen deshalb nicht zur Verfügung.",
@@ -264,6 +269,11 @@ const en: Record<Keys, string> = {
   liveWaitingAd: "Waiting for the ad to finish – its audio does not belong in the transcript.",
   liveCancel: "Cancel",
   noKey: "No OpenRouter API key configured. Please add one in the settings.",
+  noKeyMistral:
+    "Mistral AI is the selected provider, but no Mistral API key is configured. Please add one in the settings.",
+  noModelMistral:
+    "No model selected for Mistral AI yet. Use “Load models” in the settings and pick one.",
+  webOnlyOpenRouter: "Web search only with OpenRouter – not available with Mistral AI.",
   openOptions: "Open settings",
   noTimestamps:
     "This transcript source provides no timestamps, so jump marks are unavailable.",

@@ -5,8 +5,10 @@ rechte Spalte oberhalb der Empfehlungen einhängt: mit dem Transkript chatten,
 zusammenfassen, in Kapitel gliedern, übersetzen. Alle Zeitstempel sind anklickbar und
 springen im Player an die Stelle.
 
-Ein einziger Anbieter: **OpenRouter**. Kein zweiter Cloud-Dienst, kein eigenes Backend,
-kein Proxy, keine Telemetrie.
+Zwei Anbieter, einer davon gewählt: **OpenRouter** (Standard) oder **Mistral AI** direkt
+(EU-Anbieter, Datenschutzoption). Kein dritter Cloud-Dienst, kein eigenes Backend, kein
+Proxy, keine Telemetrie. Was bei Mistral fehlt, steht unter
+[Anbieter wechseln](#anbieter-wechseln-openrouter-oder-mistral-ai).
 
 ---
 
@@ -156,6 +158,34 @@ Einstellungen der Extension eintragen und mit „Testen“ prüfen – der Knopf
 `/api/v1/key` ab und zeigt Verbrauch und Limit.
 
 Der Key liegt in `chrome.storage.local` und geht ausschliesslich an `openrouter.ai`.
+
+### Anbieter wechseln: OpenRouter oder Mistral AI
+
+Ganz oben in den Einstellungen steht der Abschnitt **Anbieter** mit zwei Wahlmöglichkeiten:
+„OpenRouter (Standard)“ und „Mistral AI – EU-Anbieter, Datenschutzoption“. Bei Mistral
+gehen alle Chat-Anfragen direkt an Mistral, nicht über OpenRouter – voreingestellt an den
+EU-Endpunkt `api.eu.mistral.ai` (Inferenz garantiert in der EU, laut Mistral rund 10 %
+Aufpreis), umschaltbar auf den globalen `api.mistral.ai`; der Schlüssel
+kommt von [console.mistral.ai](https://console.mistral.ai), wird mit „Schlüssel prüfen“
+gegen `/v1/models` getestet, und „Modelle laden“ füllt die Modellauswahl aus derselben
+Liste (nur Chat-Modelle, keine abgekündigten). Ohne gewähltes Modell schickt die Sidebar
+nichts ab und sagt das. Der jeweils andere Zugang bleibt gespeichert, der Wechsel ist ein
+Klick.
+
+**Was bei Mistral fehlt – bewusst, nicht heimlich:**
+
+- **Internetsuche.** Sie ist OpenRouters Web-Plugin. Der Schalter am Eingabefeld ist bei
+  Mistral gesperrt und trägt den Hinweis „nur mit OpenRouter“; die Weltkugel unter den
+  Antworten erscheint nicht.
+- **Kostenanzeige.** Mistrals API liefert keine Preise und keinen Betrag je Antwort; es
+  werden nur die Token gezeigt, kein geratener Betrag.
+- **Reasoning-Regler.** Ein OpenRouter-Parameter; Mistral bekommt ihn nicht gesetzt.
+- **Spracherkennung aus dem laufenden Ton** und der OpenRouter-Weg des Audio-Fallbacks
+  laufen weiter über OpenRouter und brauchen dessen Schlüssel. Wer nur Mistral eingetragen
+  hat, sieht das am Knopf.
+
+Kein Fallback zwischen den beiden: fällt der gewählte Anbieter aus, steht die Fehlermeldung
+im Chat, es wird nicht still umgeschaltet.
 
 ---
 
@@ -439,7 +469,8 @@ Hänger aussehen.
 |---|---|---|
 | `storage` | API-Key, Einstellungen, System-Prompt, Chatverlauf pro Video. Alles in `chrome.storage.local`, nichts verlässt das Gerät ausser den Modellanfragen selbst. | beide |
 | `*://*.youtube.com/*` | Die Sidebar in die Videoseite einhängen, die Untertitelspuren der Seite lesen, die Wiedergabeposition beim Klick auf einen Zeitstempel setzen. | beide |
-| `https://openrouter.ai/*` | Die einzige Cloud-Gegenstelle: Chat, Modellliste, Key-Prüfung und – bei Videos ohne Untertitel – kurze Tonabschnitte aus dem Arbeitsspeicher zur Spracherkennung. | beide |
+| `https://openrouter.ai/*` | Cloud-Gegenstelle Nummer eins (Standard): Chat, Modellliste, Key-Prüfung und – bei Videos ohne Untertitel – kurze Tonabschnitte aus dem Arbeitsspeicher zur Spracherkennung. | beide |
+| `https://api.eu.mistral.ai/*`, `https://api.mistral.ai/*` | Cloud-Gegenstelle Nummer zwei (EU-Endpunkt voreingestellt) (nur wenn gewählt): Chat, Modellliste, Schlüsselprobe. Angesprochen wird sie ausschliesslich, wenn in den Einstellungen Mistral AI gewählt ist. | beide |
 | `nativeMessaging` | Den lokalen Helfer für den Audio-Fallback starten. Nur nach ausdrücklichem Klick, nie automatisch. | nur `full` |
 
 Es gibt keine weiteren Host-Permissions, kein `tabs`, kein `<all_urls>`, kein
@@ -453,6 +484,12 @@ automatische Downloads.
 ## Was nicht geprüft ist
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
+
+- **Ein echter Chat gegen Mistral AI.** Endpunkte, Antwortform und Stream-Format sind
+  gegen Mistrals OpenAPI-Spec verifiziert, der SSE-Parser hat einen Selbsttest, und beide
+  Endpunkte antworten ohne gültigen Schlüssel mit HTTP 401 „Invalid API Key“ – genau
+  dieser Text erscheint in der UI. Ein Lauf mit gültigem Schlüssel (Modellliste laden,
+  Antwort streamen, Token-Zähler) stand beim Bau nicht zur Verfügung.
 
 - **Der DOM-Panel-Weg.** Gebaut, aber er hat in keinem Test geliefert. Er schadet nicht,
   trägt aber auch nichts.

@@ -174,11 +174,13 @@ export function Sidebar({
 
   React.useEffect(() => {
     // Nur für die Reasoning-Fähigkeit des gewählten Modells; scheitert der Abruf,
-    // bleibt die statische Liste stehen.
+    // bleibt die statische Liste stehen. Bei Mistral gar kein Kontakt zu OpenRouter –
+    // auch keine Metadaten-Anfrage (Codex-Befund 05.09.2026).
+    if (settings?.provider !== "openrouter") return;
     listModels()
       .then(setModels)
       .catch(() => {});
-  }, []);
+  }, [settings?.provider]);
 
   React.useEffect(() => {
     if (!settings?.preferLocalTranslate || !transcript || !localTranslateSupported()) {
@@ -274,9 +276,20 @@ export function Sidebar({
 
   /* ---- Senden ---- */
 
-  const activeModel = settings?.model ?? "";
+  // Bei Mistral gibt es keinen Web-Schalter, kein Reasoning und keine Kosten; der
+  // Service Worker setzt Modell und Schlüssel selbst aus den Einstellungen.
+  const mistralAktiv = settings?.provider === "mistral";
+  const activeModel = (mistralAktiv ? settings?.mistralModel : settings?.model) ?? "";
 
   const modelInfo = models.find((m) => m.id === activeModel);
+
+  /** Der Fehlercode aus dem Service Worker als Satz in der Oberfläche. */
+  function fehlerText(code: string): string {
+    if (code === "NO_KEY") return mistralAktiv ? t("noKeyMistral") : t("noKey");
+    if (code === "NO_MODEL") return t("noModelMistral");
+    if (code === "WEB_ONLY_OPENROUTER") return t("webOnlyOpenRouter");
+    return code;
+  }
 
   function buildSystem(s: AppSettings, tr: Transcript, override?: string): string {
     const parts = [override ?? s.systemPrompt];
@@ -325,8 +338,17 @@ export function Sidebar({
     web?: boolean,
   ) {
     if (!settings || !transcript || streaming) return;
-    if (!settings.apiKey) {
-      setMessages((m) => [...m, { role: "assistant", content: t("noKey"), error: true }]);
+    const fehlt = mistralAktiv
+      ? !settings.mistralApiKey
+        ? "NO_KEY"
+        : !settings.mistralModel
+          ? "NO_MODEL"
+          : null
+      : !settings.apiKey
+        ? "NO_KEY"
+        : null;
+    if (fehlt) {
+      setMessages((m) => [...m, { role: "assistant", content: fehlerText(fehlt), error: true }]);
       return;
     }
 
@@ -388,7 +410,7 @@ export function Sidebar({
         const copy = [...m];
         const last = copy.at(-1);
         if (last?.role === "assistant") {
-          last.content = last.content || (msg === "NO_KEY" ? t("noKey") : msg);
+          last.content = last.content || fehlerText(msg);
           last.error = true;
         }
         return copy;
@@ -457,7 +479,7 @@ export function Sidebar({
    */
   /** Eine getippte Frage – mit Suche, wenn der Schalter an ist. */
   function frageSenden(frage: string) {
-    if (!webAn) {
+    if (!webAn || mistralAktiv) {
       void send(frage);
       return;
     }
@@ -538,9 +560,9 @@ export function Sidebar({
 
     const from = uebersetzung?.status === "partial" ? uebersetzung.done : 0;
     const target = languageToCode(settings.translationTarget);
-    const route: "chrome" | "openrouter" = settings.preferLocalTranslate
+    const route: "chrome" | "openrouter" | "mistral" = settings.preferLocalTranslate
       ? "chrome"
-      : "openrouter";
+      : settings.provider;
     if (route === "chrome" && !localTranslateOk) {
       setUebersetzung({
         target,
@@ -1072,7 +1094,8 @@ export function Sidebar({
                 onDownload={() => download(`antwort-${videoId}-${i}.md`, m.content)}
                 onWebSearch={
                   // Recherchiert wird die Frage, die zu dieser Antwort geführt hat.
-                  !streaming && messages[i - 1]?.role === "user"
+                  // Nur mit OpenRouter: die Suche ist dessen Web-Plugin.
+                  !streaming && !mistralAktiv && messages[i - 1]?.role === "user"
                     ? () => {
                         const frage = messages[i - 1];
                         if (!frage) return;
@@ -1125,15 +1148,18 @@ export function Sidebar({
                 schon beantworteten Frage nach. Der An-Zustand braucht eine eigene Farbe:
                 bg-secondary ist im hellen Thema vom Kartengrund kaum zu unterscheiden.
               */}
+              {/* Die Suche ist OpenRouters Web-Plugin; bei Mistral bleibt der Schalter
+                  gesperrt und sagt warum – kein stiller Fehlschlag. */}
               <Button
                 size="icon"
                 variant="ghost"
-                aria-pressed={webAn}
+                aria-pressed={webAn && !mistralAktiv}
+                disabled={mistralAktiv}
                 className={cn(
                   "size-8 shrink-0 [&_svg]:size-[18px]",
-                  webAn && "bg-primary/15 text-primary ring-1 ring-primary hover:bg-primary/25",
+                  webAn && !mistralAktiv && "bg-primary/15 text-primary ring-1 ring-primary hover:bg-primary/25",
                 )}
-                title={webAn ? t("webToggleOn") : t("webToggleOff")}
+                title={mistralAktiv ? t("webOnlyOpenRouter") : webAn ? t("webToggleOn") : t("webToggleOff")}
                 onClick={() => setWebAn((v) => !v)}
               >
                 <Globe />

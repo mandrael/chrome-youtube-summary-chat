@@ -100,6 +100,57 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.6.0 – Mistral AI als zweiter Anbieter (Datenschutzoption, EU-Endpunkt)
+
+**Michaels Auftrag hebt Regel 1 bewusst auf:** „Mistral unabhängiger zweiter Anbieter, das
+ist der Sinn der Sache. OpenRouter ist Standard und üblich in jedem Fall, Mistral nur als
+Option 2 für Datenschutzbewusste." Regel 1 lautet jetzt: genau zwei Gegenstellen, kein
+Fallback zwischen beiden, keine generische Abstraktion – ein Schalter `settings.provider`,
+zwei Clients (`lib/openrouter.ts`, `lib/mistral.ts`), der Service Worker verzweigt an einer
+Stelle. Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Preise, STT), fehlt bei
+Mistral sichtbar (Schalter gesperrt mit Tooltip, Service Worker wirft
+`WEB_ONLY_OPENROUTER`), nicht heimlich.
+
+**Datenschutzfrage geklärt (agy-Recherche, Quellen in
+[docs/recherche-agy-openrouter-mistral-2026-09-05.md](docs/recherche-agy-openrouter-mistral-2026-09-05.md)):**
+Provider-Pinning bei OpenRouter (`provider: {order: ["mistral"]}`) legt nur fest, wer die
+Antwort rechnet. Prompt und Antwort laufen trotzdem durch OpenRouters US-Infrastruktur
+(Cloudflare, Google Cloud, Upstash – von OpenRouter selbst als Subprozessoren mit Zugriff
+auf „Prompts & Completions" genannt); Vertragspartner OpenRouter Inc. (Delaware),
+Gerichtsstand New York, EU-Route (`eu.openrouter.ai`) nur für Enterprise. Direkt bei
+Mistral: Vertragspartner Mistral AI SAS (Paris), einstufig, kein Drittlandtransfer.
+**Mistral hat einen echten EU-Endpunkt `api.eu.mistral.ai`** (Inferenz garantiert in der
+EU, rund 10 % Aufpreis) neben dem globalen `api.mistral.ai` und einem US-Endpunkt; beide
+hier per curl mit 401 bestätigt. Michaels „EU-Zugangspunkt als Standard" ist damit
+`mistralRegion: "eu"` als Voreinstellung, umschaltbar. Mistral bewahrt API-Eingaben
+standardmässig 30 Tage zur Missbrauchserkennung auf, kein Training, ZDR beantragbar.
+Fable online lag also richtig, ohne dass er einen Schalter übersehen hätte.
+
+**Gebaut (Opus-Agent, danach EU-Region von der Hauptsitzung ergänzt):** `lib/mistral.ts`
+(`listModels`, `testKey` über `/v1/models`, `streamChat` SSE mit `data: [DONE]`, reine
+Parserfunktionen `verarbeiteSse`/`deltaText`; API-Fakten aus Mistrals OpenAPI-Spec
+verifiziert: `data[].id`, `aliases`, `capabilities.completion_chat`, `delta.content` als
+String oder Chunk-Array, `usage` im letzten Chunk, keine Preise). Settings `provider`,
+`mistralApiKey`, `mistralModel` (leer bis „Modelle laden", kein geratener Default),
+`mistralRegion`. Optionsseite: Abschnitt „Anbieter" oben (OpenRouter Standard / Mistral
+AI – EU-Anbieter, Datenschutzoption), Abschnitt „Mistral-Zugang" mit Endpunkt-Auswahl,
+Passwortfeld, „Schlüssel prüfen", „Modelle laden", Modell-Select, Hinweistext.
+`host_permissions` um beide Mistral-Endpunkte. `selfcheck.ts` prüft den SSE-Parser (21
+Prüfungen). Fehlertext der API im Wortlaut in der UI (`HTTP 401 – Invalid API Key`,
+gemessen mit Platzhalter-Key). Ungeprüft: echter Chat gegen Mistral (kein Schlüssel hier).
+
+**Codex-Review des Einbaus (fünf Befunde, alle behoben):** OpenRouters Modellliste wurde
+auch bei gewähltem Mistral geladen (Sidebar und Optionsseite) – jetzt nur bei OpenRouter,
+bei Mistral keine einzige Anfrage an OpenRouter, auch keine Metadaten. SSE-Parser
+verarbeitete `data:`-Zeilen einzeln statt ereignisweise (Leerzeile als Grenze, mehrere
+`data:`-Zeilen mit `\\n` verbunden, wie die SSE-Spezifikation verlangt) und liess den
+Restpuffer bei Stream-Ende liegen – beides korrigiert, Selbsttest um Ereignis ohne
+Leerzeile, `\\r\\n` und zweizeiliges JSON erweitert. Regionswechsel: „Modelle laden" und
+„Schlüssel prüfen" schicken die Region mit, statt sie aus dem noch nicht geschriebenen
+Storage zu lesen. Übersetzungsverlauf speichert die Route jetzt als `mistral`, nicht als
+`openrouter`. Codex' Security-Scan: keine sicherheitsrelevanten Befunde, keine
+Kreuzverwendung von Schlüsseln.
+
 ### 05.09.2026: Version 0.5.0 – Ordnerdialog, Zielordner-Anzeige mit ~, „vor jedem Download fragen"
 
 Michaels Vorgaben nach dem ersten echten Download: Ordner und Dateiname getrennt

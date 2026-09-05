@@ -11,11 +11,16 @@ lesen. Nutzerseitige Doku in [README.md](README.md).
 
 ## Absolute Regeln dieses Projekts
 
-**1. Nur OpenRouter.** Kein Code, der `api.openai.com`, `api.anthropic.com`,
-`generativelanguage.googleapis.com` oder `api.groq.com` direkt aufruft – auch nicht als
-optionaler Zweig, auch nicht als Fallback. Groq ausschliesslich über OpenRouters
-Provider-Routing. Keine Provider-Abstraktion: es gibt genau eine Gegenstelle, ein
-Interface mit einer Implementierung wäre Ballast.
+**1. Genau zwei Gegenstellen: OpenRouter (Standard) und Mistral AI direkt
+(Datenschutzoption, EU).** Kein weiterer Endpunkt – kein Code, der `api.openai.com`,
+`api.anthropic.com`, `generativelanguage.googleapis.com` oder `api.groq.com` direkt
+aufruft, auch nicht als optionaler Zweig. Kein Fallback zwischen beiden: fällt der
+gewählte Anbieter aus, sagt die UI das, statt still zum anderen zu wechseln. Keine
+generische Provider-Abstraktion – ein Schalter (`settings.provider`), zwei Clients
+(`lib/openrouter.ts`, `lib/mistral.ts`), der Service Worker verzweigt an genau einer
+Stelle. Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Preise, STT), fehlt bei
+Mistral sichtbar, nicht heimlich. Groq ausschliesslich über OpenRouters
+Provider-Routing.
 
 **2. Der Store-Build enthält keinen Download-Code.** Nicht ausgeblendet, sondern nicht
 vorhanden: Native Messaging, yt-dlp-Weg und Helfer-Routen fehlen im Bundle. Das gilt für
@@ -45,7 +50,7 @@ Hinweis auf eigene, gemeinfreie und lizenzfreie Nutzung. Einordnung mit Quellen:
 [docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
-`youtube.com` und `openrouter.ai`.
+`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`.
 
 ---
 
@@ -99,7 +104,7 @@ build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
   entrypoints/        content.tsx · background.ts · options/
   components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
-  lib/                openrouter · transcript · audio-live · fallback · korrektur · prompts …
+  lib/                openrouter · mistral · transcript · audio-live · fallback · korrektur · prompts …
   scripts/            selfcheck.ts · verify-store-bundle.sh
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```

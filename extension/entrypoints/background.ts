@@ -1,11 +1,14 @@
 import { defineBackground } from "wxt/utils/define-background";
 import { listModels, listSttModels, streamChat, testKey } from "@/lib/openrouter";
+import * as mistral from "@/lib/mistral";
 import { collapsedItem, getSettings, wideItem } from "@/lib/storage";
 import type { ChatMessage, ReasoningEffort } from "@/lib/types";
 
 /**
  * Alle Cloud-Aufrufe laufen hier. Kein eigenes Backend, kein Proxy – der Service Worker
- * spricht direkt mit openrouter.ai, sonst mit nichts.
+ * spricht direkt mit openrouter.ai oder, wenn so eingestellt, mit api.mistral.ai, sonst
+ * mit nichts. Welche der beiden Gegenstellen dran ist, entscheidet `settings.provider`;
+ * die Sidebar schickt keinen Anbieter mit, sonst könnten beide auseinanderlaufen.
  */
 
 interface ChatPortRequest {
@@ -50,6 +53,21 @@ export default defineBackground(() => {
           case "listModels":
             sendResponse({ ok: true, data: await listModels() });
             break;
+          case "listMistralModels": {
+            // Braucht im Gegensatz zu OpenRouter einen Schlüssel – die Options-Page
+            // schickt den eben getippten mit, damit „Modelle laden" ohne Umweg über
+            // das Speichern geht.
+            const { mistralApiKey, mistralRegion } = await getSettings();
+            const key = String(msg.apiKey ?? mistralApiKey);
+            if (!key) throw new Error("NO_KEY");
+            sendResponse({ ok: true, data: await mistral.listModels(key, (msg.region as typeof mistralRegion) ?? mistralRegion) });
+            break;
+          }
+          case "testMistralKey": {
+            const { mistralApiKey, mistralRegion } = await getSettings();
+            sendResponse({ ok: true, data: await mistral.testKey(String(msg.apiKey ?? mistralApiKey), (msg.region as typeof mistralRegion) ?? mistralRegion) });
+            break;
+          }
           case "listSttModels":
             // Gehoert zum Audio-Fallback: im Store-Build gar nicht erst vorhanden.
             if (!__FALLBACK__) {
@@ -130,22 +148,44 @@ function handleChatPort(port: chrome.runtime.Port) {
 
     void (async () => {
       try {
-        const { apiKey } = await getSettings();
-        if (!apiKey) throw new Error("NO_KEY");
+        const s = await getSettings();
+        const onDelta = (text: string) => port.postMessage({ type: "delta", text });
+        const onUsage = (usage: unknown) => port.postMessage({ type: "usage", usage });
 
-        await streamChat({
-          apiKey,
-          model: req.model,
-          reasoning: req.reasoning,
-          supportsReasoning: req.supportsReasoning,
-          system: req.system,
-          messages: req.messages,
-          web: req.web,
-          signal: controller.signal,
-          onDelta: (text) => port.postMessage({ type: "delta", text }),
-          onUsage: (usage) => port.postMessage({ type: "usage", usage }),
-          onSources: (quellen) => port.postMessage({ type: "sources", quellen }),
-        });
+        if (s.provider === "mistral") {
+          if (!s.mistralApiKey) throw new Error("NO_KEY");
+          if (!s.mistralModel) throw new Error("NO_MODEL");
+          // Kein Reasoning-Regler, kein Web-Plugin, kein Provider-Routing: das sind
+          // OpenRouter-Parameter, Mistral bekommt sie gar nicht erst zu sehen. Die
+          // Sidebar sperrt den Web-Schalter; käme `web` trotzdem an, wäre ein stiller
+          // Fehlschlag schlimmer als ein lauter.
+          if (req.web) throw new Error("WEB_ONLY_OPENROUTER");
+          await mistral.streamChat({
+            apiKey: s.mistralApiKey,
+            region: s.mistralRegion,
+            model: s.mistralModel,
+            system: req.system,
+            messages: req.messages,
+            signal: controller.signal,
+            onDelta,
+            onUsage,
+          });
+        } else {
+          if (!s.apiKey) throw new Error("NO_KEY");
+          await streamChat({
+            apiKey: s.apiKey,
+            model: req.model,
+            reasoning: req.reasoning,
+            supportsReasoning: req.supportsReasoning,
+            system: req.system,
+            messages: req.messages,
+            web: req.web,
+            signal: controller.signal,
+            onDelta,
+            onUsage,
+            onSources: (quellen) => port.postMessage({ type: "sources", quellen }),
+          });
+        }
         port.postMessage({ type: "done" });
       } catch (e) {
         if ((e as Error)?.name === "AbortError") return; // vom Nutzer beendet

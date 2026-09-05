@@ -22,6 +22,7 @@ import {
 } from "../lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
+import { deltaText, verarbeiteSse, type MistralChunk } from "../lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../lib/types.ts";
@@ -175,6 +176,63 @@ check("Modell-Slug braucht ein Provider-Präfix", () => {
   assert.ok(isValidSlug("google/gemini-3.5-flash-lite:batch"));
   assert.ok(!isValidSlug("gemini-3.5-flash-lite"));
   assert.ok(!isValidSlug(""));
+});
+
+console.log("mistral");
+
+check("SSE-Parser verträgt zerschnittene Ereignisse, Kommentare und [DONE]", () => {
+  // Das Format laut Mistrals OpenAPI-Spec: data-only SSE, Abschluss mit `data: [DONE]`.
+  const gesehen: string[] = [];
+  const usage: number[] = [];
+  const auf = (c: MistralChunk) => {
+    const t = deltaText(c);
+    if (t) gesehen.push(t);
+    if (c.usage) usage.push(c.usage.completion_tokens ?? -1);
+  };
+  const ereignis = (delta: unknown, extra = "") =>
+    `data: {"id":"x","choices":[{"index":0,"delta":${JSON.stringify(delta)},"finish_reason":null}]${extra}}\n\n`;
+
+  // Ein Netzwerkpaket endet mitten im JSON: der Rest bleibt im Puffer liegen …
+  const ganz = ereignis({ role: "assistant", content: "Hal" });
+  let rest = verarbeiteSse(ganz.slice(0, 30), auf);
+  assert.equal(rest, ganz.slice(0, 30), "unvollständige Zeile darf nicht verworfen werden");
+  assert.deepEqual(gesehen, []);
+  // … und wird mit dem nächsten Paket vollständig.
+  rest = verarbeiteSse(rest! + ganz.slice(30) + ": keep-alive\n\n", auf);
+  assert.equal(rest, "");
+  assert.deepEqual(gesehen, ["Hal"]);
+
+  // Ein Ereignis ohne abschliessende Leerzeile bleibt liegen, bis sie kommt.
+  rest = verarbeiteSse(ereignis({ content: "x" }).trimEnd(), auf);
+  assert.equal(rest, ereignis({ content: "x" }).trimEnd());
+  assert.deepEqual(gesehen, ["Hal"]);
+  rest = verarbeiteSse(rest! + "\r\n\r\n", auf);
+  assert.equal(rest, "");
+  assert.deepEqual(gesehen, ["Hal", "x"]);
+
+  // JSON über zwei data-Zeilen verteilt (SSE-Spezifikation: mit \n verbinden).
+  const zweizeilig = ereignis({ content: "yz" }).trimEnd();
+  const schnitt = zweizeilig.indexOf('"delta"');
+  rest = verarbeiteSse(zweizeilig.slice(0, schnitt) + "\ndata: " + zweizeilig.slice(schnitt) + "\n\n", auf);
+  assert.equal(rest, "");
+  assert.deepEqual(gesehen, ["Hal", "x", "yz"]);
+
+  // Inhalt als Chunk-Array (laut Spec erlaubt) und usage im letzten Ereignis.
+  rest = verarbeiteSse(
+    ereignis({ content: [{ type: "text", text: "lo" }, { type: "reference", text: "nein" }] }) +
+      ereignis({ content: "" }, ',"usage":{"prompt_tokens":10,"completion_tokens":3}') +
+      "data: [DONE]\n\n" +
+      ereignis({ content: "zu spät" }),
+    auf,
+  );
+  assert.equal(rest, null, "[DONE] beendet den Strom");
+  assert.deepEqual(gesehen, ["Hal", "x", "yz", "lo"]);
+  assert.deepEqual(usage, [3]);
+});
+
+check("Mistral-Delta ohne Inhalt ergibt leeren Text", () => {
+  assert.equal(deltaText({}), "");
+  assert.equal(deltaText({ choices: [{ delta: { content: null } }] }), "");
 });
 
 console.log("fallback-parser");

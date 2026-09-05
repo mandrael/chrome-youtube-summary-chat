@@ -153,16 +153,23 @@ def run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(cmd, p.returncode, out, err)
 
 
+def kinder_beenden_leise(p: subprocess.Popen[str]) -> None:
+    try:
+        if hasattr(os, "killpg"):
+            os.killpg(p.pid, signal.SIGTERM)
+        elif os.name == "nt":
+            # p.kill() trifft nur yt-dlp, nicht dessen ffmpeg; taskkill /T nimmt den Baum.
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True)
+        else:
+            p.kill()
+    except OSError:
+        pass
+
+
 def kinder_beenden(*_: Any) -> None:
     p = _KIND
     if p is not None and p.poll() is None:
-        try:
-            if hasattr(os, "killpg"):
-                os.killpg(p.pid, signal.SIGTERM)
-            else:
-                p.kill()
-        except OSError:
-            pass
+        kinder_beenden_leise(p)
     os._exit(1)
 
 
@@ -629,19 +636,86 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     if not ordner.is_dir():
         raise HostError(f"Der Zielordner existiert nicht: {ordner}")
 
-    progress("download", f"Video wird geladen ({hoehe}p) ...")
+    meldung = f"Video wird geladen ({hoehe}p) ..."
+    progress("download", meldung)
     wahl = f"bestvideo[height<={hoehe}]+bestaudio/best[height<={hoehe}]"
-    res = run([
+    cmd = [
         exe, "-f", wahl, "--merge-output-format", "mp4", "--no-playlist", "--no-warnings",
-        "--print", "after_move:filepath",
+        # --newline: eine Fortschrittszeile je Aktualisierung statt Wagenruecklauf, sonst
+        # kommt der Fortschritt erst am Ende als ein Block an.
+        # Eindeutiger Praefix: so entscheidet kein Zeilenformat, welche Zeile der Pfad ist.
+        "--newline", "--progress", "--print", "after_move:PFAD=%(filepath)s",
         "-o", str(ordner / "%(title).150B [%(id)s] %(height)sp.%(ext)s"),
         f"https://www.youtube.com/watch?v={video_id}",
-    ])
-    if res.returncode != 0:
-        raise HostError(f"Der Download ist fehlgeschlagen:\n{(res.stderr or res.stdout)[-800:]}")
-
-    pfad = (res.stdout or "").strip().splitlines()[-1] if res.stdout.strip() else ""
+    ]
+    global _KIND
+    kw: dict[str, Any] = (
+        {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
+        else {"start_new_session": True}
+    )
+    # stderr in denselben Strom: zwei getrennte Pipes, von denen nur eine gelesen wird,
+    # blockieren, sobald die andere 64 KB voll hat - bei einem langen Download mit
+    # Warnungen bliebe der Host dann stumm haengen.
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kw)
+    _KIND = p
+    pfad = ""
+    schwanz: list[str] = []
+    letzter = -1
+    try:
+        assert p.stdout is not None
+        for zeile in p.stdout:
+            zeile = zeile.rstrip("\n")
+            schwanz = (schwanz + [zeile])[-12:]
+            m = PROZENT.match(zeile)
+            if m:
+                # ponytail: Bild- und Tonspur laufen nacheinander je 0 bis 100 %; ein
+                # gewichteter Gesamtwert braeuchte die Groessen beider Spuren vorab.
+                pz = min(100, int(float(m.group(1))))
+                if pz != letzter:
+                    letzter = pz
+                    progress("download", meldung, pz)
+            elif zeile.startswith("[Merger]"):
+                progress("download", "Bild und Ton werden zusammengefügt ...")
+            elif zeile.startswith("PFAD="):
+                pfad = zeile[len("PFAD="):]
+        p.wait()
+    finally:
+        # Bricht die Schleife durch eine Ausnahme ab (etwa BrokenPipe in progress(), wenn
+        # Chrome den Port schon getrennt hat), darf yt-dlp nicht verwaist weiterlaufen.
+        if p.poll() is None:
+            kinder_beenden_leise(p)
+        _KIND = None
+    if p.returncode != 0:
+        raise HostError("Der Download ist fehlgeschlagen:\n" + "\n".join(schwanz)[-800:])
+    if not pfad or not Path(pfad).is_file():
+        raise HostError("yt-dlp hat keinen Dateipfad gemeldet:\n" + "\n".join(schwanz)[-800:])
     return {"type": "downloaded", "path": pfad, "height": hoehe}
+
+
+PROZENT = re.compile(r"\[download\]\s+(\d+(?:\.\d+)?)%")
+
+
+def reveal_file(pfad: str, ziel: str) -> dict[str, Any]:
+    """Zeigt die fertige Datei im Dateimanager - Finder, Explorer oder was xdg kennt.
+
+    Nur Dateien im eingestellten Zielordner: der Pfad kommt aus der Erweiterung, und
+    der Host soll nicht jede beliebige Datei auf der Platte anzeigen.
+    """
+    p = Path(pfad).expanduser().resolve()
+    ordner = Path(ziel).expanduser().resolve()
+    if p.parent != ordner:
+        raise HostError(f"Die Datei liegt nicht im Zielordner {ordner}: {p}")
+    if not p.is_file():
+        raise HostError(f"Die Datei gibt es nicht mehr: {p}")
+    if sys.platform == "darwin":
+        cmd = ["open", "-R", str(p)]
+    elif sys.platform.startswith("win"):
+        cmd = ["explorer", f"/select,{p}"]
+    else:
+        cmd = ["xdg-open", str(p.parent)]
+    # Nicht warten: der Explorer liefert grundsaetzlich Exit 1, der Finder blockiert nicht.
+    subprocess.Popen(cmd)
+    return {"type": "revealed"}
 
 
 def parse_parakeet_segments(data: Any) -> Iterator[dict[str, Any]]:
@@ -688,6 +762,10 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
     art = str(msg.get("kind", "transcript"))
     if art == "formats":
         send(list_formats(video_id))
+        return
+    if art == "reveal":
+        ziel = str(msg.get("target") or Path.home() / "Downloads")
+        send(reveal_file(str(msg.get("path") or ""), ziel))
         return
     if art == "download":
         hoehe = int(msg.get("height") or 720)

@@ -55,6 +55,17 @@ export async function videoFormate(videoId: string): Promise<VideoFormat[]> {
   return res.formats ?? [];
 }
 
+/** Zeigt die geladene Datei im Dateimanager (Finder, Explorer, xdg). */
+export async function videoZeigen(videoId: string, path: string, target: string): Promise<void> {
+  let res: { type?: string; message?: string } | undefined;
+  try {
+    res = await chrome.runtime.sendNativeMessage(HOST_NAME, { type: "transcribe", videoId, kind: "reveal", path, target });
+  } catch (e) {
+    throw new Error(hostFehler((e as Error)?.message));
+  }
+  if (res?.type === "error") throw new Error(res.message || "Ordner nicht geöffnet");
+}
+
 function hostFehler(err: string | undefined): string {
   if (!err) return "Native-Host hat die Verbindung ohne Ergebnis beendet.";
   return `Native-Host nicht erreichbar: ${err}${

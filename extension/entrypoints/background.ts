@@ -86,6 +86,17 @@ export default defineBackground(() => {
             sendResponse({ ok: true, data: await videoFormate(String(msg.videoId)) });
             break;
           }
+          case "revealFile": {
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const { videoZeigen } = await import("@/lib/fallback");
+            const { downloadTarget } = await getSettings();
+            await videoZeigen(String(msg.videoId), String(msg.path), downloadTarget);
+            sendResponse({ ok: true, data: null });
+            break;
+          }
           default:
             sendResponse({ ok: false, error: `Unbekannte Anfrage: ${msg?.type}` });
         }

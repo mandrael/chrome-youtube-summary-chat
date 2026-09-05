@@ -150,6 +150,7 @@ const de = {
     "Nur für eigene, gemeinfreie oder lizenzfreie Inhalte – bei allem anderen ist der Download in Deutschland und Österreich nicht risikofrei.",
   downloadStart: "Herunterladen",
   downloadDone: "Gespeichert unter",
+  downloadReveal: "Im Ordner zeigen",
   close: "Schliessen",
 } as const;
 
@@ -290,6 +291,7 @@ const en: Record<Keys, string> = {
     "Only for your own, public-domain or royalty-free content – for anything else the download is not free of legal risk.",
   downloadStart: "Download",
   downloadDone: "Saved to",
+  downloadReveal: "Show in folder",
   close: "Close",
 };
 

@@ -100,6 +100,32 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 05.09.2026: Version 0.4.0 – Download-Fortschritt und „Im Ordner zeigen"
+
+Michaels Wahl aus 16 gerenderten Kandidaten: **Icon Nr. 1 `Download`** (statt
+`FileVideo`). Neu: `download_video` startet yt-dlp mit `--newline --progress` und liest
+stdout zeilenweise; jede `[download] NN%`-Zeile wird als `percent` gemeldet (gemessen:
+78 Meldungen 0 bis 100 % bei Big Buck Bunny 360p), `[Merger]` als „Bild und Ton werden
+zusammengefügt". stderr läuft in denselben Strom (zwei Pipes, eine gelesen, blockieren
+ab 64 KB). Der Pfad ist nicht mehr „letzte Zeile", sondern der letzte Kandidat ohne
+Klammerpräfix, den das Dateisystem als Datei bestätigt. Bild- und Tonspur zählen
+nacheinander je 0 bis 100 (bewusst, `ponytail:`-Kommentar). Nach „fertig" steht neben
+dem Pfad ein Ordner-Knopf (`FolderOpen`): `kind: "reveal"` → `reveal_file()` → `open -R`
+(macOS), `explorer /select,` (Windows), `xdg-open` auf den Ordner (Linux); der Host
+prüft `is_file()`, Argumentliste ohne Shell. Gespeichert wird in `downloadTarget`
+(Optionsseite), leer bedeutet den Downloads-Ordner des Systems – nicht der Browser
+entscheidet, sondern der Helfer. Test 2d prüft zusätzlich `kind: "reveal"|videoZeigen`.
+**Codex-Review (zweiter Anlauf, der erste brach mit Verbindungsabriss ab):** sechs
+Punkte, drei davon umgesetzt: `--print "after_move:PFAD=%(filepath)s"` statt Zeilenform-
+Heuristik; `finally` beendet yt-dlp, wenn die Schleife durch eine Ausnahme abbricht
+(BrokenPipe in `progress()` nach Port-Trennung), Windows über `taskkill /T`;
+`reveal_file` nimmt nur Dateien im eingestellten Zielordner (`target` kommt aus den
+Settings im Service Worker, nicht aus dem Content-Script). Erfolgreicher Reveal löscht
+einen alten Fehlertext. Gemessen nach den Änderungen: 29 Meldungen bis 100 %, Pfad aus
+dem Präfix, Datei ausserhalb des Zielordners abgewiesen. **Panne beim Test:** ein
+Testfall rief `reveal_file` mit echtem Ziel auf und öffnete damit ein Finder-Fenster auf
+`/etc/hosts` im Vordergrund – Michael gemeldet. Ungeprüft: Explorer und xdg.
+
 ### 05.09.2026: Version 0.3.2 – Download-Knopf in den Kopf, Web-Schalter ans Eingabefeld
 
 Michaels Befund nach dem Neuladen: kein Download-Knopf sichtbar (er sass in der

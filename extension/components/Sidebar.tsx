@@ -7,7 +7,7 @@ import {
   Loader2,
   ArrowUp,
   BrushCleaning,
-  FileVideo,
+  FolderOpen,
   Globe,
   Settings,
   Square,
@@ -898,6 +898,11 @@ export function Sidebar({
             brichDownloadAb();
             setDl(null);
           }}
+          onReveal={(pfad) =>
+            void ask("revealFile", { videoId, path: pfad })
+              .then(() => setDl((d) => d && { ...d, fehler: "" }))
+              .catch((e) => setDl((d) => d && { ...d, fehler: String(e?.message ?? e) }))
+          }
         />
       )}
       <Header
@@ -1255,7 +1260,7 @@ function Header({
         )}
         {onVideoDownload && (
           <Button size="iconSm" variant="ghost" title={t("downloadVideo")} onClick={onVideoDownload}>
-            <FileVideo />
+            <Download />
           </Button>
         )}
         <Button size="iconSm" variant="ghost" title="Einstellungen" onClick={() => void chrome.runtime.sendMessage({ type: "openOptions" })}>
@@ -1389,6 +1394,7 @@ function DownloadDialog({
   onStart,
   onCancel,
   onClose,
+  onReveal,
 }: {
   t: T;
   lage: DownloadLage;
@@ -1396,6 +1402,7 @@ function DownloadDialog({
   onStart: () => void;
   onCancel: () => void;
   onClose: () => void;
+  onReveal: (pfad: string) => void;
 }) {
   const mb = (bytes: number | null) =>
     bytes == null ? t("downloadSizeUnknown") : `ca. ${(bytes / 1_048_576).toFixed(0)} MB`;
@@ -1449,9 +1456,14 @@ function DownloadDialog({
       )}
 
       {lage.status === "fertig" && (
-        <p className="mb-3 break-all">
-          {t("downloadDone")}: <span className="font-mono text-xs">{lage.pfad}</span>
-        </p>
+        <div className="mb-3 flex items-start gap-2">
+          <p className="min-w-0 flex-1 break-all">
+            {t("downloadDone")}: <span className="font-mono text-xs">{lage.pfad}</span>
+          </p>
+          <Button size="iconSm" variant="outline" title={t("downloadReveal")} onClick={() => onReveal(lage.pfad)}>
+            <FolderOpen />
+          </Button>
+        </div>
       )}
 
       <p className="mb-3 text-xs text-muted-foreground">{t("downloadLegal")}</p>

@@ -100,6 +100,35 @@ diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chro
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
 
+### 06.09.2026: Version 0.9.2 – Mistral-Preise aus der Preisliste, Chat durch die Extension mit acht Modellen bestätigt
+
+**„Nur Luna geht“ nachgetestet, diesmal durch die Extension selbst** (headless,
+Content-Script → Service Worker → OpenRouter, DiktaGo-Schlüssel nur im Storage,
+Reasoning high, Knopf „In Kürze“ auf dem NK-Video): alle acht Modelle antworteten mit
+451 bis 1083 Zeichen, keine Fehlerelemente, keine pageerrors. Dauer: luna 11 s,
+deepseek 8 s, gemini-3.8-flash 15 s, glm-5.3-flash 9 s, nemotron 10 s, **haiku 49 s,
+qwen3.7-flash 62 s, gpt-5-nano 86 s**. Die drei langen liegen weit über den 30 s, nach
+denen Chrome einen Service Worker ohne Ereignis beendet – ohne den Wachhalter aus
+0.8.0 wäre der Port mitten im Denken gestorben, und der alte Code hätte das als leere
+Antwort ohne Meldung gezeigt. Das ist die wahrscheinlichste Erklärung für Michaels
+Befund; ein Beweis ist es nicht, weil sein Fehlertext fehlt.
+
+**Mistral-Preise:** die API führt keine, deshalb steht jetzt die Preisliste von
+mistral.ai/pricing/api (per WebFetch am 06.09.2026 gelesen, nicht agy) in
+`lib/mistral.ts`: Medium 1,50/7,50, Small 0,15/0,60, Large 0,50/1,50, Codestral
+0,30/0,90, Ministral 3B/8B/14B 0,10/0,15/0,20 je Richtung, GLM 5.2 1,40/4,40 USD je
+Mio. Token, EU-Endpunkt ×1,1. Codex (hoch): datierte Altversionen sind anders bepreist
+(medium-2508 0,40/2,00) – deshalb hängen die Preise nur an „-latest“-Namen, und die
+Modellliste behält je Familie jetzt den „-latest“-Eintrag statt des datierten. Kosten je
+Antwort werden im Service Worker aus Token × Preis gerechnet und in der Sidebar mit
+„≈“ und Preisstand gezeigt; Regionswechsel rechnet die geladene Liste um. Weiter ohne
+Preis: Magistral, Devstral, Pixtral, Nemo, Saba, datierte IDs.
+
+**Brave Leos Auswahl:** GLM (5.3 Flash und 5.3), Nemotron 3 Nano 30B und Claude Haiku
+4.5 stehen seit 0.8.0 in der OpenRouter-Empfehlung; Qwen 3.5 35B nicht (qwen3.7-flash
+billiger, 1M Kontext). Für Mistral gibt es keine Empfehlungsliste, dort zeigt die
+Auswahl alle Chat-Modelle mit Preis.
+
 ### 06.09.2026: Version 0.9.1 – Behauptungen zurück und lesbar, Listenform in allen Presets
 
 Michael: „In Kürze und Zusammenfassung, zwei statt einem, ist das berechtigt? In Kürze

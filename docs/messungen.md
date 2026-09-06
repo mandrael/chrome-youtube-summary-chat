@@ -934,3 +934,26 @@ qwen3.7-flash billiger ist und 1M Kontext hat. Kein Modell überschritt die 30 s
 denen Chrome einen untätigen Service Worker beendet; der Wachhalter in
 `handleChatPort` ist trotzdem eingebaut, weil ein Denkmodell mit hoher Stufe die
 Grenze reissen kann.
+
+## Chat durch die Extension: acht Modelle, Reasoning high (06.09.2026)
+
+Ergänzung zur Tabelle oben: dort lief die API direkt, hier der ganze Weg der Extension
+(Content-Script → Port → Service Worker → OpenRouter), headless mit Playwright, Knopf
+„In Kürze“, Transkript des NK-Videos 9D-xzper0wQ, Reasoning high.
+
+| Modell | Dauer bis Ende | Zeichen |
+|---|---|---|
+| openai/gpt-5.6-luna | 11,1 s | 788 |
+| deepseek/deepseek-v4-flash | 8,1 s | 812 |
+| google/gemini-3.8-flash | 15,1 s | 954 |
+| z-ai/glm-5.3-flash | 9,1 s | 895 |
+| nvidia/nemotron-3-nano-30b-a3b | 10,1 s | 451 |
+| anthropic/claude-haiku-4.5 | 49,4 s | 471 |
+| qwen/qwen3.7-flash | 61,5 s | 1083 |
+| openai/gpt-5-nano | 85,8 s | 494 |
+
+Alle acht ohne Fehlerelement und ohne pageerror. Die Marken „schnell“ in der
+Empfehlung gelten für Reasoning minimal; mit high denken Haiku, Qwen Flash und
+GPT-5 Nano 50 bis 86 s, bevor Text kommt – länger als Chromes 30-s-Leerlaufgrenze für
+den Service Worker. Der Wachhalter in `handleChatPort` ist damit kein Vorsichtscode
+mehr, sondern notwendig.

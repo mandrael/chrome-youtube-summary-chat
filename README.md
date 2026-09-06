@@ -172,7 +172,10 @@ EU-Endpunkt `api.eu.mistral.ai` (Inferenz garantiert in der EU, laut Mistral run
 Aufpreis), umschaltbar auf den globalen `api.mistral.ai`; der Schlüssel
 kommt von [console.mistral.ai](https://console.mistral.ai), wird mit „Schlüssel prüfen“
 gegen `/v1/models` getestet, und „Modelle laden“ füllt die Modellauswahl aus derselben
-Liste (nur Chat-Modelle, keine abgekündigten). Ohne gewähltes Modell schickt die Sidebar
+Liste (nur Chat-Modelle). Preise liefert Mistrals API nicht; die Erweiterung führt die
+Preisliste von mistral.ai/pricing/api (Stand 06.09.2026) mit, rechnet beim EU-Endpunkt
+den Aufpreis von 10 % ein und zeigt je Antwort Token und Betrag. Modelle ausserhalb
+der Liste (Magistral, Devstral, Pixtral) bleiben ohne Preis. Ohne gewähltes Modell schickt die Sidebar
 nichts ab und sagt das. Der jeweils andere Zugang bleibt gespeichert, der Wechsel ist ein
 Klick.
 
@@ -181,8 +184,9 @@ Klick.
 - **Internetsuche.** Sie ist OpenRouters Web-Plugin. Der Schalter am Eingabefeld ist bei
   Mistral gesperrt und trägt den Hinweis „nur mit OpenRouter“; die Weltkugel unter den
   Antworten erscheint nicht.
-- **Kostenanzeige.** Mistrals API liefert keine Preise und keinen Betrag je Antwort; es
-  werden nur die Token gezeigt, kein geratener Betrag.
+- **Kostenanzeige.** Mistrals API liefert keine Preise und keinen Betrag je Antwort. Der
+  Betrag kommt aus der mitgeführten Preisliste (Stand 06.09.2026, EU +10 %) und steht
+  deshalb mit „≈“ und Preisstand da; für Modelle ausserhalb der Liste nur die Token.
 - **Reasoning-Regler.** Ein OpenRouter-Parameter; Mistral bekommt ihn nicht gesetzt.
 - **Spracherkennung aus dem laufenden Ton** und der OpenRouter-Weg des Audio-Fallbacks
   laufen weiter über OpenRouter und brauchen dessen Schlüssel. Wer nur Mistral eingetragen

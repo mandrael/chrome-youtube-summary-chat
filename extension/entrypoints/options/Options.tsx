@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { ask } from "@/lib/chat-client";
 import { ModellWahl } from "./ModellWahl";
+import { preis as mistralPreis, PREISSTAND } from "@/lib/mistral";
 import {
   empfohleneModelle,
   FALLBACK_MODELS,
@@ -248,8 +249,9 @@ export function Options() {
             Anfragen gehen direkt an Mistral (EU-Unternehmen), nicht über OpenRouter. Mit dem
             EU-Endpunkt findet die Verarbeitung garantiert in der EU statt; Mistral bewahrt
             API-Eingaben standardmässig 30 Tage zur Missbrauchserkennung auf, kein Training.
-            Die Kostenanzeige entfällt, weil Mistrals API keine Preise liefert; ebenso die
-            Internetsuche und der Reasoning-Regler, beides sind OpenRouter-Funktionen.
+            Mistrals API liefert keine Preise; die Beträge hier stammen aus Mistrals
+            Preisliste (Stand {PREISSTAND}), beim EU-Endpunkt mit dem Aufpreis von 10 %.
+            Internetsuche und Reasoning-Regler entfallen, beides sind OpenRouter-Funktionen.
           </p>
           <Field
             label="Endpunkt"
@@ -257,7 +259,21 @@ export function Options() {
           >
             <Select
               value={s.mistralRegion}
-              onValueChange={(v) => patch({ mistralRegion: v as Settings["mistralRegion"] })}
+              onValueChange={(v) => {
+                const region = v as Settings["mistralRegion"];
+                patch({ mistralRegion: region });
+                // Die geladene Liste trägt Preise der alten Region; ohne Umrechnung
+                // stünde bis zum nächsten „Modelle laden" der um 10 % falsche Betrag.
+                setMistralModels(
+                  (liste) =>
+                    liste &&
+                    liste.map((m) => ({
+                      ...m,
+                      pricePrompt: mistralPreis(m.id, region)?.ein,
+                      priceCompletion: mistralPreis(m.id, region)?.aus,
+                    })),
+                );
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -311,12 +327,16 @@ export function Options() {
                 {s.mistralModel && !mistralModels?.some((m) => m.id === s.mistralModel) && (
                   <option value={s.mistralModel}>{s.mistralModel} (gespeichert)</option>
                 )}
-                {(mistralModels ?? []).map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} · {m.id}
-                    {m.contextLength ? ` · ${formatTokens(m.contextLength)}` : ""}
-                  </option>
-                ))}
+                {(mistralModels ?? []).map((m) => {
+                  const p = preisProAnfrage(m);
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {m.name} · {m.id}
+                      {m.contextLength ? ` · ${formatTokens(m.contextLength)}` : ""}
+                      {p != null ? ` · ≈ ${formatPreis(p)} je Anfrage` : " · Preis nicht in der Liste"}
+                    </option>
+                  );
+                })}
               </select>
               <Button
                 variant="outline"

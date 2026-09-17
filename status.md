@@ -2,14 +2,33 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
+**Braucht Michael (nur er kann es):**
+
+1. **Mistral mit eigenem Schlüssel prüfen** (0.9.2): „Modelle laden" muss eine Liste
+   liefern (der Filter, der am 05.09. alles strich, ist behoben und im Selbsttest
+   abgedeckt, aber nie gegen die echte API gelaufen), ein Modell wählen, eine Frage
+   stellen. Erwartet: Antwort streamt, darunter Token und „≈ $…" mit Preisstand.
+2. **Fehlertext nachreichen, falls ein Modell wieder stumm bleibt.** Seit 0.8.1 steht in
+   dem Fall ein Satz im Chat statt nichts. Ohne diesen Satz bleibt „nur Luna geht"
+   unerklärt – acht Modelle antworteten am 06.09. durch die Extension selbst
+   (docs/messungen.md), drei davon erst nach 49 bis 86 s.
+3. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
    venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
-2. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
+
+**Offen, ohne Auftrag nicht anfassen:**
+
+4. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
    sherpa-Route – eine Zeile, drei Läufe, ungemessen. Auf dem Mac laut Michael nicht
    relevant.
-3. Optional: Store-Build einreichen.
-4. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+5. de/en-Prompts sind seit 0.9.1 nicht mehr inhaltsgleich (Codex, niedrig): en fehlt die
+   Abgrenzung Angabe/Behauptung, körperliche Abläufe in „Anleitung", die Überlaufregel in
+   „Ausführlich"; Hinweistexte ebenso. Hier arbeitet niemand auf en.
+6. Optional: Store-Build einreichen.
+7. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+8. Versionsnummern 0.9.0 bis 0.9.2 sind nach der geschärften Regel eigentlich 0.8.2 bis
+   0.8.4 (Kachel- und Promptarbeit ist „fix"). Bleibt stehen; ein Rewrite kostet mehr als
+   der Schönheitsfehler.
 
 ## Nachtrag 04.09.2026 (Nachmittag) – Download-Knopf gebaut, Codex-Review, React-Produktionsbuild, Parakeet-Bewertung
 

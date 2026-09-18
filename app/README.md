@@ -10,6 +10,9 @@ und in `yt-dlp` aus einem reinen HTTP-Client – aus einer Chrome-Extension-Seit
 dagegen HTML statt JSON. Eine Android-App liegt dazwischen. Steht diese Antwort, steht
 die App; steht sie nicht, ändert sich der Aufbau grundlegend.
 
+Zusammenhang, Entscheidungen und was danach kommt:
+[../docs/uebergabe-android-2026-09-18.md](../docs/uebergabe-android-2026-09-18.md).
+
 ## Bauen am Mac
 
 Voraussetzungen: Node 22+, pnpm 10, JDK 21, Android Studio (mindestens Narwhal 3 Feature

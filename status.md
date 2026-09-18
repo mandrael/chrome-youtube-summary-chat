@@ -2,9 +2,10 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Spike-APK am Mac bauen und messen** – `app/README.md` listet die sieben Messungen.
-   Ohne Messung A (trägt der Transkript-Weg auf Android?) wird an der App-Oberfläche
-   nicht weitergebaut.
+1. **Spike-APK am Mac bauen und messen** – Einstieg:
+   [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md),
+   Ablauf der sieben Messungen in `app/README.md`. Ohne Messung A (trägt der
+   Transkript-Weg auf Android?) wird an der App-Oberfläche nicht weitergebaut.
 2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
    venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
 3. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der

@@ -4,8 +4,13 @@ Chrome-Extension (MV3): Chat-Sidebar auf YouTube-Videoseiten. Transkript-Chat,
 Zusammenfassung, Kapitel, Übersetzung. Stack: WXT, React 19, TypeScript, Tailwind 4,
 shadcn/ui, pnpm.
 
+Dazu eine Android-App (Capacitor) in `app/`, die sich den Kern in `shared/` mit der
+Erweiterung teilt – Stand: Spike, siehe §6.
+
 Aktueller Stand, offene Punkte und Historie stehen in [status.md](status.md) – zuerst
-lesen. Nutzerseitige Doku in [README.md](README.md).
+lesen. Nutzerseitige Doku in [README.md](README.md). Wer die App am Mac weiterbaut,
+fängt bei [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md)
+an.
 
 ---
 
@@ -115,13 +120,15 @@ build-full/           gebaute Erweiterung zum Laden (GitHub-Build)
 shared/               plattformneutraler Kern für Erweiterung und App
   src/lib/            openrouter · mistral · chat · prompts · transcript · settings · i18n …
 app/                  Android-App (Capacitor + TypeScript), android/ eingecheckt
+  src/                main.ts (Spike-Messungen) · http-capacitor.ts
+  scripts/            verify-app-bundle.sh
 icon-source/          Icon-Quelle (Python/PIL) und die gerenderten Grössen
 build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
   entrypoints/        content.tsx · background.ts · options/
   components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
   lib/                openrouter · mistral · transcript · audio-live · fallback · korrektur · prompts …
-  scripts/            selfcheck.ts · verify-store-bundle.sh
+  scripts/            selfcheck.ts · verify-store-bundle.sh · ladeprobe.mjs
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```
 

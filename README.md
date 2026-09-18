@@ -10,6 +10,15 @@ Zwei Anbieter, einer davon gewählt: **OpenRouter** (Standard) oder **Mistral AI
 Proxy, keine Telemetrie. Was bei Mistral fehlt, steht unter
 [Anbieter wechseln](#anbieter-wechseln-openrouter-oder-mistral-ai).
 
+**Android-App: im Entstehen.** In `app/` liegt eine eigenständige App (Capacitor), die
+sich den Kern – KI-Clients, Prompts, Transkript-Abruf – über `shared/` mit der
+Erweiterung teilt. Sie ist als Teilen-Ziel für YouTube-Links gedacht. Stand heute ist sie
+ein **Messgerät**, kein Produkt: sie prüft auf einem echten Gerät die Annahmen, die
+über ihren Aufbau entscheiden. Einstieg:
+[docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md), Bedienung
+in [app/README.md](app/README.md). Was daran ungeprüft ist, steht unter
+[Was nicht geprüft ist](#was-nicht-geprüft-ist).
+
 ---
 
 ## Zwei Builds aus einer Codebase

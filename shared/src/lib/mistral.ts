@@ -67,7 +67,8 @@ export async function listModels(apiKey: string, region: MistralRegion): Promise
 
 /**
  * Mistrals API liefert keine Preise; diese Tabelle ist die Preisliste
- * mistral.ai/pricing/api, abgerufen am 06.09.2026, in USD je Token. Zuordnung über die
+ * mistral.ai/pricing/api, abgerufen am 06.09.2026, in USD je Million Token – `preis()`
+ * rechnet auf USD je Token herunter. Zuordnung über die
  * „-latest"-Namen, denn nur für die gilt die Preisliste; datierte Altversionen
  * (mistral-medium-2508, ministral-8b-2410) sind anders bepreist und bekommen bewusst
  * keinen Preis. Der EU-Endpunkt kostet laut derselben Seite 10 % mehr („Regional

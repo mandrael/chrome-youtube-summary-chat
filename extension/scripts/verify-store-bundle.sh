@@ -137,7 +137,10 @@ if [ -d "$FULL" ]; then
     FAIL=1
   fi
 else
-  echo "  übersprungen ($FULL fehlt)"
+  # Ohne den full-Build misst Test 2 nichts: „kein Download-Code im Store-Bundle" wäre
+  # auch dann wahr, wenn der Download nirgends mehr existiert (Grok, 18.09.2026).
+  echo "  FEHLGESCHLAGEN – $FULL fehlt, die Gegenprobe kann nicht laufen."
+  FAIL=1
 fi
 
 echo

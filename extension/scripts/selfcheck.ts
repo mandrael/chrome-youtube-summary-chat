@@ -21,11 +21,12 @@ import {
   duenneMarkenAus,
 } from "../../shared/src/lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdAusText, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
+import { chatStream } from "../../shared/src/lib/chat.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
 import { deltaText, modelleAusListe, preis, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
-import type { CaptionTrack, Transcript } from "../../shared/src/lib/types.ts";
+import type { CaptionTrack, Settings, Transcript, Usage } from "../../shared/src/lib/types.ts";
 import { bildeAbsaetze, bildeLeseabsaetze } from "../../shared/src/lib/absaetze.ts";
 import { baueWav } from "../lib/audio-live.ts";
 import {
@@ -38,6 +39,12 @@ import {
 let checks = 0;
 const check = (name: string, fn: () => void) => {
   fn();
+  checks++;
+  console.log("  ok:", name);
+};
+
+const checkAsync = async (name: string, fn: () => Promise<void>) => {
+  await fn();
   checks++;
   console.log("  ok:", name);
 };
@@ -285,6 +292,47 @@ check("Mistral-Preistabelle: Familie erkannt, EU-Aufpreis 10 %, Unbekanntes ohne
   assert.equal(preis("magistral-medium-latest", "eu"), null);
   const [m] = modelleAusListe([{ id: "mistral-small-latest", capabilities: { completion_chat: true } }], "eu");
   assert.ok(m && Math.abs((m.pricePrompt ?? 0) - 0.165e-6) < 1e-15);
+});
+
+// Die Rechnung selbst, nicht nur die Tabelle: bis hierher prüfte nur `preis()`. Eine
+// Formel in chat.ts ohne Division, mit vertauschten Faktoren oder mit stillem cost: 0
+// wäre grün geblieben (Grok, 18.09.2026). Deshalb läuft hier der echte Weg mit
+// gefälschter Gegenstelle.
+await checkAsync("Mistral-Kosten je Antwort: Token mal Tabellenpreis, sonst gar nichts", async () => {
+  const strom = (tokenModell: string) =>
+    [
+      'data: {"choices":[{"delta":{"content":"hallo"}}]}',
+      'data: {"usage":{"prompt_tokens":30000,"completion_tokens":2000}}',
+      "data: [DONE]",
+      "",
+    ].join("\n\n") + tokenModell;
+
+  const lauf = async (model: string): Promise<Usage | undefined> => {
+    const echtes = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(strom(""), { status: 200 })) as typeof fetch;
+    try {
+      let gesehen: Usage | undefined;
+      await chatStream(
+        { provider: "mistral", mistralApiKey: "test", mistralModel: model, mistralRegion: "global" } as Settings,
+        { model: "", supportsReasoning: false, reasoning: "minimal", system: "", messages: [] },
+        { onDelta: () => {}, onUsage: (u) => { gesehen = u; } },
+        new AbortController().signal,
+      );
+      return gesehen;
+    } finally {
+      globalThis.fetch = echtes;
+    }
+  };
+
+  // 30.000 × 1,50 $ + 2.000 × 7,50 $ je Million = 0,045 + 0,015 = 0,06 $.
+  const mitPreis = await lauf("mistral-medium-latest");
+  assert.equal(mitPreis?.prompt_tokens, 30_000);
+  assert.ok(Math.abs((mitPreis?.cost ?? 0) - 0.06) < 1e-12, `erwartet 0,06 – bekommen ${mitPreis?.cost}`);
+
+  // Ohne Tabellenpreis bleibt das Feld weg; ein cost von 0 wäre eine erfundene Zahl.
+  const ohnePreis = await lauf("magistral-medium-latest");
+  assert.equal(ohnePreis?.completion_tokens, 2_000);
+  assert.equal(ohnePreis?.cost, undefined);
 });
 
 check("Mistral-Delta ohne Inhalt ergibt leeren Text", () => {

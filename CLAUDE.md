@@ -150,7 +150,9 @@ weggelassen.
 
 **Fünftens, nach jeder Build-Änderung: die Erweiterung einmal headless laden** und
 Konsole samt `pageerror` einsammeln. Das macht `extension/scripts/ladeprobe.mjs` (braucht
-Playwright, bewusst keine Projekt-Abhängigkeit: `pnpm dlx playwright@1.56.1`). Am
+Playwright, seit 18.09.2026 devDependency – der `pnpm dlx`-Weg kann nicht funktionieren,
+weil ESM vom Ort der Datei aus auflöst; Browser einmalig mit
+`pnpm exec playwright install chromium`, Notweg im Kopf des Skripts). Am
 05.09.2026 bestanden alle vier Prüfungen, während das Content-Script beim ersten Render
 warf – ein Bundle-Grep ersetzt keinen Ladeversuch.
 

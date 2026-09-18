@@ -5,6 +5,10 @@
     "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    // chat.ts importiert seine Nachbarn mit .ts-Endung, damit der Selbsttest der
+    // Erweiterung den echten Weg mit Node laufen lassen kann. Der Bundler stört sich
+    // nicht daran, tsc ohne dieses Flag schon.
+    "allowImportingTsExtensions": true,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

@@ -59,12 +59,20 @@ echo
 echo "== 3. Die Anbieter-Verzweigung steht an genau einer Stelle (§1) =="
 # `settings.provider` darf nur in chat.ts abgefragt werden; ein zweiter Ort wäre der
 # Anfang einer Provider-Abstraktion.
-ORTE=$(grep -rln 'provider === "mistral"' src || true)
-if [ "$ORTE" = "src/lib/chat.ts" ]; then
-  echo "  ok – nur in src/lib/chat.ts"
+# Gezählt wird im Code, nicht in der ganzen Datei: `grep -l` fand auch einen Kommentar
+# und hätte eine auskommentierte Verzweigung als "vorhanden" durchgehen lassen (DeepSeek,
+# 18.09.2026, nachgestellt und bestätigt). Gezählt werden ausserdem Vorkommen, nicht
+# Dateien – zwei Verzweigungen in derselben Datei sind auch zwei Stellen.
+TREFFER=0
+ORTE=""
+for f in $QUELLEN; do
+  N=$(ohne_kommentare "$f" | grep -cE 'provider === "mistral"')
+  [ "$N" -gt 0 ] && { TREFFER=$((TREFFER + N)); ORTE="$ORTE $f($N)"; }
+done
+if [ "$TREFFER" -eq 1 ] && [ "${ORTE# }" = "src/lib/chat.ts(1)" ]; then
+  echo "  ok – genau einmal, in src/lib/chat.ts"
 else
-  echo "  FEHLGESCHLAGEN – erwartet genau src/lib/chat.ts, gefunden:"
-  echo "${ORTE:-nichts}"
+  echo "  FEHLGESCHLAGEN – erwartet genau einmal in src/lib/chat.ts, gezählt: ${ORTE:-nichts}"
   FAIL=1
 fi
 

@@ -106,8 +106,21 @@ else
   echo
   echo "== Stufe 2: uebersprungen (kein --apk uebergeben) =="
   echo "  Ohne sie ist nur das Web-Bundle geprueft, nicht die ausgelieferte Datei."
+  # Wo Stufe 2 laufen MUSS, sagt der Aufrufer das mit APK_PFLICHT=1. Sonst meldete ein
+  # Lauf, dem --apk abhandenkommt, weiter Erfolg (DeepSeek, 18.09.2026).
+  if [ -n "${APK_PFLICHT:-}" ]; then
+    echo "  FEHLGESCHLAGEN – APK_PFLICHT gesetzt, aber kein --apk uebergeben."
+    FAIL=1
+  fi
+  UNVOLLSTAENDIG=ja
 fi
 
 echo
-[ "$FAIL" -eq 0 ] && echo "ERGEBNIS: bestanden" || echo "ERGEBNIS: FEHLGESCHLAGEN"
+if [ "$FAIL" -ne 0 ]; then
+  echo "ERGEBNIS: FEHLGESCHLAGEN"
+elif [ -n "${UNVOLLSTAENDIG:-}" ]; then
+  echo "ERGEBNIS: Stufe 1 bestanden, Stufe 2 nicht gelaufen"
+else
+  echo "ERGEBNIS: bestanden"
+fi
 exit "$FAIL"

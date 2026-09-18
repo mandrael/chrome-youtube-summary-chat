@@ -1,5 +1,5 @@
-import { streamChat as streamOpenRouter } from "./openrouter";
-import * as mistral from "./mistral";
+import { streamChat as streamOpenRouter } from "./openrouter.ts";
+import * as mistral from "./mistral.ts";
 import type { ChatMessage, ReasoningEffort, Settings, Usage } from "./types";
 
 /**
@@ -10,6 +10,10 @@ import type { ChatMessage, ReasoningEffort, Settings, Usage } from "./types";
  * Service Worker der Erweiterung – dort kommt die Android-App nicht hin, und eine zweite
  * Kopie wäre der Anfang des Auseinanderlaufens. Deshalb steht sie hier, und der Service
  * Worker ruft sie nur noch auf.
+ *
+ * Die App ruft sie noch nicht: `app/src/main.ts` spricht die beiden Clients für die
+ * Messungen B1 und B2 absichtlich einzeln an, weil die Messung sie gerade trennen soll.
+ * Mit der Oberfläche der App kommt der Aufruf hierher.
  *
  * Kein Fallback zwischen den beiden: fällt der gewählte Anbieter aus, wirft das hier,
  * und die UI sagt es. Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Quellen),

@@ -52,7 +52,7 @@ export interface ChatMessage {
 export interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
-  /** USD. OpenRouter liefert ihn mit; bei Mistral rechnet der Service Worker ihn aus der Preistabelle in lib/mistral.ts, ohne Tabellenpreis fehlt das Feld. */
+  /** USD. OpenRouter liefert ihn mit; bei Mistral rechnet chat.ts ihn aus der Preistabelle in mistral.ts, ohne Tabellenpreis fehlt das Feld. */
   cost?: number;
 }
 

@@ -203,3 +203,29 @@ export interface VideoFormat {
   /** Geschätzte Gesamtgrösse aus Video- und Tonspur; null, wenn YouTube keine nennt. */
   bytes: number | null;
 }
+
+/**
+ * Ein laufender Chat-Strom, unabhängig davon, wie er transportiert wird.
+ *
+ * In der Erweiterung steckt dahinter ein Port zum Service Worker, in der Android-App der
+ * direkte Aufruf von `chatStream`. Wer den Strom verbraucht (Sidebar, Untertitel-
+ * Übersetzung), soll den Unterschied nicht kennen müssen.
+ */
+export interface StreamHandle {
+  /** Bricht die laufende Generierung ab. */
+  stop: () => void;
+  done: Promise<void>;
+}
+
+export interface StreamArgs {
+  model: string;
+  supportsReasoning: boolean;
+  reasoning: ReasoningEffort;
+  system: string;
+  messages: ChatMessage[];
+  /** Internetrecherche über OpenRouters Web-Plugin. */
+  web?: boolean;
+  onDelta: (text: string) => void;
+  onUsage: (usage: Usage) => void;
+  onSources?: (quellen: Array<{ url: string; title?: string }>) => void;
+}

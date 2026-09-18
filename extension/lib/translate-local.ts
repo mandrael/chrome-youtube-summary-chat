@@ -1,4 +1,4 @@
-import type { Transcript } from "./types";
+import type { Transcript } from "@shared/lib/types";
 
 /**
  * Chromes eingebaute Translator API (stabil ab Chrome 138). Läuft auf dem Gerät, kostet

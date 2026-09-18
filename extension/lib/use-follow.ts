@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { Cue } from "./types";
+import type { Cue } from "@shared/lib/types";
 
 /**
  * Folgt der Wiedergabe im Transkript.

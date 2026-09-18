@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ZIELSPRACHEN } from "@/lib/tracks";
+import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { availability as localAvailability, baseLang, downloadModel, isSupported } from "@/lib/translate-local";
 import { Check, Copy, Loader2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,10 +21,10 @@ import {
   isLiteModel,
   ONE_M_CONTEXT,
   preisProAnfrage,
-} from "@/lib/openrouter";
+} from "@shared/lib/openrouter";
 import { clearCache, DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
-import { parseWoerterbuch } from "@/lib/korrektur";
-import { DEFAULT_SYSTEM_PROMPT } from "@/lib/prompts";
+import { parseWoerterbuch } from "@shared/lib/korrektur";
+import { DEFAULT_SYSTEM_PROMPT } from "@shared/lib/prompts";
 import type {
   KeyStatus,
   ModelInfo,
@@ -32,7 +32,7 @@ import type {
   Settings,
   SttModelInfo,
   SttRoute,
-} from "@/lib/types";
+} from "@shared/lib/types";
 
 const REASONING_STEPS: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
 

@@ -1,4 +1,4 @@
-import type { Cue, Transcript } from "./types";
+import type { Cue, Transcript } from "@shared/lib/types";
 
 /**
  * Transkript aus dem laufenden Ton, ohne Download.

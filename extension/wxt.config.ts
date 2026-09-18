@@ -1,6 +1,14 @@
 import { defineConfig } from "wxt";
 import tailwindcss from "@tailwindcss/vite";
 
+// Der plattformneutrale Kern liegt seit dem Workspace-Umbau in ../shared und wird von
+// Erweiterung und Android-App gemeinsam benutzt. Kein Build-Schritt dazwischen: WXT
+// bündelt die TypeScript-Quellen direkt, damit `define` (__FALLBACK__) und Tailwind
+// daran genauso greifen wie an eigenem Code.
+// Relativ zum Projektverzeichnis – WXT löst Alias-Pfade selbst auf; ein absoluter
+// Pfad über node:url bräuchte @types/node nur für diese eine Zeile.
+const shared = "../shared/src";
+
 // Zwei Builds aus einer Codebase:
 //   --mode full   GitHub, unpacked, mit lokalem Audio-Fallback (yt-dlp via Native Messaging)
 //   --mode store  Chrome Web Store, nur Untertitel, kein Fallback-Code im Bundle
@@ -13,6 +21,7 @@ const isFull = (mode: string) => mode !== "store";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   srcDir: ".",
+  alias: { "@shared": shared },
   // Die gebauten Ordner liegen sichtbar im Projekt, nicht in einem versteckten
   // .output/ – wer die Erweiterung laden will, soll sie sehen.
   outDir: "..",

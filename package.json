@@ -1,0 +1,10 @@
+{
+  "name": "yt-summary-chat-workspace",
+  "version": "0.9.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compile": "pnpm -r run compile",
+    "check": "pnpm -r run check"
+  }
+}

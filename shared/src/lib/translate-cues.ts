@@ -1,5 +1,4 @@
-import type { Cue, ReasoningEffort } from "./types";
-import { startChat } from "./chat-client";
+import type { Cue, ReasoningEffort, StreamArgs, StreamHandle } from "./types";
 
 /**
  * Übersetzt Untertitelzeilen über OpenRouter – zeilenweise, mit Indexanker.
@@ -24,6 +23,12 @@ export interface CueTranslateOptions {
   from?: number;
   signal: AbortSignal;
   onCue: (index: number, text: string) => void;
+  /**
+   * Wie ein Chat-Strom gestartet wird – in der Erweiterung `startChat` über den Port zum
+   * Service Worker, in der App der direkte Aufruf. Injiziert statt importiert, weil diese
+   * Datei sonst die einzige im geteilten Kern wäre, die `chrome.runtime` kennt.
+   */
+  stream: (args: StreamArgs) => StreamHandle;
 }
 
 export async function translateCuesViaOpenRouter(
@@ -58,7 +63,7 @@ export async function translateCuesViaOpenRouter(
       }
     };
 
-    const handle = startChat({
+    const handle = o.stream({
       model: o.model,
       supportsReasoning: o.supportsReasoning,
       reasoning: o.reasoning,

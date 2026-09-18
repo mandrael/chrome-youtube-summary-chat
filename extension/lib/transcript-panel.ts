@@ -1,4 +1,4 @@
-import type { CaptionTrack, Cue, Transcript } from "./types";
+import type { CaptionTrack, Cue, Transcript } from "@shared/lib/types";
 
 /**
  * Rückfall auf YouTubes eigenes Transkript-Panel.

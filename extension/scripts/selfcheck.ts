@@ -19,21 +19,21 @@ import {
   TS_PATTERN,
   TS_SINGLE,
   duenneMarkenAus,
-} from "../lib/timestamps.ts";
-import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
-import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
-import { deltaText, modelleAusListe, verarbeiteSse, type MistralChunk, type RawModel } from "../lib/mistral.ts";
+} from "../../shared/src/lib/timestamps.ts";
+import { parseJson3, pickTrack, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
+import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
+import { deltaText, modelleAusListe, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
-import type { CaptionTrack, Transcript } from "../lib/types.ts";
-import { bildeAbsaetze, bildeLeseabsaetze } from "../lib/absaetze.ts";
+import type { CaptionTrack, Transcript } from "../../shared/src/lib/types.ts";
+import { bildeAbsaetze, bildeLeseabsaetze } from "../../shared/src/lib/absaetze.ts";
 import { baueWav } from "../lib/audio-live.ts";
 import {
   korrigiere,
   korrigiereTranskript,
   parseWoerterbuch,
   schreibweisenHinweis,
-} from "../lib/korrektur.ts";
+} from "../../shared/src/lib/korrektur.ts";
 
 let checks = 0;
 const check = (name: string, fn: () => void) => {

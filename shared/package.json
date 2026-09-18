@@ -1,0 +1,14 @@
+{
+  "name": "@ytsc/shared",
+  "version": "0.9.1",
+  "private": true,
+  "type": "module",
+  "description": "Plattformneutraler Kern: KI-Clients, Prompts, Transkript-Abruf, Zeitstempel.",
+  "scripts": {
+    "compile": "tsc --noEmit",
+    "check": "bash scripts/check.sh"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

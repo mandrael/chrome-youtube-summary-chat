@@ -7,7 +7,7 @@ import {
   TS_GROUP_PATTERN,
   TS_SINGLE,
   tsToSeconds,
-} from "@/lib/timestamps";
+} from "@shared/lib/timestamps";
 import { cn } from "@/lib/utils";
 
 /* Minimal-Typen für den hast-Baum – ein Paket dafür wäre hier Ballast. */

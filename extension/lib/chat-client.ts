@@ -1,29 +1,12 @@
-import type { ChatMessage, HelperJob, ReasoningEffort, Transcript, Usage, DownloadErgebnis } from "./types";
+import type { HelperJob, StreamArgs, StreamHandle, Transcript, DownloadErgebnis } from "@shared/lib/types";
 import type { FallbackProgress } from "./fallback";
+
+export type { StreamArgs, StreamHandle };
 
 /**
  * Content-Script-Seite der Port-Verbindung zum Service Worker. Streaming geht nicht über
  * sendMessage, deshalb ein Port; abgebrochen wird durch Trennen des Ports.
  */
-
-export interface StreamHandle {
-  /** Bricht die laufende Generierung ab. */
-  stop: () => void;
-  done: Promise<void>;
-}
-
-export interface StreamArgs {
-  model: string;
-  supportsReasoning: boolean;
-  reasoning: ReasoningEffort;
-  system: string;
-  messages: ChatMessage[];
-  /** Internetrecherche über OpenRouters Web-Plugin. */
-  web?: boolean;
-  onDelta: (text: string) => void;
-  onUsage: (usage: Usage) => void;
-  onSources?: (quellen: Array<{ url: string; title?: string }>) => void;
-}
 
 export function startChat(args: StreamArgs): StreamHandle {
   const port = chrome.runtime.connect({ name: "chat" });

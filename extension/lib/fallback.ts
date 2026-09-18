@@ -1,4 +1,4 @@
-import type { Cue, DownloadErgebnis, SttRoute, Transcript, VideoFormat } from "./types";
+import type { Cue, DownloadErgebnis, SttRoute, Transcript, VideoFormat } from "@shared/lib/types";
 
 /**
  * Native-Messaging-Brücke zum lokalen Audio-Fallback.

@@ -21,12 +21,12 @@ import { Markdown } from "@/components/Markdown";
 import { TranscriptView } from "@/components/TranscriptView";
 import { HistoryView } from "@/components/HistoryView";
 import { ask, startChat, startDownload, startFallback } from "@/lib/chat-client";
-import { makeT, resolveUiLang, type T } from "@/lib/i18n";
+import { makeT, resolveUiLang, type T } from "@shared/lib/i18n";
 import {
   PRESETS,
   webKontext,
   webLookupPrompt,
-} from "@/lib/prompts";
+} from "@shared/lib/prompts";
 import {
   empfohleneModelle,
   FALLBACK_MODELS,
@@ -35,7 +35,7 @@ import {
   listModels,
   ONE_M_CONTEXT,
   preisProAnfrage,
-} from "@/lib/openrouter";
+} from "@shared/lib/openrouter";
 import {
   collapsedItem,
   deleteConversation,
@@ -48,16 +48,16 @@ import {
   wideItem,
 } from "@/lib/storage";
 import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
-import { ZIELSPRACHEN } from "@/lib/tracks";
+import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
-import { transcriptToText } from "@/lib/timestamps";
-import { translateCuesViaOpenRouter } from "@/lib/translate-cues";
+import { transcriptToText } from "@shared/lib/timestamps";
+import { translateCuesViaOpenRouter } from "@shared/lib/translate-cues";
 import { NoCaptionsError } from "@/lib/transcript";
-import { formatTs } from "@/lib/timestamps";
+import { formatTs } from "@shared/lib/timestamps";
 import { starteLiveTranskription } from "@/lib/audio-live";
-import { STT_MODEL_IDS } from "@/lib/openrouter";
+import { STT_MODEL_IDS } from "@shared/lib/openrouter";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
-import { korrigiereTranskript, parseWoerterbuch, schreibweisenHinweis } from "@/lib/korrektur";
+import { korrigiereTranskript, parseWoerterbuch, schreibweisenHinweis } from "@shared/lib/korrektur";
 import {
   availability as localAvailability,
   baseLang,
@@ -74,7 +74,7 @@ import type {
   TranscriptTranslation,
   UiLang,
   VideoFormat,
-} from "@/lib/types";
+} from "@shared/lib/types";
 import { cn } from "@/lib/utils";
 
 type LoadState = "loading" | "ready" | "no-captions" | "error";
@@ -631,6 +631,9 @@ export function Sidebar({
             onDownload: (loaded) => setDownloadAnteil(loaded),
           })
         : translateCuesViaOpenRouter(transcript.cues, {
+            // Der Chat-Strom der Erweiterung: Port zum Service Worker. Die Android-App
+            // reicht hier ihren eigenen ein – deshalb Parameter statt Import.
+            stream: startChat,
             model: activeModel,
             supportsReasoning: modelInfo?.supportsReasoning ?? true,
             reasoning: settings.reasoning,

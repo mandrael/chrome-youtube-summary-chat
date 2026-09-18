@@ -1,14 +1,19 @@
 import { defineBackground } from "wxt/utils/define-background";
-import { listModels, listSttModels, streamChat, testKey } from "@/lib/openrouter";
-import * as mistral from "@/lib/mistral";
+import { listModels, listSttModels, testKey } from "@shared/lib/openrouter";
+import * as mistral from "@shared/lib/mistral";
+import { chatStream } from "@shared/lib/chat";
 import { collapsedItem, getSettings, wideItem } from "@/lib/storage";
-import type { ChatMessage, ReasoningEffort } from "@/lib/types";
+import type { ChatMessage, ReasoningEffort, Usage } from "@shared/lib/types";
 
 /**
  * Alle Cloud-Aufrufe laufen hier. Kein eigenes Backend, kein Proxy – der Service Worker
  * spricht direkt mit openrouter.ai oder, wenn so eingestellt, mit api.mistral.ai, sonst
  * mit nichts. Welche der beiden Gegenstellen dran ist, entscheidet `settings.provider`;
  * die Sidebar schickt keinen Anbieter mit, sonst könnten beide auseinanderlaufen.
+ *
+ * Die Verzweigung selbst steht seit dem Workspace-Umbau in `@shared/lib/chat` – dieselbe
+ * eine Stelle, die auch die Android-App aufruft. Hier bleibt nur der Transport: Port,
+ * Wachhalter, Abbruch.
  */
 
 interface ChatPortRequest {
@@ -164,42 +169,25 @@ function handleChatPort(port: chrome.runtime.Port) {
       try {
         const s = await getSettings();
         const onDelta = (text: string) => port.postMessage({ type: "delta", text });
-        const onUsage = (usage: unknown) => port.postMessage({ type: "usage", usage });
+        const onUsage = (usage: Usage) => port.postMessage({ type: "usage", usage });
 
-        if (s.provider === "mistral") {
-          if (!s.mistralApiKey) throw new Error("NO_KEY");
-          if (!s.mistralModel) throw new Error("NO_MODEL");
-          // Kein Reasoning-Regler, kein Web-Plugin, kein Provider-Routing: das sind
-          // OpenRouter-Parameter, Mistral bekommt sie gar nicht erst zu sehen. Die
-          // Sidebar sperrt den Web-Schalter; käme `web` trotzdem an, wäre ein stiller
-          // Fehlschlag schlimmer als ein lauter.
-          if (req.web) throw new Error("WEB_ONLY_OPENROUTER");
-          await mistral.streamChat({
-            apiKey: s.mistralApiKey,
-            region: s.mistralRegion,
-            model: s.mistralModel,
-            system: req.system,
-            messages: req.messages,
-            signal: controller.signal,
-            onDelta,
-            onUsage,
-          });
-        } else {
-          if (!s.apiKey) throw new Error("NO_KEY");
-          await streamChat({
-            apiKey: s.apiKey,
+        await chatStream(
+          s,
+          {
             model: req.model,
-            reasoning: req.reasoning,
             supportsReasoning: req.supportsReasoning,
+            reasoning: req.reasoning,
             system: req.system,
             messages: req.messages,
             web: req.web,
-            signal: controller.signal,
+          },
+          {
             onDelta,
             onUsage,
             onSources: (quellen) => port.postMessage({ type: "sources", quellen }),
-          });
-        }
+          },
+          controller.signal,
+        );
         port.postMessage({ type: "done" });
       } catch (e) {
         if ((e as Error)?.name === "AbortError") return; // vom Nutzer beendet

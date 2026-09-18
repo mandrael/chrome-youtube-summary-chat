@@ -6,7 +6,9 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  extension:
     dependencies:
       '@radix-ui/react-select':
         specifier: ^2.2.6
@@ -69,6 +71,12 @@ importers:
       wxt:
         specifier: ^0.21.4
         version: 0.21.4(rolldown@1.2.6)(typescript@5.9.3)(vite@8.2.2(jiti@2.7.0))
+
+  shared:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
 
 packages:
 

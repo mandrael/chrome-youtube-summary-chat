@@ -2,7 +2,7 @@ import React from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { ModelInfo } from "@/lib/types";
+import type { ModelInfo } from "@shared/lib/types";
 
 /**
  * Auswahlfeld mit Suche für die knapp 300 Modelle.

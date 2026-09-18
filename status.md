@@ -59,7 +59,10 @@ dabei: `channel: "chromium"`, die Headless-Shell lädt gar keine Extensions – 
 hätte die Probe bestanden, ohne etwas zu messen.
 
 Für die App: Typprüfung grün, Bundle gebaut, `verify-app-bundle.sh` Stufe 1 bestanden,
-`cap add android` erzeugt und eingecheckt. Fables Angabe zu `adjustMarginsForEdgeToEdge`
+`cap add android` erzeugt und eingecheckt. Der Actions-Lauf hat danach **die APK
+gebaut** (2:54) und Stufe 2 gegen die entpackte Datei bestanden – der Gradle-Weg trägt
+also, bevor am Mac überhaupt jemand anfängt. Die fertige Debug-APK hängt als Artefakt am
+Lauf; sie lässt sich auch direkt installieren, statt sie am Mac neu zu bauen. Fables Angabe zu `adjustMarginsForEdgeToEdge`
 war überholt – in 8.5.2 läuft Edge-to-Edge über `plugins.SystemBars.insetsHandling`,
 abgelesen an den Typen, nicht geraten.
 

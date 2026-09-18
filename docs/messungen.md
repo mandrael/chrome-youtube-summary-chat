@@ -958,6 +958,14 @@ Vorlage – nicht aus Doku abgeschrieben:**
   `initialViewportFitValueHint`. Abgelesen an `@capacitor/cli/dist/declarations.d.ts`.
 - Der Spike-Build: 26 Module, `dist` rund 100 kB, ohne Minifier (sonst wäre der Grep in
   `verify-app-bundle.sh` blind).
+- **Die APK baut** (GitHub Actions, 18.09.2026, `ubuntu-latest`, Temurin 21): `cap sync`
+  plus `./gradlew assembleDebug` laufen ohne Eingriff durch, 2 Minuten 54. Das
+  eingecheckte `android/`-Gerüst ist also vollständig. Stufe 2 von
+  `verify-app-bundle.sh` – der Grep in die **entpackte APK** – ist damit ebenfalls
+  gelaufen und bestanden: kein Native Messaging, kein fremder Endpunkt, beide erlaubten
+  Gegenstellen vorhanden. Gemessen wurde nur der Bau, nicht das Verhalten: auf einem
+  Runner läuft die App nicht, und YouTube antwortet Runner-IPs ohnehin oft mit
+  `LOGIN_REQUIRED`.
 
 **Ungeprüft – steht und fällt mit der Messung am Gerät:**
 

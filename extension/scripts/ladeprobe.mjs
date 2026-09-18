@@ -16,6 +16,17 @@
  *   pnpm exec playwright install chromium   # einmalig, holt den Browser
  *   node scripts/ladeprobe.mjs ../build-full
  *
+ * `playwright install` haengt auf diesem Mac: der Download laeuft durch, das
+ * Entpacken bleibt nach 38 Dateien stehen und kommt nie zurueck. Nicht Netz und
+ * nicht Platte – dasselbe Archiv von Hand entpackt braucht 1,6 s. Wenn es haengt:
+ *   curl -sSL -o /tmp/pw.zip \
+ *     https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/<build>/chromium-mac-arm64.zip
+ *   unzip -q /tmp/pw.zip -d /tmp/pw && mv /tmp/pw/chrome-mac \
+ *     ~/Library/Caches/ms-playwright/chromium-<build>/chrome-mac
+ *   touch ~/Library/Caches/ms-playwright/chromium-<build>/INSTALLATION_COMPLETE \
+ *         ~/Library/Caches/ms-playwright/chromium-<build>/DEPENDENCIES_VALIDATED
+ * Die Nummer <build> steht in der Fehlermeldung des Starts (fuer 1.56.1: 1194).
+ *
  * Playwright steht als devDependency in extension/package.json. Der Weg über
  * `pnpm dlx` war gedacht, um das zu vermeiden, funktioniert aber nicht: ESM löst
  * Importe vom Ort der Datei aus auf und ignoriert NODE_PATH, der Zwischenspeicher

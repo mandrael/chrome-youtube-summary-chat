@@ -1012,3 +1012,33 @@ nicht, der Weg aus `audio-live.ts` (Tab-Ton + `webkitSpeechRecognition`) ist dor
 keine Option. Und `setPlaybackRate` im eingebetteten Player nimmt nur Werte aus
 `getAvailablePlaybackRates()` – der 8×-Trick der Erweiterung fällt weg, mehr als 2× wird
 es nicht.
+
+## `playwright install` hängt beim Entpacken, nicht beim Laden (18.09.2026)
+
+Auf diesem Rechner (Apple M5, arm64, macOS 25.6) kommt `pnpm exec playwright install
+chromium` nie zurück. Gemessen, weil zwei Hintergrundläufe zwei Stunden standen:
+
+- **Netz ist es nicht.** `curl` holt dasselbe Archiv (130 MB) in gut zwei Minuten,
+  ein Bereichsabruf liefert 2 MB in 1,2 s. Die Fortschrittsanzeige des Installers
+  erreicht 100 %.
+- **Platte ist es auch nicht.** `unzip` entpackt genau dieses Archiv in **1,6 s** zu
+  303 MB.
+- **Der Installer bleibt danach stehen.** Im Zielordner liegen 38 Dateien (624 kB),
+  dann passiert nichts mehr – auch nicht nach neun Minuten, auch nicht mit
+  `--force`, auch nicht ohne Sandbox des Bash-Werkzeugs. Abgebrochen wird er nur
+  durch `timeout` (Exit 124).
+- **Folge, wenn man ihn laufen lässt und abbricht:** ein halb entpacktes
+  `Chromium.app` ohne `Chromium Framework`. Der Start stirbt dann mit `SIGABRT` und
+  einer `dlopen`-Meldung – das sieht nach kaputtem Browser aus, ist aber der
+  abgeschnittene Entpackvorgang.
+
+Weg drumherum: Archiv mit `curl` holen, mit `unzip` an seinen Platz legen, die
+Markierungen `INSTALLATION_COMPLETE` und `DEPENDENCIES_VALIDATED` daneben
+anlegen. Schritt für Schritt im Kopf von `extension/scripts/ladeprobe.mjs`.
+Danach lief die Ladeprobe für beide Builds durch: Extension geladen, Sidebar
+gemountet, 0 unerwartete Meldungen.
+
+**Die eigentliche Lehre ist aber nicht Playwright.** Beide Läufe standen zwei Stunden,
+weil sie ohne Zeitgrenze gestartet wurden und eine `until`-Warteschleife ohne Timeout
+auf den ersten wartete. Jeder lange Lauf gehört über `lauf.sh` mit `timeout`; ein
+Wartezustand ohne obere Schranke ist kein Wartezustand, sondern ein Hänger.

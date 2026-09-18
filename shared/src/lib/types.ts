@@ -52,7 +52,7 @@ export interface ChatMessage {
 export interface Usage {
   prompt_tokens: number;
   completion_tokens: number;
-  /** USD, kommt direkt von OpenRouter. Mistral liefert keinen Betrag – dann fehlt das Feld. */
+  /** USD. OpenRouter liefert ihn mit; bei Mistral rechnet der Service Worker ihn aus der Preistabelle in lib/mistral.ts, ohne Tabellenpreis fehlt das Feld. */
   cost?: number;
 }
 
@@ -69,7 +69,7 @@ export interface ModelInfo {
   contextLength: number;
   /** Unix-Sekunden der Veröffentlichung; sortiert die Liste. */
   created?: number;
-  /** USD pro Token, roh wie von der API geliefert. */
+  /** USD pro Token. OpenRouter liefert ihn roh; bei Mistral stammt er aus der Preistabelle in lib/mistral.ts. */
   pricePrompt?: number;
   priceCompletion?: number;
   supportsReasoning: boolean;

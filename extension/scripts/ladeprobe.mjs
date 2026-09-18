@@ -12,9 +12,14 @@
  * Sidebar ohne Ausnahme mountet. Der Transkript-Abruf schlägt dabei erwartungsgemäss
  * fehl (der Stub ist nicht YouTube); das ist eine Meldung in der UI, kein Fehler.
  *
- * Aufruf (Playwright kommt bewusst nicht als Abhängigkeit ins Projekt):
- *   pnpm dlx playwright@1.56.1 --version >/dev/null   # einmalig, holt das Paket
+ * Aufruf:
+ *   pnpm exec playwright install chromium   # einmalig, holt den Browser
  *   node scripts/ladeprobe.mjs ../build-full
+ *
+ * Playwright steht als devDependency in extension/package.json. Der Weg über
+ * `pnpm dlx` war gedacht, um das zu vermeiden, funktioniert aber nicht: ESM löst
+ * Importe vom Ort der Datei aus auf und ignoriert NODE_PATH, der Zwischenspeicher
+ * von dlx liegt ausserhalb dieses Baums.
  */
 import { createServer } from "node:http";
 import { chromium } from "playwright";

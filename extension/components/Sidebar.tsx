@@ -27,6 +27,7 @@ import {
   webKontext,
   webLookupPrompt,
 } from "@shared/lib/prompts";
+import { PREISSTAND } from "@shared/lib/mistral";
 import {
   empfohleneModelle,
   FALLBACK_MODELS,
@@ -1099,6 +1100,7 @@ export function Sidebar({
                 message={m}
                 t={t}
                 showCost={settings?.showCost ?? false}
+                kostenGeschaetzt={mistralAktiv}
                 onSeek={transcript?.hasTimestamps ? onSeek : undefined}
                 onDownload={() => download(`antwort-${videoId}-${i}.md`, m.content)}
                 onWebSearch={
@@ -1582,6 +1584,7 @@ function MessageBubble({
   message,
   t,
   showCost,
+  kostenGeschaetzt,
   onSeek,
   onDownload,
   onWebSearch,
@@ -1589,6 +1592,8 @@ function MessageBubble({
   message: ChatMessage;
   t: T;
   showCost: boolean;
+  /** Bei Mistral stammt der Betrag aus der Preisliste, nicht von der API. */
+  kostenGeschaetzt?: boolean;
   onSeek?: (s: number) => void;
   onDownload: () => void;
   onWebSearch?: () => void;
@@ -1657,7 +1662,10 @@ function MessageBubble({
         {showCost && message.usage && (
           <span className="text-xs text-muted-foreground">
             {t("tokens")}: {message.usage.prompt_tokens} / {message.usage.completion_tokens}
-            {message.usage.cost != null && ` · ${t("cost")}: $${message.usage.cost.toFixed(5)}`}
+            {message.usage.cost != null &&
+              ` · ${t("cost")}: ${kostenGeschaetzt ? "≈ " : ""}$${message.usage.cost.toFixed(5)}${
+                kostenGeschaetzt ? ` (${t("priceList")} ${PREISSTAND})` : ""
+              }`}
           </span>
         )}
       </div>

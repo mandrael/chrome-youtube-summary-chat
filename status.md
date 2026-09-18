@@ -2,18 +2,37 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
+**Braucht Michael (nur er kann es):**
+
 1. **Spike-APK am Mac bauen und messen** – Einstieg:
    [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md),
    Ablauf der sieben Messungen in `app/README.md`. Ohne Messung A (trägt der
    Transkript-Weg auf Android?) wird an der App-Oberfläche nicht weitergebaut.
-2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
+2. **Mistral mit eigenem Schlüssel prüfen** (0.9.2): „Modelle laden" muss eine Liste
+   liefern (der Filter, der am 05.09. alles strich, ist behoben und im Selbsttest
+   abgedeckt, aber nie gegen die echte API gelaufen), ein Modell wählen, eine Frage
+   stellen. Erwartet: Antwort streamt, darunter Token und „≈ $…" mit Preisstand.
+3. **Fehlertext nachreichen, falls ein Modell wieder stumm bleibt.** Seit 0.8.1 steht in
+   dem Fall ein Satz im Chat statt nichts. Ohne diesen Satz bleibt „nur Luna geht"
+   unerklärt – acht Modelle antworteten am 06.09. durch die Extension selbst
+   (docs/messungen.md), drei davon erst nach 49 bis 86 s.
+4. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
    venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
-3. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
+
+**Offen, ohne Auftrag nicht anfassen:**
+
+5. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
    sherpa-Route – eine Zeile, drei Läufe, ungemessen. Auf dem Mac laut Michael nicht
    relevant.
-4. Optional: Store-Build einreichen.
-5. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+6. de/en-Prompts sind seit 0.9.1 nicht mehr inhaltsgleich (Codex, niedrig): en fehlt die
+   Abgrenzung Angabe/Behauptung, körperliche Abläufe in „Anleitung", die Überlaufregel in
+   „Ausführlich"; Hinweistexte ebenso. Hier arbeitet niemand auf en.
+7. Optional: Store-Build einreichen.
+8. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+9. Versionsnummern 0.9.0 bis 0.9.2 sind nach der geschärften Regel eigentlich 0.8.2 bis
+   0.8.4 (Kachel- und Promptarbeit ist „fix"). Bleibt stehen; ein Rewrite kostet mehr als
+   der Schönheitsfehler.
 
 ## Nachtrag 18.09.2026 – Workspace-Umbau und Android-Spike
 
@@ -173,6 +192,35 @@ Windows: `-Encoding OEM` statt ASCII (Umlaute im Pfad), `$LASTEXITCODE` nach ven
 diesem Mac, nicht einmal Syntax), GNU-`stat`-Zweig unter Linux, Start durch Chrome selbst
 über den Wrapper. Michaels Vorgabe „auf dem Mac nicht relevant, hier
 ist CoreML Standard" beruhte auf einer falschen Annahme und wurde ihm gemeldet.
+
+### 06.09.2026: Version 0.9.2 – Mistral-Preise aus der Preisliste, Chat durch die Extension mit acht Modellen bestätigt
+
+**„Nur Luna geht“ nachgetestet, diesmal durch die Extension selbst** (headless,
+Content-Script → Service Worker → OpenRouter, DiktaGo-Schlüssel nur im Storage,
+Reasoning high, Knopf „In Kürze“ auf dem NK-Video): alle acht Modelle antworteten mit
+451 bis 1083 Zeichen, keine Fehlerelemente, keine pageerrors. Dauer: luna 11 s,
+deepseek 8 s, gemini-3.8-flash 15 s, glm-5.3-flash 9 s, nemotron 10 s, **haiku 49 s,
+qwen3.7-flash 62 s, gpt-5-nano 86 s**. Die drei langen liegen weit über den 30 s, nach
+denen Chrome einen Service Worker ohne Ereignis beendet – ohne den Wachhalter aus
+0.8.0 wäre der Port mitten im Denken gestorben, und der alte Code hätte das als leere
+Antwort ohne Meldung gezeigt. Das ist die wahrscheinlichste Erklärung für Michaels
+Befund; ein Beweis ist es nicht, weil sein Fehlertext fehlt.
+
+**Mistral-Preise:** die API führt keine, deshalb steht jetzt die Preisliste von
+mistral.ai/pricing/api (per WebFetch am 06.09.2026 gelesen, nicht agy) in
+`lib/mistral.ts`: Medium 1,50/7,50, Small 0,15/0,60, Large 0,50/1,50, Codestral
+0,30/0,90, Ministral 3B/8B/14B 0,10/0,15/0,20 je Richtung, GLM 5.2 1,40/4,40 USD je
+Mio. Token, EU-Endpunkt ×1,1. Codex (hoch): datierte Altversionen sind anders bepreist
+(medium-2508 0,40/2,00) – deshalb hängen die Preise nur an „-latest“-Namen, und die
+Modellliste behält je Familie jetzt den „-latest“-Eintrag statt des datierten. Kosten je
+Antwort werden im Service Worker aus Token × Preis gerechnet und in der Sidebar mit
+„≈“ und Preisstand gezeigt; Regionswechsel rechnet die geladene Liste um. Weiter ohne
+Preis: Magistral, Devstral, Pixtral, Nemo, Saba, datierte IDs.
+
+**Brave Leos Auswahl:** GLM (5.3 Flash und 5.3), Nemotron 3 Nano 30B und Claude Haiku
+4.5 stehen seit 0.8.0 in der OpenRouter-Empfehlung; Qwen 3.5 35B nicht (qwen3.7-flash
+billiger, 1M Kontext). Für Mistral gibt es keine Empfehlungsliste, dort zeigt die
+Auswahl alle Chat-Modelle mit Preis.
 
 ### 06.09.2026: Version 0.9.1 – Behauptungen zurück und lesbar, Listenform in allen Presets
 

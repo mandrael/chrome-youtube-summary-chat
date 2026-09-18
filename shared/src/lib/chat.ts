@@ -45,6 +45,7 @@ export async function chatStream(
     // Oberfläche sperrt den Web-Schalter; käme `web` trotzdem an, wäre ein stiller
     // Fehlschlag schlimmer als ein lauter.
     if (req.web) throw new Error("WEB_ONLY_OPENROUTER");
+    const p = mistral.preis(s.mistralModel, s.mistralRegion);
     await mistral.streamChat({
       apiKey: s.mistralApiKey,
       region: s.mistralRegion,
@@ -53,7 +54,12 @@ export async function chatStream(
       messages: req.messages,
       signal,
       onDelta: cb.onDelta,
-      onUsage: cb.onUsage,
+      // Mistral liefert nur Token; der Betrag kommt aus der Preistabelle in
+      // mistral.ts. Ohne Tabellenpreis bleibt cost leer, die UI zeigt nur Token.
+      onUsage: (u) =>
+        cb.onUsage(
+          p ? { ...u, cost: u.prompt_tokens * p.ein + u.completion_tokens * p.aus } : u,
+        ),
     });
     return;
   }

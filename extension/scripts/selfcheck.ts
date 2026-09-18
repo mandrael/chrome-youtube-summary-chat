@@ -22,7 +22,7 @@ import {
 } from "../../shared/src/lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdAusText, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
-import { deltaText, modelleAusListe, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
+import { deltaText, modelleAusListe, preis, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
 import type { CaptionTrack, Transcript } from "../../shared/src/lib/types.ts";
@@ -261,16 +261,30 @@ check("Mistral-Modellliste: Aliase ergeben je Modell einen Eintrag, nie eine lee
   ];
   const ids = modelleAusListe(data).map((m) => m.id);
   assert.deepEqual(ids, [
-    "ministral-8b-2512",
-    "codestral-2508",
-    "mistral-medium-3-5",
-    "mistral-small-2506",
-    "ministral-8b-2410",
+    "ministral-8b-latest",
+    "codestral-latest",
+    "mistral-medium-latest",
+    "mistral-small-latest",
     "ohne-alias",
   ]);
-  // Nur bewegliche Namen ohne versionierten Partner: sie bleiben, statt zu verschwinden.
-  const nurLatest: RawModel[] = [{ id: "mistral-neu-latest", aliases: ["mistral-neu"], capabilities: chat }];
-  assert.deepEqual(modelleAusListe(nurLatest).map((m) => m.id), ["mistral-neu-latest"]);
+  // Ein datierter Name ohne -latest-Partner bleibt stehen, statt zu verschwinden.
+  const nurDatiert: RawModel[] = [{ id: "mistral-neu-2609", aliases: ["mistral-neu"], capabilities: chat }, { id: "mistral-neu", capabilities: chat }];
+  assert.deepEqual(modelleAusListe(nurDatiert).map((m) => m.id), ["mistral-neu-2609"]);
+});
+
+check("Mistral-Preistabelle: Familie erkannt, EU-Aufpreis 10 %, Unbekanntes ohne Preis", () => {
+  const global = preis("mistral-medium-latest", "global")!;
+  const eu = preis("mistral-medium-latest", "eu")!;
+  assert.equal(global.ein, 1.5e-6);
+  assert.equal(global.aus, 7.5e-6);
+  assert.ok(Math.abs(eu.ein - 1.65e-6) < 1e-15 && Math.abs(eu.aus - 8.25e-6) < 1e-15);
+  // Datierte Altversionen sind anders bepreist (Codex 06.09.2026): kein Preis statt falscher.
+  assert.equal(preis("mistral-medium-2508", "global"), null);
+  assert.equal(preis("ministral-8b-2410", "global"), null);
+  assert.equal(preis("codestral-embed-2505", "eu"), null);
+  assert.equal(preis("magistral-medium-latest", "eu"), null);
+  const [m] = modelleAusListe([{ id: "mistral-small-latest", capabilities: { completion_chat: true } }], "eu");
+  assert.ok(m && Math.abs((m.pricePrompt ?? 0) - 0.165e-6) < 1e-15);
 });
 
 check("Mistral-Delta ohne Inhalt ergibt leeren Text", () => {

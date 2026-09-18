@@ -55,15 +55,43 @@ export interface RawModel {
 }
 
 /**
- * Nur Chat-Modelle, ohne abgekündigte. Preise gibt es hier nicht – Mistrals
- * /v1/models führt keine – und es wird keiner geraten: `pricePrompt` bleibt leer, die
- * Kostenanzeige entfällt.
+ * Nur Chat-Modelle, je Familie der „-latest"-Name. Preise liefert Mistrals /v1/models
+ * nicht; sie kommen aus der Tabelle PREISE unten, sonst bleibt `pricePrompt` leer.
  */
 export async function listModels(apiKey: string, region: MistralRegion): Promise<ModelInfo[]> {
   const res = await fetch(`${basis(region)}/models`, { headers: headers(apiKey) });
   if (!res.ok) throw new Error(`HTTP ${res.status} – ${await fehlertext(res)}`);
   const { data } = (await res.json()) as { data: RawModel[] };
-  return modelleAusListe(data);
+  return modelleAusListe(data, region);
+}
+
+/**
+ * Mistrals API liefert keine Preise; diese Tabelle ist die Preisliste
+ * mistral.ai/pricing/api, abgerufen am 06.09.2026, in USD je Token. Zuordnung über die
+ * „-latest"-Namen, denn nur für die gilt die Preisliste; datierte Altversionen
+ * (mistral-medium-2508, ministral-8b-2410) sind anders bepreist und bekommen bewusst
+ * keinen Preis. Der EU-Endpunkt kostet laut derselben Seite 10 % mehr („Regional
+ * inference +10 %"). Was hier fehlt (Magistral, Devstral, Pixtral, Nemo …), bleibt
+ * ohne Preis – geraten wird nichts.
+ */
+const PREISE: [muster: RegExp, ein: number, aus: number][] = [
+  [/^ministral-3b-latest$/, 0.1, 0.1],
+  [/^ministral-8b-latest$/, 0.15, 0.15],
+  [/^ministral-14b-latest$/, 0.2, 0.2],
+  [/^mistral-medium-latest$/, 1.5, 7.5],
+  [/^mistral-small-latest$/, 0.15, 0.6],
+  [/^mistral-large-latest$/, 0.5, 1.5],
+  [/^codestral-latest$/, 0.3, 0.9],
+  [/^zai-glm-5-2$/, 1.4, 4.4],
+];
+export const PREISSTAND = "06.09.2026";
+
+/** Preis je Token für Ein- und Ausgabe, oder null, wenn die Preisliste die Familie nicht kennt. */
+export function preis(id: string, region: MistralRegion): { ein: number; aus: number } | null {
+  const zeile = PREISE.find(([muster]) => muster.test(id));
+  if (!zeile) return null;
+  const faktor = region === "eu" ? 1.1 : 1;
+  return { ein: (zeile[1] * faktor) / 1e6, aus: (zeile[2] * faktor) / 1e6 };
 }
 
 /**
@@ -72,23 +100,25 @@ export async function listModels(apiKey: string, region: MistralRegion): Promise
  * `aliases`-Feld ihr Grundmodell, das Grundmodell nennt sie zurück. Wer alles
  * streicht, was irgendwo als Alias steht, streicht deshalb alles – so kam am
  * 05.09.2026 eine leere Liste zustande. Die Spec garantiert keine Symmetrie
- * (Codex-Befund), darum keine Gruppenbildung: Ein Eintrag mit Versionsnummer am Ende
- * (mistral-small-2506, mistral-medium-3-5) bleibt immer. Ein beweglicher Name
- * (-latest, oder ganz ohne Nummer) fliegt nur, wenn ein versionierter Partner in der
- * Liste steht – als sein Alias oder ihn nennend. Abgekündigte Modelle bleiben drin,
- * sie laufen bis zur Abschaltung weiter; die Sortierung nach Datum stellt sie ans Ende.
+ * (Codex-Befund), darum keine Gruppenbildung, sondern eine Regel je Eintrag:
+ * Ein „-latest"-Name bleibt immer. Ein anderer Name fliegt, wenn ein Partner (als
+ * sein Alias oder ihn nennend) auf „-latest" endet – oder wenn er selbst keine
+ * Versionsnummer trägt („codestral") und überhaupt einen Partner hat. Übrig bleibt
+ * je Familie der bewegliche Name, den Mistral selbst empfiehlt und an dem die
+ * Preisliste hängt (Codex, 06.09.2026: datierte Altversionen sind anders bepreist,
+ * eine Familien-Regex hätte ihnen den heutigen Preis gegeben).
  */
-export function modelleAusListe(data: RawModel[]): ModelInfo[] {
+export function modelleAusListe(data: RawModel[], region: MistralRegion = "global"): ModelInfo[] {
   const chat = data.filter((m) => m.capabilities?.completion_chat);
-  const versioniert = (id: string) => /\d$/.test(id);
-  const versionierte = new Set(chat.filter((m) => versioniert(m.id)).map((m) => m.id));
+  const latest = (id: string) => id.endsWith("-latest");
   const genanntVon = new Map<string, string[]>();
-  for (const m of chat) for (const a of m.aliases ?? []) genanntVon.set(a, [...(genanntVon.get(a) ?? []), m.id]);
+  for (const m of chat) for (const al of m.aliases ?? []) genanntVon.set(al, [...(genanntVon.get(al) ?? []), m.id]);
   return chat
     .filter((m) => {
-      if (versioniert(m.id)) return true;
+      if (latest(m.id)) return true;
       const partner = [...(m.aliases ?? []), ...(genanntVon.get(m.id) ?? [])];
-      return !partner.some((p) => versionierte.has(p));
+      if (partner.some(latest)) return false;
+      return /\d/.test(m.id) || partner.length === 0;
     })
     .map(
       (m): ModelInfo => ({
@@ -96,6 +126,8 @@ export function modelleAusListe(data: RawModel[]): ModelInfo[] {
         name: m.name || m.id,
         contextLength: m.max_context_length ?? 0,
         created: m.created,
+        pricePrompt: preis(m.id, region)?.ein,
+        priceCompletion: preis(m.id, region)?.aus,
         // Mistral kennt OpenRouters `reasoning.effort` nicht; der Regler bleibt aus.
         supportsReasoning: false,
       }),

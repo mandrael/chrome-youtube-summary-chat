@@ -55,7 +55,7 @@ jobs:
         run: pnpm --filter @ytsc/app run build
 
       - name: Web-Bundle pruefen (Stufe 1)
-        run: bash app/scripts/verify-app-bundle.sh
+        run: bash scripts/verify-app-bundle.sh
         working-directory: app
 
       - name: Capacitor synchronisieren

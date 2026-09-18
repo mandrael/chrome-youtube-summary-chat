@@ -28,7 +28,7 @@
       legend { font-weight: 600; font-size: 13px; }
       input { width: 100%; box-sizing: border-box; padding: 8px; margin: 4px 0; font: inherit; }
       button { padding: 10px 12px; margin: 3px 3px 3px 0; font: inherit; border-radius: 8px; }
-      #player { width: 100%; aspect-ratio: 16/9; border: 0; }
+      #player { width: 100%; aspect-ratio: 16/9; border: 0; background: #8882; }
       pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: #8881; padding: 8px; border-radius: 8px; min-height: 40vh; }
     </style>
   </head>
@@ -60,12 +60,13 @@
       <button id="clear">Log leeren</button>
     </fieldset>
 
-    <iframe
-      id="player"
-      referrerpolicy="strict-origin-when-cross-origin"
-      allow="autoplay; encrypted-media; picture-in-picture"
-      allowfullscreen
-    ></iframe>
+    <!--
+      Container, nicht das iframe selbst: YT.Player ersetzt das uebergebene Element
+      durch ein eigenes iframe und wuerde Attribute daran verlieren. Die Referrer-
+      Richtlinie haengt deshalb am Dokument (meta oben) – das ist ohnehin die Stelle,
+      die fuer den ausgehenden Referer zaehlt.
+    -->
+    <div id="player"></div>
 
     <pre id="log">bereit.</pre>
     <script type="module" src="/src/main.ts"></script>

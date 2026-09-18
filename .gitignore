@@ -21,3 +21,6 @@ native-host/at.gasperl.youtube_summary_chat.json
 
 __pycache__/
 *.pyc
+
+# Gebautes Web-Bundle der App (wird von cap sync nach android/ kopiert).
+app/dist/

@@ -20,7 +20,7 @@ import {
   TS_SINGLE,
   duenneMarkenAus,
 } from "../../shared/src/lib/timestamps.ts";
-import { parseJson3, pickTrack, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
+import { parseJson3, pickTrack, videoIdAusText, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
 import { deltaText, modelleAusListe, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
@@ -146,6 +146,15 @@ check("videoIdFromUrl schliesst Shorts aus", () => {
 });
 
 console.log("transkript-panel");
+
+check("Geteilter Text: Video-ID aus youtu.be, watch, live – Shorts nicht", () => {
+  // Was die YouTube-App beim Teilen schickt, ist kein sauberer Link.
+  assert.equal(videoIdAusText("Schau mal https://youtu.be/aqz-KE-bpKQ?si=Ab12"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("https://m.youtube.com/watch?v=9CZBIaaiPRI&t=30s"), "9CZBIaaiPRI");
+  assert.equal(videoIdAusText("https://www.youtube.com/live/aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("https://www.youtube.com/shorts/aqz-KE-bpKQ"), null);
+  assert.equal(videoIdAusText("gar kein Link"), null);
+});
 
 check("panelTimeToSeconds liest YouTubes Panel-Format", () => {
   // Real gemessen: das Panel schreibt „0:00“ bis „18:29“, bei langen Videos „1:02:03“.

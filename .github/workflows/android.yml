@@ -1,0 +1,77 @@
+name: Android-APK
+
+# Zweitpruefung, nicht der Hauptweg: gebaut und gemessen wird am Mac (dort steckt das
+# Geraet). Was dieser Lauf beitraegt, ist die Gegenprobe, dass der Build nicht an einer
+# lokalen Eigenheit haengt - und die zweite Stufe von verify-app-bundle.sh, die in die
+# fertige APK schaut statt nur in app/dist.
+#
+# Kein Geraetetest hier: GitHub-Runner-IPs bekommen von YouTube regelmaessig
+# LOGIN_REQUIRED. Ein Fehlschlag waere kein Befund, also wird es gar nicht erst versucht.
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+    paths:
+      - "app/**"
+      - "shared/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+jobs:
+  debug-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        with:
+          # Capacitor 8 verlangt Node 22 oder neuer (engines in @capacitor/cli).
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          # @capacitor/android kompiliert auf VERSION_21.
+          java-version: 21
+
+      - name: Abhaengigkeiten
+        run: pnpm install --frozen-lockfile
+
+      - name: Geteilter Kern - Pruefungen
+        run: |
+          pnpm -r run compile
+          bash shared/scripts/check.sh
+          node extension/scripts/selfcheck.ts
+
+      - name: App bauen
+        run: pnpm --filter @ytsc/app run build
+
+      - name: Web-Bundle pruefen (Stufe 1)
+        run: bash app/scripts/verify-app-bundle.sh
+        working-directory: app
+
+      - name: Capacitor synchronisieren
+        run: pnpm exec cap sync android
+        working-directory: app
+
+      - name: APK bauen
+        run: ./gradlew assembleDebug --no-daemon
+        working-directory: app/android
+
+      - name: APK pruefen (Stufe 2)
+        run: bash scripts/verify-app-bundle.sh --apk android/app/build/outputs/apk/debug/app-debug.apk
+        working-directory: app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

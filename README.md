@@ -489,6 +489,14 @@ automatische Downloads.
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
 
+- **Die Android-App, vollständig.** Sie ist in dieser Entwicklungsumgebung weder baubar
+  noch startbar: `dl.google.com` (Android-SDK) und `youtube.com` sind dort gesperrt.
+  Gebaut, installiert und gemessen wird am Mac. Was der erste Lauf klären soll, steht in
+  [docs/messungen.md](docs/messungen.md) unter „Android-App"; solange dort nichts mit
+  Gerät und Android-Version steht, ist über das Verhalten der App nichts bekannt.
+  Geprüft ist bisher nur, was ohne Gerät geht: Typprüfung, Bundle-Bau, der Grep gegen
+  das gebaute Bundle und die Selbstprüfung des geteilten Kerns.
+
 - **Ein echter Chat gegen Mistral AI.** Endpunkte, Antwortform und Stream-Format sind
   gegen Mistrals OpenAPI-Spec verifiziert, der SSE-Parser hat einen Selbsttest, und beide
   Endpunkte antworten ohne gültigen Schlüssel mit HTTP 401 „Invalid API Key“ – genau

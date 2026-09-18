@@ -314,3 +314,30 @@ export function videoIdFromUrl(href: string): string | null {
     return null;
   }
 }
+
+/**
+ * Video-ID aus einem geteilten Text.
+ *
+ * Das Teilen-Ziel der Android-App bekommt keinen sauberen Link, sondern das, was die
+ * YouTube-App schickt: oft `https://youtu.be/<id>?si=…`, je nach Fassung mit dem
+ * Videotitel davor. `videoIdFromUrl` greift dort nicht – es erwartet genau eine
+ * `/watch`-URL. Deshalb diese zweite, groszuegigere Lesart, bewusst getrennt: im
+ * Browser soll weiterhin nur die Watch-Seite zaehlen.
+ *
+ * Shorts liefern auch hier null – die werden nicht bedient.
+ */
+export function videoIdAusText(text: string): string | null {
+  if (/youtube\.com\/shorts\//.test(text)) return null;
+  const id = "([A-Za-z0-9_-]{11})";
+  const muster = [
+    new RegExp(`youtu\\.be/${id}`),
+    new RegExp(`youtube\\.com/watch\\?(?:[^\\s]*&)?v=${id}`),
+    new RegExp(`youtube\\.com/live/${id}`),
+    new RegExp(`youtube\\.com/embed/${id}`),
+  ];
+  for (const m of muster) {
+    const treffer = text.match(m);
+    if (treffer?.[1]) return treffer[1];
+  }
+  return null;
+}

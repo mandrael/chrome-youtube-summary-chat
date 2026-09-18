@@ -2,14 +2,84 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-1. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
+1. **Spike-APK am Mac bauen und messen** – `app/README.md` listet die sieben Messungen.
+   Ohne Messung A (trägt der Transkript-Weg auf Android?) wird an der App-Oberfläche
+   nicht weitergebaut.
+2. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
    venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
-2. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
+3. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
    sherpa-Route – eine Zeile, drei Läufe, ungemessen. Auf dem Mac laut Michael nicht
    relevant.
-3. Optional: Store-Build einreichen.
-4. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+4. Optional: Store-Build einreichen.
+5. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
+
+## Nachtrag 18.09.2026 – Workspace-Umbau und Android-Spike
+
+Ziel: eine eigenständige Android-App mit der Funktion der Erweiterung – Teilen-Ziel für
+YouTube-Links, Transkript, dieselben Schnellbefehle, Chat, Web-Recherche, dieselbe
+KI-Anbindung. Zwei Dinge sind dabei zuerst entschieden worden, bevor eine Zeile
+Oberfläche entstand.
+
+### Entscheidung 1: Capacitor, nicht Kotlin
+
+Begründung liegt in der Änderungshistorie dieses Projekts, nicht im Allgemeinen: am
+häufigsten geändert werden die Prompts (0.9.0, 0.9.1) und die beiden Clients. Ein
+Kotlin-Port hätte `prompts.ts` ein zweites Mal, in zwei Sprachen – die Drift zwischen de
+und en ist hier schon einmal ein Befund gewesen. Der Player wäre in beiden Fällen
+derselbe: IFrame-API im WebView, Googles eigener Weg seit der Abkündigung der Android
+Player API.
+
+Was damit **nicht** geht und auch mit Kotlin nicht ginge: Anmeldung. Google sperrt
+Sign-in in eingebetteten WebViews (403 `disallowed_useragent`), und der WebView hat
+seinen eigenen Cookie-Topf. Also kein Premium im eingebetteten Player, also Werbung.
+Wer ohne Werbung springen will, geht über den Deep-Link in die YouTube-App – deshalb ist
+der Knopf Pflichtpfad und nicht Kür.
+
+### Entscheidung 2: ein Repo, ein Kern
+
+`shared/` als pnpm-Workspace-Paket, rund 2.700 Zeilen laufen unverändert in beiden
+Zielen. Vier Nähte statt einer Abstraktion: `chat.ts` (die §1-Verzweigung, jetzt an einer
+Stelle statt im Service Worker), eine `Http`-Naht im Transkript-Abruf, Vorgaben und
+Schlüsselnamen in `settings.ts`, und der Chat-Strom wird in `translate-cues.ts`
+injiziert statt importiert. `shared/scripts/check.sh` hält den Kern sauber – inklusive
+der Prüfung, dass `provider === "mistral"` an genau einer Stelle steht.
+
+Die Erweiterung verhält sich unverändert; deshalb kein Versionssprung für den Umbau.
+
+### Was gemessen wurde, hier, ohne Gerät
+
+`pnpm -r run compile` grün, selfcheck 23/23 (neu: die Lesart geteilter Links),
+`shared/scripts/check.sh` bestanden, beide Extension-Builds gebaut,
+`verify-store-bundle.sh` bestanden, **Ladeprobe bestanden** gegen `build-full` und
+`build-store` – die fünfte Prüfung aus CLAUDE.md ist jetzt ein Skript
+(`extension/scripts/ladeprobe.mjs`) statt Handarbeit: sie leitet `www.youtube.com` per
+`--host-resolver-rules` auf einen lokalen Stub um und sammelt `pageerror` ein. Wichtig
+dabei: `channel: "chromium"`, die Headless-Shell lädt gar keine Extensions – ohne das
+hätte die Probe bestanden, ohne etwas zu messen.
+
+Für die App: Typprüfung grün, Bundle gebaut, `verify-app-bundle.sh` Stufe 1 bestanden,
+`cap add android` erzeugt und eingecheckt. Fables Angabe zu `adjustMarginsForEdgeToEdge`
+war überholt – in 8.5.2 läuft Edge-to-Edge über `plugins.SystemBars.insetsHandling`,
+abgelesen an den Typen, nicht geraten.
+
+### Was offen ist – und ohne Gerät offen bleibt
+
+Die App ist in der Cloud weder baubar noch startbar: `dl.google.com` und `youtube.com`
+sind dort gesperrt. Der Spike hat genau deshalb sieben Messungen, damit eine einzige
+Installation reicht (Liste in `app/README.md`). Die wichtigste ist A: trägt der
+signierte Player-Call aus einem Nicht-Browser-Client? Trägt er nicht, ist der Rückfall
+ein unsichtbarer WebView auf youtube.com-Origin – dann ändert sich der Aufbau, und gut,
+dass die Oberfläche noch nicht gebaut ist.
+
+### Offene To-Dos aus diesem Schritt
+
+1. Spike-APK am Mac bauen, installieren, A bis F messen, Ergebnisse nach
+   `docs/messungen.md` (mit Gerät, Android- und WebView-Version).
+2. Danach erst: Oberfläche der App (Sidebar-Komponenten nach `shared/src/components`,
+   Schnellbefehle, Chat, Verlauf), Speicher über Dateien statt Preferences.
+3. Ton-Weg (MediaProjection + AudioPlaybackCapture → OpenRouter-STT) nur, wenn A trägt
+   und die Oberfläche steht; höchstens 2× Tempo, der 8×-Trick der Erweiterung entfällt.
 
 ## Nachtrag 04.09.2026 (Nachmittag) – Download-Knopf gebaut, Codex-Review, React-Produktionsbuild, Parakeet-Bewertung
 

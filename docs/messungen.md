@@ -934,3 +934,50 @@ qwen3.7-flash billiger ist und 1M Kontext hat. Kein Modell überschritt die 30 s
 denen Chrome einen untätigen Service Worker beendet; der Wachhalter in
 `handleChatPort` ist trotzdem eingebaut, weil ein Denkmodell mit hoher Stufe die
 Grenze reissen kann.
+
+## Android-App – was gemessen ist und was nicht (18.09.2026)
+
+**Gemessen, in der Entwicklungsumgebung, an den entpackten Paketen und an der erzeugten
+Vorlage – nicht aus Doku abgeschrieben:**
+
+- Versionen am 17./18.09.2026: `@capacitor/core|cli|android` **8.5.2**,
+  `@capacitor/preferences` 8.0.1, `@capacitor/filesystem` 8.1.3,
+  `@capacitor/app-launcher` 8.0.1, `@capgo/capacitor-share-target` 8.0.53 (MPL-2.0,
+  peer `@capacitor/core >=8.0.0`). `@capacitor/cli` verlangt `node >=22`.
+- Aus dem von `cap add android` erzeugten Projekt: **minSdk 24, compileSdk 36,
+  targetSdk 36**, AGP **8.13.0**, Gradle-Wrapper **8.14.3**, `MainActivity` in Java,
+  `launchMode="singleTask"`, Permissions ab Werk nur `INTERNET`.
+- **pnpm-Workspace und Capacitor vertragen sich ohne Hoisting.** `cap add android` fand
+  alle vier Plugins über die pnpm-Symlinks (`@capacitor/app-launcher`,
+  `@capacitor/filesystem`, `@capacitor/preferences`, `@capgo/capacitor-share-target`).
+  Kein `shamefully-hoist`, kein `node-linker=hoisted`. Bedingung: die Plugins stehen als
+  direkte Abhängigkeit in `app/package.json`, und `cap` läuft aus `app/`.
+- **Edge-to-Edge steht in Capacitor 8 woanders.** Nicht `android.adjustMarginsForEdgeToEdge`
+  (das lehnen die Typen von 8.5.2 ab), sondern `plugins.SystemBars.insetsHandling`
+  (`"native" | "css" | "disable"`, Vorgabe `"css"`) plus
+  `initialViewportFitValueHint`. Abgelesen an `@capacitor/cli/dist/declarations.d.ts`.
+- Der Spike-Build: 26 Module, `dist` rund 100 kB, ohne Minifier (sonst wäre der Grep in
+  `verify-app-bundle.sh` blind).
+
+**Ungeprüft – steht und fällt mit der Messung am Gerät:**
+
+- Ob der signierte visionOS-Player-Call aus `CapacitorHttp` heraus JSON liefert. `yt-dlp`
+  schafft ihn aus einem reinen HTTP-Client, aus einer Extension-Seite kam HTML – die App
+  liegt dazwischen und ist nicht vorhersagbar. Das ist Messung A.
+- Ob `openrouter.ai` und `api.eu.mistral.ai` CORS für den Origin `https://localhost`
+  erlauben und ob `fetch` im System-WebView wirklich streamt (Messung B). Fällt Mistral
+  durch, ist „Antwort kommt am Stück" die ehrliche Anzeige – kein Proxy, kein stilles
+  Umschalten auf OpenRouter (§1, §3).
+- Ob YouTube `https://localhost` als Embedder annimmt oder mit Fehler 153 antwortet
+  (Messung C). `referrerpolicy` am iframe und das `<meta name="referrer">` sind gesetzt.
+- Ob `getCurrentTime()` während eines Werbeeinschubs die Werbezeit meldet (Messung C).
+- Ob die YouTube-App den Parameter `t=` aus einem `AppLauncher.openUrl` beachtet
+  (Messung E).
+- Ob Chromiums WebView-Ton als `USAGE_MEDIA` läuft – Voraussetzung dafür, dass der
+  spätere Ton-Weg den eigenen Player überhaupt mitschneiden kann.
+
+**Was dabei schon feststeht, ohne Gerät:** die Web Speech API gibt es im Android-WebView
+nicht, der Weg aus `audio-live.ts` (Tab-Ton + `webkitSpeechRecognition`) ist dort also
+keine Option. Und `setPlaybackRate` im eingebetteten Player nimmt nur Werte aus
+`getAvailablePlaybackRates()` – der 8×-Trick der Erweiterung fällt weg, mehr als 2× wird
+es nicht.

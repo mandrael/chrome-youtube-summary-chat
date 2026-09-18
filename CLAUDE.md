@@ -50,7 +50,20 @@ Hinweis auf eigene, gemeinfreie und lizenzfreie Nutzung. Einordnung mit Quellen:
 [docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
-`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`.
+`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`. In der App
+bleiben die Android-Permissions bei `INTERNET`; keine Analytics-Abhängigkeit im Gradle
+(kein Firebase, kein Crashlytics).
+
+**6. Zwei Ziele, ein Kern.** Chrome-Erweiterung und Android-App teilen sich `shared/`
+(pnpm-Workspace). Dort steht kein `chrome.`, kein `document.`, kein `window.`, nichts aus
+`wxt/` und kein `__FALLBACK__` – geprüft von `shared/scripts/check.sh`, Kommentare
+ausgenommen. Grund: `__FALLBACK__` wird in vorgebündelten Abhängigkeiten nicht ersetzt,
+und der Store-Beweis wäre still unwahr. Die Anbieter-Verzweigung aus §1 steht in
+`shared/src/lib/chat.ts` und **nur dort**; beide Plattformen rufen sie auf, statt sie zu
+kopieren. Für die App gilt §2 verschärft: es gibt keinen `full`-Build – kein Native
+Messaging, kein yt-dlp, kein Videodownload. Bewiesen wird das mit
+`app/scripts/verify-app-bundle.sh`, Stufe 1 gegen `app/dist`, Stufe 2 gegen die
+entpackte APK (nur die zeigt, dass Capacitors Kopierschritt nichts hinzufügt).
 
 ---
 
@@ -99,6 +112,9 @@ Seitenleiste dort nachlesen**, sonst wird eine bereits widerlegte Hypothese neu 
 
 ```
 build-full/           gebaute Erweiterung zum Laden (GitHub-Build)
+shared/               plattformneutraler Kern für Erweiterung und App
+  src/lib/            openrouter · mistral · chat · prompts · transcript · settings · i18n …
+app/                  Android-App (Capacitor + TypeScript), android/ eingecheckt
 icon-source/          Icon-Quelle (Python/PIL) und die gerenderten Grössen
 build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
@@ -116,7 +132,7 @@ der Bedingung.
 ## Prüfungen
 
 ```bash
-cd extension && pnpm run compile && pnpm run check
+pnpm -r run compile && pnpm -r run check          # Wurzel: extension, shared, app
 cd extension && pnpm run build && pnpm run build:store && ./scripts/verify-store-bundle.sh
 cd native-host && python3 selfcheck.py
 ```
@@ -126,9 +142,16 @@ steht im README-Abschnitt „Was nicht geprüft ist“ und wird dort gepflegt, n
 weggelassen.
 
 **Fünftens, nach jeder Build-Änderung: die Erweiterung einmal headless laden** und
-Konsole samt `pageerror` einsammeln (Playwright-Chromium, `--load-extension`). Am
+Konsole samt `pageerror` einsammeln. Das macht `extension/scripts/ladeprobe.mjs` (braucht
+Playwright, bewusst keine Projekt-Abhängigkeit: `pnpm dlx playwright@1.56.1`). Am
 05.09.2026 bestanden alle vier Prüfungen, während das Content-Script beim ersten Render
 warf – ein Bundle-Grep ersetzt keinen Ladeversuch.
+
+**Sechstens, für die App: nichts davon ist in der Cloud prüfbar.** Android-SDK
+(`dl.google.com`) und `youtube.com` sind in der Entwicklungsumgebung gesperrt. Gebaut und
+gemessen wird am Mac; bis eine Messung mit Gerät und Android-Version in
+[docs/messungen.md](docs/messungen.md) steht, gilt jede Aussage über App-Verhalten als
+ungeprüft und gehört in den README-Abschnitt „Was nicht geprüft ist".
 
 **Version vor jedem Commit mit Nutzerwirkung erhöhen**, Schema `major.function.fix`
 (status.md, 03.09.2026), an zwei Stellen: `extension/wxt.config.ts` (Manifest) und

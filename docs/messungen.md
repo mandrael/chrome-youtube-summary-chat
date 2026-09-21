@@ -1042,3 +1042,41 @@ gemountet, 0 unerwartete Meldungen.
 weil sie ohne Zeitgrenze gestartet wurden und eine `until`-Warteschleife ohne Timeout
 auf den ersten wartete. Jeder lange Lauf gehört über `lauf.sh` mit `timeout`; ein
 Wartezustand ohne obere Schranke ist kein Wartezustand, sondern ein Hänger.
+
+## Code-Review des Android-Branches: drei Prüfer, derselbe Auftrag (21.09.2026)
+
+DeepSeek (`dsh`), Codex (`gpt-5.6-sol`, medium) und Kimi (`k3`) bekamen wortgleich
+denselben Auftrag (`_system/reviews/auftrag-codereview-android-branch-2026-09-21.md`):
+109 Dateien, rund 4.000 Zeilen Diff gegen `main`. Rohausgaben in
+`_system/reviews/laeufe-2026-09-21/`.
+
+| | DeepSeek | Codex medium | Kimi k3 |
+|---|---|---|---|
+| Laufzeit | 3 min 20 s | 9 min 13 s | 20 min 04 s |
+| Befunde gesamt | 7 | 6 | 8 |
+| davon am Code bestätigt | 5 ganz, 1 teils | 5 | 8 |
+| nur von diesem Prüfer | 2 | 4 | 5 |
+| schwersten Fehler gefunden | ja | **nein** | ja |
+
+**Der schwerste Fehler:** Das Teilen-Ziel der App las `text`/`subject`/`url`, das Plugin
+sendet `title`/`texts`/`files`. Jede geteilte Video-ID wäre „KEINE" gewesen – Messung D
+hätte am Gerät ein Artefakt gemessen. DeepSeek und Kimi fanden das, beide durch Lesen der
+Plugin-Quelle in `node_modules`; Codex las alle 109 Dateien des Diffs, aber keine
+Abhängigkeit, und fand es nicht.
+
+**Nur Kimi:** Der Kaltstart über das Teilen-Ziel liefert nie ein Ereignis, weil das
+Plugin nur `onNewIntent` auswertet (behoben in `MainActivity`, **am Gerät ungeprüft**);
+zwei Blindstellen in `check.sh`; Doppelklick auf den Player hängt; Reste der
+Capacitor-Vorlage (google-services im Gradle, FileProvider auf die Wurzel des externen
+Speichers); zwei veraltete Stellen in `CLAUDE.md`.
+**Nur Codex:** APK-Rechte wurden nie aus der APK gelesen (jetzt Stufe 2b mit `aapt2`);
+`check.sh` prüfte Gegenstellen per Verbots- statt Positivliste; `videoIdAusText`
+akzeptierte `notyoutube.com`; falscher Paketname im Instrumentationstest; fremdes
+`iframe_api`-Skript im selben Dokument wie die Schlüsselfelder (offen, Architekturfrage).
+**Nur DeepSeek:** Regex nimmt bei doppeltem `v=` das letzte; Teilstring-Treffer bei der
+`INTERNET`-Prüfung.
+
+Ein Widerspruch: DeepSeek meldete eine Cookie-Regression beim Abruf von `base.js`, Kimi
+belegte „identisches Verhalten". Beide haben recht – der Pfad ist in der Praxis relativ
+und damit same-origin; der Unterschied träte erst bei einem absoluten fremden Host auf.
+Abgesichert, weil es eine Zeile kostet.

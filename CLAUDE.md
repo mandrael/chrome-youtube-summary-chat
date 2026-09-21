@@ -22,8 +22,8 @@ an.
 aufruft, auch nicht als optionaler Zweig. Kein Fallback zwischen beiden: fällt der
 gewählte Anbieter aus, sagt die UI das, statt still zum anderen zu wechseln. Keine
 generische Provider-Abstraktion – ein Schalter (`settings.provider`), zwei Clients
-(`lib/openrouter.ts`, `lib/mistral.ts`), der Service Worker verzweigt an genau einer
-Stelle. Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Preise, STT), fehlt bei
+(`shared/src/lib/openrouter.ts`, `shared/src/lib/mistral.ts`), verzweigt wird an genau
+einer Stelle (`shared/src/lib/chat.ts`, §6). Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Preise, STT), fehlt bei
 Mistral sichtbar, nicht heimlich. Groq ausschliesslich über OpenRouters
 Provider-Routing.
 
@@ -65,7 +65,8 @@ bleiben die Android-Permissions bei `INTERNET`; keine Analytics-Abhängigkeit im
 ausgenommen. Grund: `__FALLBACK__` wird in vorgebündelten Abhängigkeiten nicht ersetzt,
 und der Store-Beweis wäre still unwahr. Die Anbieter-Verzweigung aus §1 steht in
 `shared/src/lib/chat.ts` und **nur dort**; beide Plattformen rufen sie auf, statt sie zu
-kopieren. Für die App gilt §2 verschärft: es gibt keinen `full`-Build – kein Native
+kopieren – die App als Messgerät noch nicht, sie spricht die Clients für die Messungen B1
+und B2 absichtlich einzeln an. Für die App gilt §2 verschärft: es gibt keinen `full`-Build – kein Native
 Messaging, kein yt-dlp, kein Videodownload. Bewiesen wird das mit
 `app/scripts/verify-app-bundle.sh`, Stufe 1 gegen `app/dist`, Stufe 2 gegen die
 entpackte APK (nur die zeigt, dass Capacitors Kopierschritt nichts hinzufügt).
@@ -127,7 +128,7 @@ build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
   entrypoints/        content.tsx · background.ts · options/
   components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
-  lib/                openrouter · mistral · transcript · audio-live · fallback · korrektur · prompts …
+  lib/                audio-live · fallback · chat-client · storage · transcript-panel · translate-local …
   scripts/            selfcheck.ts · verify-store-bundle.sh · ladeprobe.mjs
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```

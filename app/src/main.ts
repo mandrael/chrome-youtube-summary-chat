@@ -1,7 +1,7 @@
 import { Preferences } from "@capacitor/preferences";
 import { Directory, Filesystem, Encoding } from "@capacitor/filesystem";
 import { AppLauncher } from "@capacitor/app-launcher";
-import { CapacitorShareTarget } from "@capgo/capacitor-share-target";
+import { CapacitorShareTarget, type ShareReceivedEvent } from "@capgo/capacitor-share-target";
 
 import { fetchCaptionTracks, fetchCues, pickTrack, videoIdAusText } from "@shared/lib/transcript";
 import { streamChat as streamOpenRouter } from "@shared/lib/openrouter";
@@ -224,15 +224,18 @@ async function messungC(): Promise<void> {
   }
 }
 
+// Ein Ladeversuch für alle Aufrufer: ein zweiter Klick überschrieb sonst
+// onYouTubeIframeAPIReady, und das Promise des ersten kehrte nie zurück (Kimi, 21.09.2026).
+let ytLaden: Promise<void> | undefined;
 function ladeYtApi(): Promise<void> {
   if (window.YT?.loaded) return Promise.resolve();
-  return new Promise((resolve, reject) => {
+  return (ytLaden ??= new Promise((resolve, reject) => {
     const s = document.createElement("script");
     s.src = "https://www.youtube.com/iframe_api";
     s.onerror = () => reject(new Error("iframe_api liess sich nicht laden"));
     window.onYouTubeIframeAPIReady = () => resolve();
     document.head.appendChild(s);
-  });
+  }));
 }
 
 function messungCSeek(): void {
@@ -284,9 +287,11 @@ async function messungF(): Promise<void> {
 
 // ---------------------------------------------------------------- D  Teilen-Ziel
 
-void CapacitorShareTarget.addListener("shareReceived", (ereignis: unknown) => {
-  const e = ereignis as { text?: string; subject?: string; url?: string };
-  const roh = [e.url, e.text, e.subject].filter(Boolean).join(" ");
+// Der Typ kommt vom Plugin, nicht geraten: es sendet { title, texts, files }. Ein
+// `unknown`-Cast auf erfundene Felder (text/subject/url) hatte hier jede geteilte
+// Video-ID verschluckt, ohne dass der Compiler es sehen konnte (DeepSeek, 21.09.2026).
+void CapacitorShareTarget.addListener("shareReceived", (e: ShareReceivedEvent) => {
+  const roh = [e.title, ...(e.texts ?? [])].filter(Boolean).join(" ");
   log(`D geteilt: ${JSON.stringify(roh).slice(0, 200)}`);
   const id = videoIdAusText(roh);
   log(`D  erkannte Video-ID: ${id ?? "KEINE"}`);

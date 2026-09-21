@@ -17,11 +17,13 @@ QUELLEN=$(find src -name '*.ts' -o -name '*.tsx')
 
 # Kommentarzeilen (// … und Blockkommentar-Zeilen) entfernen, Rest prüfen.
 ohne_kommentare() {
-  sed -E 's://.*::' "$1" | grep -vE '^\s*(\*|/\*)'
+  # `://` bleibt stehen: sonst verschwände mit jedem Kommentar auch jede URL im Code,
+  # und Test 2 sähe keinen einzigen Host.
+  sed -E 's:(^|[^:])//.*:\1:' "$1" | grep -vE '^\s*(\*|/\*)'
 }
 
 echo "== 1. Kein Browser- und kein Extension-Code im geteilten Kern =="
-VERBOTEN='chrome\.|document\.|window\.|from "wxt|__FALLBACK__'
+VERBOTEN='chrome\.|document\.|window\.|from ["'"'"']wxt|__FALLBACK__'
 for f in $QUELLEN; do
   HIT=$(ohne_kommentare "$f" | grep -nE "$VERBOTEN" || true)
   if [ -n "$HIT" ]; then
@@ -34,15 +36,22 @@ done
 
 echo
 echo "== 2. Genau zwei Gegenstellen (§1) =="
-# Kein weiterer Endpunkt, auch nicht als optionaler Zweig.
-FREMD='api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.groq\.com'
-HITS=$(grep -rnE "$FREMD" src || true)
+# Kein weiterer Endpunkt, auch nicht als optionaler Zweig. Positivliste statt Verbotsliste:
+# vier verbotene Namen liessen jeden fünften Host durch (Codex, 21.09.2026, nachgestellt
+# mit https://evil.example). github.com ist kein Endpunkt, sondern der Referer-Wert für
+# OpenRouter; localhost ist der Origin der App.
+ERLAUBT='^https?://(openrouter\.ai|api\.mistral\.ai|api\.eu\.mistral\.ai|www\.youtube\.com|youtu\.be|github\.com|localhost)$'
+HITS=""
+for f in $QUELLEN; do
+  H=$(ohne_kommentare "$f" | grep -oE 'https?://[A-Za-z0-9.-]+' | grep -vE "$ERLAUBT" | sort -u | tr '\n' ' ')
+  [ -n "$H" ] && HITS="$HITS  $f: $H"$'\n'
+done
 if [ -n "$HITS" ]; then
-  echo "  FEHLGESCHLAGEN – fremder Endpunkt im geteilten Kern:"
-  echo "$HITS" | cut -c1-140
+  echo "  FEHLGESCHLAGEN – Host ausserhalb der Positivliste im geteilten Kern:"
+  printf '%s' "$HITS" | cut -c1-140
   FAIL=1
 else
-  echo "  ok – keiner von: $FREMD"
+  echo "  ok – nur Hosts der Positivliste"
 fi
 
 # Gegenprobe: ohne sie würde Test 2 auch bestehen, wenn gar keine Clients mehr da wären.

@@ -26,13 +26,17 @@ export type Http = (url: string, init?: HttpAnfrage) => Promise<HttpAntwort>;
  * Vorgabe für alles, was in einem Browser auf youtube.com läuft. `credentials: "include"`
  * ist gemessen **nicht** nötig (messungen.md: geht mit und ohne Cookies), schadet aber
  * auch nicht und hält das Verhalten der Erweiterung unverändert.
+ *
+ * Nur für youtube.com selbst: vor dem Umbau lief der Abruf von base.js ohne diese Angabe.
+ * Liegt die Datei einmal auf einem fremden Host, gingen sonst Cookies dorthin, und ein
+ * Abruf mit Cookies scheitert an CORS, wo er ohne gelingt (DeepSeek, 21.09.2026).
  */
 export const browserHttp: Http = async (url, init) => {
   const res = await fetch(url, {
     method: init?.method ?? "GET",
     headers: init?.headers,
     body: init?.body,
-    credentials: "include",
+    credentials: /^https:\/\/(www\.|m\.)?youtube\.com\//.test(url) ? "include" : "same-origin",
   });
   return { status: res.status, ok: res.ok, text: await res.text() };
 };
@@ -329,11 +333,16 @@ export function videoIdFromUrl(href: string): string | null {
 export function videoIdAusText(text: string): string | null {
   if (/youtube\.com\/shorts\//.test(text)) return null;
   const id = "([A-Za-z0-9_-]{11})";
+  // Der Host muss wirklich der Host sein: am Textanfang, nach Leerraum oder nach `://`,
+  // davor höchstens Subdomains. Sonst zählten `notyoutube.com/watch?v=…` und
+  // `evil.test/youtu.be/…` als YouTube-Link (Codex, 21.09.2026).
+  const vor = "(?:^|\\s|://)(?:[\\w-]+\\.)*";
   const muster = [
-    new RegExp(`youtu\\.be/${id}`),
-    new RegExp(`youtube\\.com/watch\\?(?:[^\\s]*&)?v=${id}`),
-    new RegExp(`youtube\\.com/live/${id}`),
-    new RegExp(`youtube\\.com/embed/${id}`),
+    new RegExp(`${vor}youtu\\.be/${id}`),
+    // Lazy und ohne & im Teilausdruck: bei doppeltem v= gilt das erste, wie bei YouTube.
+    new RegExp(`${vor}youtube\\.com/watch\\?(?:[^\\s&]+&)*?v=${id}`),
+    new RegExp(`${vor}youtube\\.com/live/${id}`),
+    new RegExp(`${vor}youtube\\.com/embed/${id}`),
   ];
   for (const m of muster) {
     const treffer = text.match(m);

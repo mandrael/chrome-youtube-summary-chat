@@ -100,6 +100,15 @@ cd android && ./gradlew assembleDebug
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Gradle verlangt ein JDK 21; das System-Java dieses Macs ist 18. Gemessen am 21.09.2026 –
+so baut es lokal durch (41 s), Homebrew-JDK genügt:
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export JAVA_HOME="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+./gradlew assembleDebug --no-daemon -Dorg.gradle.java.installations.paths="$JAVA_HOME"
+```
+
 Mitlesen:
 
 ```bash

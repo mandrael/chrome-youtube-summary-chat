@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ab Android 12 entscheidet diese Datei, nicht mehr allowBackup: die
+  Geraet-zu-Geraet-Uebertragung ignoriert allowBackup="false". In den SharedPreferences
+  liegen die API-Schluessel im Klartext (@capacitor/preferences, Gruppe CapacitorStorage),
+  deshalb geht nichts davon in die Cloud und nichts auf ein anderes Geraet.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+    </device-transfer>
+</data-extraction-rules>

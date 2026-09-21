@@ -161,6 +161,14 @@ check("Geteilter Text: Video-ID aus youtu.be, watch, live – Shorts nicht", () 
   assert.equal(videoIdAusText("https://www.youtube.com/live/aqz-KE-bpKQ"), "aqz-KE-bpKQ");
   assert.equal(videoIdAusText("https://www.youtube.com/shorts/aqz-KE-bpKQ"), null);
   assert.equal(videoIdAusText("gar kein Link"), null);
+  // Fremde Hosts, die nur so aussehen, zählen nicht; Subdomain und fehlendes Schema schon.
+  assert.equal(videoIdAusText("https://notyoutube.com/watch?v=aqz-KE-bpKQ"), null);
+  assert.equal(videoIdAusText("https://evil.test/youtu.be/aqz-KE-bpKQ"), null);
+  assert.equal(videoIdAusText("https://music.youtube.com/watch?v=aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("Titel youtu.be/aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  // Mehrere Parameter vor v=, und bei doppeltem v= gilt das erste – wie bei YouTube.
+  assert.equal(videoIdAusText("https://www.youtube.com/watch?list=PLx&index=2&v=aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("https://www.youtube.com/watch?v=aqz-KE-bpKQ&v=9CZBIaaiPRI"), "aqz-KE-bpKQ");
 });
 
 check("panelTimeToSeconds liest YouTubes Panel-Format", () => {

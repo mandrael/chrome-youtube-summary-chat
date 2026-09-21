@@ -46,11 +46,5 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
-}
+// Der google-services-Block der Capacitor-Vorlage ist entfernt: §5 verlangt, dass die
+// Analytics-Abhängigkeit nicht vorhanden ist – nicht bloss inaktiv, solange eine Datei fehlt.

@@ -71,9 +71,10 @@ if [ -f "$M" ]; then
   # den Bildschirm abgreifen duerfen (§4, §5).
   RECHTE=$(grep -oE 'android:name="android.permission.[A-Z_]+"' "$M" | sort -u)
   echo "  Permissions: $(echo "$RECHTE" | tr '\n' ' ')"
-  if echo "$RECHTE" | grep -qvE 'INTERNET'; then
+  # Ganze Zeile, nicht Teilstring: INTERNET_IRGENDWAS rutschte sonst durch.
+  if echo "$RECHTE" | grep -qvxE 'android:name="android\.permission\.INTERNET"'; then
     echo "  FEHLGESCHLAGEN - mehr als INTERNET deklariert:"
-    echo "$RECHTE" | grep -vE 'INTERNET'
+    echo "$RECHTE" | grep -vxE 'android:name="android\.permission\.INTERNET"'
     FAIL=1
   else
     echo "  ok - nur INTERNET"
@@ -102,6 +103,29 @@ if [ -n "$APK" ]; then
   B=$(grep -rqE "$MUSS2" "$TMP/assets/public" && echo ja || echo nein)
   pruefe "Stufe 2: $APK" "$H" "$A" "$B"
   rm -rf "$TMP"
+
+  # Stufe 1b liest das Quellmanifest. Rechte, die eine Abhaengigkeit ueber den
+  # Manifest-Merger einbringt, stehen nur in der APK (Codex, 21.09.2026). Das Manifest
+  # dort ist binaer, lesbar nur mit aapt2 aus den Build-Tools.
+  echo
+  echo "== Stufe 2b: Permissions der fertigen APK =="
+  SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
+  AAPT=$(ls "$SDK"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+  if [ -z "$AAPT" ]; then
+    echo "  FEHLGESCHLAGEN - aapt2 nicht gefunden unter $SDK/build-tools; die Rechte der APK sind ungeprueft."
+    FAIL=1
+  else
+    # Das eigene "…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" legt androidx an; es ist
+    # ein selbst definiertes Signaturrecht, kein Zugriff auf irgendetwas.
+    APKRECHTE=$("$AAPT" dump permissions "$APK" | grep -oE "uses-permission: name='[^']+'" | sed -E "s/.*name='([^']+)'/\1/" | grep -v 'DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION$' | sort -u)
+    echo "  Permissions: $(echo "$APKRECHTE" | tr '\n' ' ')"
+    if [ "$APKRECHTE" = "android.permission.INTERNET" ]; then
+      echo "  ok - nur INTERNET"
+    else
+      echo "  FEHLGESCHLAGEN - erwartet genau android.permission.INTERNET"
+      FAIL=1
+    fi
+  fi
 else
   echo
   echo "== Stufe 2: uebersprungen (kein --apk uebergeben) =="

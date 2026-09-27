@@ -159,6 +159,16 @@ async function erkenne(
   return { segments: data.segments ?? [], text: data.text ?? "", sprache: data.language };
 }
 
+/**
+ * Welches Video die Seite zeigt: `v=` bei /watch, sonst der Pfad (/live/<id>). Bewusst
+ * ohne Import aus dem Kern – der Selbsttest lädt diese Datei direkt mit Node, und dort
+ * gibt es den Alias `@shared` nicht.
+ */
+function videoAufSeite(): string {
+  const u = new URL(location.href);
+  return u.searchParams.get("v") ?? u.pathname;
+}
+
 export function starteLiveTranskription(opts: {
   apiKey: string;
   model: string;
@@ -182,7 +192,7 @@ export function starteLiveTranskription(opts: {
       stumm: video.muted,
       pausiert: video.paused,
       pitch: video.preservesPitch,
-      quelle: video.currentSrc,
+      video: videoAufSeite(),
     };
 
     /*
@@ -493,8 +503,11 @@ export function starteLiveTranskription(opts: {
       video.preservesPitch = vorher.pitch;
       video.muted = vorher.stumm;
       // YouTube nimmt bei SPA-Navigation dasselbe `<video>` für das nächste Video. Zeigt
-      // es inzwischen eine andere Quelle, gehören Position und Pause nicht mehr dazu.
-      if (video.currentSrc === vorher.quelle) {
+      // die Seite inzwischen ein anderes, gehören Position und Pause nicht mehr dazu.
+      // Verglichen wird die Video-ID der Adresse, nicht `currentSrc`: Werbung läuft im
+      // selben Element mit eigener Quelle (messungen.md, 02.09.2026), und nach einem
+      // Werbeblock mitten in der Erkennung bliebe die Position sonst unwiederhergestellt.
+      if (videoAufSeite() === vorher.video) {
         video.pause();
         video.currentTime = vorher.zeit;
         if (!vorher.pausiert) void video.play().catch(() => {});

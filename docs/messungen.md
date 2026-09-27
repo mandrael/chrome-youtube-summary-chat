@@ -1054,8 +1054,8 @@ denselben Auftrag (`_system/reviews/auftrag-codereview-android-branch-2026-09-21
 |---|---|---|---|
 | Laufzeit | 3 min 20 s | 9 min 13 s | 20 min 04 s |
 | Befunde gesamt | 7 | 6 | 8 |
-| davon am Code bestätigt | 5 ganz, 1 teils | 5 | 8 |
-| nur von diesem Prüfer | 2 | 4 | 5 |
+| davon am Code bestätigt | 5 ganz, 1 teils | 5 | 7 |
+| nur von diesem Prüfer, bestätigt | 2 | 4 | 4 |
 | schwersten Fehler gefunden | ja | **nein** | ja |
 
 **Der schwerste Fehler:** Das Teilen-Ziel der App las `text`/`subject`/`url`, das Plugin
@@ -1064,9 +1064,7 @@ hätte am Gerät ein Artefakt gemessen. DeepSeek und Kimi fanden das, beide durc
 Plugin-Quelle in `node_modules`; Codex las alle 109 Dateien des Diffs, aber keine
 Abhängigkeit, und fand es nicht.
 
-**Nur Kimi:** Der Kaltstart über das Teilen-Ziel liefert nie ein Ereignis, weil das
-Plugin nur `onNewIntent` auswertet (behoben in `MainActivity`, **am Gerät ungeprüft**);
-zwei Blindstellen in `check.sh`; Doppelklick auf den Player hängt; Reste der
+**Nur Kimi:** zwei Blindstellen in `check.sh`; Doppelklick auf den Player hängt; Reste der
 Capacitor-Vorlage (google-services im Gradle, FileProvider auf die Wurzel des externen
 Speichers); zwei veraltete Stellen in `CLAUDE.md`.
 **Nur Codex:** APK-Rechte wurden nie aus der APK gelesen (jetzt Stufe 2b mit `aapt2`);
@@ -1080,6 +1078,16 @@ Ein Widerspruch: DeepSeek meldete eine Cookie-Regression beim Abruf von `base.js
 belegte „identisches Verhalten". Beide haben recht – der Pfad ist in der Praxis relativ
 und damit same-origin; der Unterschied träte erst bei einem absoluten fremden Host auf.
 Abgesichert, weil es eine Zeile kostet.
+
+**Ein Fehlalarm, erst am 27.09.2026 erkannt.** Kimi meldete, der Kaltstart über das
+Teilen-Ziel liefere nie ein Ereignis, weil das Share-Plugin nur `onNewIntent` auswertet –
+belegt am Quelltext des Plugins. Das stimmt für das Plugin, aber nicht für die App:
+`BridgeActivity.load()` in `@capacitor/android` 8.5.2 ruft selbst
+`onNewIntent(getIntent())`, der Start-Intent kommt also an. Die am 21.09. eingebaute
+Weiterleitung in `MainActivity` lieferte das Ereignis beim Kaltstart deshalb **doppelt**
+(Capacitor hält Ereignisse ohne Zuhörer als Liste fest) und ist wieder entfernt. Die
+Lehre für den Prüfervergleich: ein Befund, der an einer Abhängigkeit belegt ist, muss
+auch an der Schicht darüber geprüft werden – das hat weder Kimi noch die Bewertung getan.
 
 ## Kommentare über youtubei/v1/next (26.09.2026)
 

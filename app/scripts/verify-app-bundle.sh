@@ -117,7 +117,7 @@ if [ -n "$APK" ]; then
   else
     # Das eigene "…DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" legt androidx an; es ist
     # ein selbst definiertes Signaturrecht, kein Zugriff auf irgendetwas.
-    APKRECHTE=$("$AAPT" dump permissions "$APK" | grep -oE "uses-permission: name='[^']+'" | sed -E "s/.*name='([^']+)'/\1/" | grep -v 'DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION$' | sort -u)
+    APKRECHTE=$("$AAPT" dump permissions "$APK" | grep -oE "uses-permission: name='[^']+'" | sed -E "s/.*name='([^']+)'/\1/" | grep -vx 'at\.gasperl\.ytsummary\.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION' | sort -u)
     echo "  Permissions: $(echo "$APKRECHTE" | tr '\n' ' ')"
     if [ "$APKRECHTE" = "android.permission.INTERNET" ]; then
       echo "  ok - nur INTERNET"

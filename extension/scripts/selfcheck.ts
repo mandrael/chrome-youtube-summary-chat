@@ -311,17 +311,16 @@ check("Mistral-Preistabelle: Familie erkannt, EU-Aufpreis 10 %, Unbekanntes ohne
 // wäre grün geblieben (Grok, 18.09.2026). Deshalb läuft hier der echte Weg mit
 // gefälschter Gegenstelle.
 await checkAsync("Mistral-Kosten je Antwort: Token mal Tabellenpreis, sonst gar nichts", async () => {
-  const strom = (tokenModell: string) =>
-    [
-      'data: {"choices":[{"delta":{"content":"hallo"}}]}',
-      'data: {"usage":{"prompt_tokens":30000,"completion_tokens":2000}}',
-      "data: [DONE]",
-      "",
-    ].join("\n\n") + tokenModell;
+  const strom = [
+    'data: {"choices":[{"delta":{"content":"hallo"}}]}',
+    'data: {"usage":{"prompt_tokens":30000,"completion_tokens":2000}}',
+    "data: [DONE]",
+    "",
+  ].join("\n\n");
 
   const lauf = async (model: string): Promise<Usage | undefined> => {
     const echtes = globalThis.fetch;
-    globalThis.fetch = (async () => new Response(strom(""), { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async () => new Response(strom, { status: 200 })) as typeof fetch;
     try {
       let gesehen: Usage | undefined;
       await chatStream(

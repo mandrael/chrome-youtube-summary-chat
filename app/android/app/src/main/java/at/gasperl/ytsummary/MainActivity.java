@@ -1,27 +1,12 @@
 package at.gasperl.ytsummary;
 
-import android.content.Intent;
-import android.os.Bundle;
-
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {
-
-    /**
-     * Kaltstart über das Teilen-Ziel. Das Share-Plugin wertet nur onNewIntent aus; läuft die
-     * App noch nicht, kommt der SEND-Intent aber als Start-Intent und ginge verloren – kein
-     * Ereignis, kein Logeintrag, von einem echten Fehlschlag nicht zu unterscheiden (Kimi,
-     * 21.09.2026, am Plugin-Quelltext belegt). Deshalb wird er hier einmal nachgereicht; das
-     * Plugin hält das Ereignis fest, bis der Listener im WebView steht.
-     * Nur beim echten Neustart: nach einer Drehung käme derselbe Intent sonst ein zweites Mal.
-     */
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Intent start = getIntent();
-        if (savedInstanceState == null && bridge != null && start != null
-                && Intent.ACTION_SEND.equals(start.getAction())) {
-            onNewIntent(start);
-        }
-    }
-}
+/*
+ * Bewusst leer. Den Kaltstart über das Teilen-Ziel deckt Capacitor selbst ab:
+ * BridgeActivity.load() ruft onNewIntent(getIntent()), das Share-Plugin bekommt den
+ * Start-Intent also wie jeden späteren. Eine eigene Weiterleitung hier lieferte das
+ * Ereignis doppelt – Capacitor hält Ereignisse ohne Zuhörer als Liste fest
+ * (Plugin.notifyListeners, @capacitor/android 8.5.2). Nachgelesen am 27.09.2026.
+ */
+public class MainActivity extends BridgeActivity {}

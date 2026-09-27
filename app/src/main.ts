@@ -229,12 +229,16 @@ async function messungC(): Promise<void> {
 let ytLaden: Promise<void> | undefined;
 function ladeYtApi(): Promise<void> {
   if (window.YT?.loaded) return Promise.resolve();
-  return (ytLaden ??= new Promise((resolve, reject) => {
+  return (ytLaden ??= new Promise<void>((resolve, reject) => {
     const s = document.createElement("script");
     s.src = "https://www.youtube.com/iframe_api";
     s.onerror = () => reject(new Error("iframe_api liess sich nicht laden"));
     window.onYouTubeIframeAPIReady = () => resolve();
     document.head.appendChild(s);
+  }).catch((e: unknown) => {
+    // Ein Fehlschlag darf nicht hängen bleiben: der nächste Klick versucht es neu.
+    ytLaden = undefined;
+    throw e;
   }));
 }
 

@@ -4,10 +4,11 @@
 
 **Braucht Michael (nur er kann es):**
 
-1. **Spike-APK am Mac bauen und messen** – Einstieg:
-   [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md),
+1. **Spike-APK am Gerät messen** – sie baut am Mac (JDK 21, Aufruf in der Übergabe),
+   Einstieg: [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md),
    Ablauf der sieben Messungen in `app/README.md`. Ohne Messung A (trägt der
-   Transkript-Weg auf Android?) wird an der App-Oberfläche nicht weitergebaut.
+   Transkript-Weg auf Android?) wird an der App-Oberfläche nicht weitergebaut. Bei
+   Messung D zählen: kalt wie warm genau **ein** Ereignis je Teilen.
 2. **Mistral mit eigenem Schlüssel prüfen** (0.9.2): „Modelle laden" muss eine Liste
    liefern (der Filter, der am 05.09. alles strich, ist behoben und im Selbsttest
    abgedeckt, aber nie gegen die echte API gelaufen), ein Modell wählen, eine Frage
@@ -33,6 +34,23 @@
 9. Versionsnummern 0.9.0 bis 0.9.2 sind nach der geschärften Regel eigentlich 0.8.2 bis
    0.8.4 (Kachel- und Promptarbeit ist „fix"). Bleibt stehen; ein Rewrite kostet mehr als
    der Schönheitsfehler.
+
+## Nachtrag 27.09.2026 – Gesamtreview des Android-Branches samt 0.10.0
+
+Alle Prüfungen grün (27 + 8 Selbsttests, Store-Bundle, beide Ladeproben, APK samt
+Stufe 2 und 2b). Zwei Fehler behoben, einer davon selbst eingebaut:
+
+- **`MainActivity` lieferte das Teilen-Ereignis beim Kaltstart doppelt.** Die am 21.09.
+  eingebaute Weiterleitung beruhte auf Kimis Befund „Kaltstart kommt nie an" – falsch,
+  `BridgeActivity.load()` leitet den Start-Intent schon selbst weiter. Zurückgebaut, in
+  der gebauten APK geprüft (nur noch der Konstruktor).
+- **Live-Erkennung stellte nach Werbung den Player nicht wieder her** (aus 0.10.0):
+  der Vergleich lief über `currentSrc`, Werbung hat eine eigene Quelle. Jetzt über die
+  Video-ID der Adresse. Logik, kein Live-Lauf mit Werbeblock.
+
+Offen: fremdes `iframe_api`-Skript im selben Dokument wie die Schlüsselfelder (Frage für
+die echte App-Oberfläche); ob das Transkript als `.txt` im Store-Build bleiben soll,
+während Kommentare dort wegen der Richtlinie fehlen.
 
 ## Nachtrag 26.09.2026 – 0.10.0: Download-Menü mit Transkript und Kommentaren
 

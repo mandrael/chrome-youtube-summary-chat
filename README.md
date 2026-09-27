@@ -516,13 +516,19 @@ Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nich
   sonst fragte, um welches Video es geht. Ohne OpenRouter-Schlüssel in der
   Entwicklungsumgebung nicht gegen die echte API gelaufen.
 
-- **Die Android-App, vollständig.** Sie ist in dieser Entwicklungsumgebung weder baubar
-  noch startbar: `dl.google.com` (Android-SDK) und `youtube.com` sind dort gesperrt.
-  Gebaut, installiert und gemessen wird am Mac. Was der erste Lauf klären soll, steht in
-  [docs/messungen.md](docs/messungen.md) unter „Android-App"; solange dort nichts mit
-  Gerät und Android-Version steht, ist über das Verhalten der App nichts bekannt.
-  Geprüft ist bisher nur, was ohne Gerät geht: Typprüfung, Bundle-Bau, der Grep gegen
-  das gebaute Bundle und die Selbstprüfung des geteilten Kerns.
+- **Die Android-App auf einem Gerät.** In der Cloud-Umgebung ist sie weder baubar noch
+  startbar (`dl.google.com` und `youtube.com` gesperrt); am Mac baut sie seit 21.09.2026
+  (JDK 21 nötig, Aufruf in der Übergabe). Geprüft ist, was ohne Gerät geht: Typprüfung,
+  Bundle-Bau, der Grep gegen Web-Bundle und entpackte APK, die Rechte der fertigen APK
+  (nur `INTERNET`) und dass Backup dort aus ist. Was der erste Gerätelauf klären soll,
+  steht in [docs/messungen.md](docs/messungen.md) unter „Android-App"; solange dort
+  nichts mit Gerät und Android-Version steht, ist über das Verhalten der App nichts
+  bekannt – auch nicht, ob das Teilen-Ziel kalt und warm genau ein Ereignis liefert.
+
+- **Player-Zustand nach Werbung während der Live-Erkennung (27.09.2026).** Ob Position
+  und Pause wiederhergestellt werden, hängt jetzt an der Video-ID der Adresse statt an
+  `currentSrc`, weil Werbung im selben Element mit eigener Quelle läuft. Die Logik folgt
+  der Messung vom 02.09.2026; ein Lauf mit Werbeblock mitten in der Erkennung fehlt.
 
 - **Ein echter Chat gegen Mistral AI.** Endpunkte, Antwortform und Stream-Format sind
   gegen Mistrals OpenAPI-Spec verifiziert, der SSE-Parser hat einen Selbsttest, und beide
@@ -563,10 +569,10 @@ Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 | Alle drei STT-Routen end-to-end | siehe Tabelle oben |
 | `/api/v1/key`, Modellliste live | 375 Modelle in der Options-Page |
 | Sidebar-Platzierung, Dark-Mode, SPA-Wechsel | im Browser gesehen |
-| Extension-Logik / Host | 18 bzw. 8 Prüfungen |
+| Extension-Logik / Host | 27 bzw. 8 Prüfungen |
 
 ```bash
-cd extension    && pnpm run check          # 18 Prüfungen
+cd extension    && pnpm run check          # 27 Prüfungen
 cd native-host  && python3 selfcheck.py    # 8 Prüfungen
 ```
 

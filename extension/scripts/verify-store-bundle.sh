@@ -107,6 +107,20 @@ else
 fi
 
 echo
+echo "== 2e. Kommentar-Download: nicht im Store-Bundle =="
+# Kommentare sind Inhalte Dritter; der Store verbietet das Herunterladen geschützter
+# Inhalte. Gesucht ist der Endpunkt, über den sie kommen, und der HTML-Bau.
+KOMM='youtubei/v1/next|kommentareAlsHtml|comment-item-section'
+KHITS=$(grep -rInoE "$KOMM" "$OUT" --include='*.js' 2>/dev/null || true)
+if [ -n "$KHITS" ]; then
+  echo "  FEHLGESCHLAGEN – Kommentar-Download im Store-Bundle:"
+  echo "$KHITS" | cut -c1-160
+  FAIL=1
+else
+  echo "  ok – keiner von: $KOMM"
+fi
+
+echo
 echo "== 2c. Der erlaubte Weg MUSS drin sein =="
 # Ein Test, der nur Verbotenes sucht, wuerde auch bestehen, wenn das Store-Bundle gar
 # nichts mehr kann. Die Spracherkennung aus dem laufenden Ton ist dort der einzige Weg
@@ -128,6 +142,12 @@ if [ -d "$FULL" ]; then
   else
     echo "  FEHLGESCHLAGEN – auch der full-Build enthält keinen Fallback-Code."
     echo "  Damit prüft Test 2 nichts. Erst 'pnpm run build' ausführen."
+    FAIL=1
+  fi
+  if grep -rqE "comment-item-section" "$FULL" --include='*.js'; then
+    echo "  ok – full-Build enthält den Kommentar-Download (Test 2e greift also überhaupt)"
+  else
+    echo "  FEHLGESCHLAGEN – auch der full-Build enthält keinen Kommentar-Download; Test 2e prüft nichts."
     FAIL=1
   fi
   if grep -rqE "videoLaden" "$FULL" --include='*.js' && grep -rqE "function startDownload" "$FULL" --include='*.js'; then

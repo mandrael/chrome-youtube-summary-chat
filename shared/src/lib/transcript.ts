@@ -307,11 +307,17 @@ export class NoCaptionsError extends Error {
   }
 }
 
-/** Video-ID aus einer YouTube-URL. Shorts liefern bewusst null – die werden nicht bedient. */
+/**
+ * Video-ID aus einer YouTube-URL. Shorts liefern bewusst null – die werden nicht bedient.
+ * `/live/<id>` ist dieselbe Watch-Seite unter anderem Pfad; so verlinkt YouTube
+ * Livestreams und deren Aufzeichnungen (Michael, 27.09.2026: dort kam keine Sidebar).
+ */
 export function videoIdFromUrl(href: string): string | null {
   try {
     const u = new URL(href);
     if (u.pathname.startsWith("/shorts/")) return null;
+    const live = u.pathname.match(/^\/live\/([A-Za-z0-9_-]{11})\/?$/);
+    if (live) return live[1]!;
     if (u.pathname !== "/watch") return null;
     return u.searchParams.get("v");
   } catch {

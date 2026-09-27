@@ -34,6 +34,28 @@
    0.8.4 (Kachel- und Promptarbeit ist „fix"). Bleibt stehen; ein Rewrite kostet mehr als
    der Schönheitsfehler.
 
+## Nachtrag 26.09.2026 – 0.10.0: Download-Menü mit Transkript und Kommentaren
+
+Der Download-Knopf ist ein Menü: Video (nur `full`), Transkript `.txt`, Kommentare
+`.html` (`shared/src/lib/kommentare.ts`, Messung in docs/messungen.md). **Kommentare
+nur `full`:** die Store-Richtlinien verbieten das Herunterladen geschützter Inhalte,
+Kommentare sind Inhalte Dritter (geprüft 27.09.2026); `verify-store-bundle.sh` Test 2e
+beweist das am Bundle. Transkript-Export in beiden Builds (gab es als `.md` schon).
+
+`/live/<id>`-Adressen (Livestreams und ihre Aufzeichnungen) bekamen keine Sidebar –
+`videoIdFromUrl` kannte nur `/watch`. Behoben, URL-Arten in docs/messungen.md. Geprüft im echten
+Browser: Kommentare mit Stopp (1240, als unvollständig markiert), Transkript an
+`arj7oStGLkU`. Zählt mit den 0.9.3-Fixes als ein Sprung von 0.9.2.
+
+## Nachtrag 26.09.2026 – 0.9.3: Websuche, Scrollen, Zeitspannen, Aufräumen bei Videowechsel
+
+- Websuche: Transkript als erste Nutzernachricht statt im System-Prompt (Modell fragte
+  sonst nach dem Video). Ungeprüft gegen die echte API – Michael testet.
+- Chat scrollt nur noch bei neuer Nachricht nach unten, nicht bei jedem Stream-Delta.
+- Zeitspannen „[12:34–13:10]“, „[12:34]–[13:10]“, „bis“/„to“: nur der Anfang ist Link.
+- Bug-Audit: Helfer-Job wird bei Videowechsel abgebrochen; Transkript-Übersetzung auch
+  bei Spurwechsel; Live-Erkennung setzt Position/Pause nicht mehr auf ein neues Video.
+
 ## Nachtrag 18.09.2026 – Workspace-Umbau und Android-Spike
 
 Ziel: eine eigenständige Android-App mit der Funktion der Erweiterung – Teilen-Ziel für

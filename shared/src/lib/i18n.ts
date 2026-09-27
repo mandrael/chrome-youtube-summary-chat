@@ -145,6 +145,11 @@ const de = {
   forceAudioHint:
     "Nimmt nicht die Untertitel von YouTube, sondern lädt die Tonspur und transkribiert sie über die eingestellte STT-Route. Dauert länger und kostet je nach Route Geld.",
   downloadVideo: "Video herunterladen",
+  downloadMenu: "Herunterladen …",
+  downloadTranscriptTxt: "Transkript (.txt)",
+  downloadComments: "Kommentare (.html)",
+  commentsLoading: "Kommentare werden geladen",
+  commentsStopHint: "Anhalten und das bisher Geladene speichern",
   downloadTitle: "Video herunterladen",
   downloadLoadingFormats: "Verfügbare Auflösungen werden geholt …",
   downloadNoFormats: "Für dieses Video meldet yt-dlp keine passende Auflösung.",
@@ -294,6 +299,11 @@ const en: Record<Keys, string> = {
   forceAudioHint:
     "Ignores YouTube's captions, downloads the audio track and transcribes it via the configured STT route. Slower, and depending on the route it costs money.",
   downloadVideo: "Download video",
+  downloadMenu: "Download …",
+  downloadTranscriptTxt: "Transcript (.txt)",
+  downloadComments: "Comments (.html)",
+  commentsLoading: "Loading comments",
+  commentsStopHint: "Stop and save what has been loaded so far",
   downloadTitle: "Download video",
   downloadLoadingFormats: "Fetching available resolutions …",
   downloadNoFormats: "yt-dlp reports no suitable resolution for this video.",

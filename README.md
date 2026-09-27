@@ -29,6 +29,8 @@ in [app/README.md](app/README.md). Was daran ungeprüft ist, steht unter
 | Spracherkennung aus dem laufenden Ton | ja | ja |
 | Tonspur herunterladen und transkribieren | ja | **nein** |
 | Untertitel über yt-dlp holen | ja | **nein** |
+| Transkript (.txt) sichern | ja | ja |
+| Kommentare (.html) sichern | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
 | Fallback-Code im Bundle | ja | **nein, nachgemessen** |
 
@@ -51,6 +53,13 @@ den `full`-Build – sonst würde ein Test bestehen, der überhaupt nichts misst
 ---
 
 ## Bedienung
+
+**Download-Menü** (Pfeil oben rechts): Video (nur `full`), Transkript als `.txt` mit
+Titel und Link, Kommentare als `.html` (nur `full`) – mit Antworten, Fett, Kursiv, Emojis, Zeit- und
+Kanal-Links, ganz oben der Link zum Video. Die Kommentare kommen seitenweise über
+YouTubes eigene Schnittstelle, sortiert nach „Neueste“ (nur so vollständig); der
+Stopp-Knopf speichert das bisher Geladene, die Datei sagt dann, dass sie unvollständig
+ist. Grosse Videos dauern: 5175 Kommentare brauchten 626 Abrufe und rund zwei Minuten.
 
 Die Oberfläche sitzt **in der YouTube-Seite**, in der rechten Spalte über den
 Empfehlungen. Sie lässt sich am Kopf einklappen, bleibt beim Wechsel zwischen Videos
@@ -501,6 +510,11 @@ automatische Downloads.
 ## Was nicht geprüft ist
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
+
+- **Websuche mit Videokontext (0.10.0).** Mit eingeschalteter Weltkugel steht das
+  Transkript als erste Nachricht im Verlauf statt im System-Prompt, weil das Modell
+  sonst fragte, um welches Video es geht. Ohne OpenRouter-Schlüssel in der
+  Entwicklungsumgebung nicht gegen die echte API gelaufen.
 
 - **Die Android-App, vollständig.** Sie ist in dieser Entwicklungsumgebung weder baubar
   noch startbar: `dl.google.com` (Android-SDK) und `youtube.com` sind dort gesperrt.

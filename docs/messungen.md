@@ -1080,3 +1080,36 @@ Ein Widerspruch: DeepSeek meldete eine Cookie-Regression beim Abruf von `base.js
 belegte „identisches Verhalten". Beide haben recht – der Pfad ist in der Praxis relativ
 und damit same-origin; der Unterschied träte erst bei einem absoluten fremden Host auf.
 Abgesichert, weil es eine Zeile kostet.
+
+## Kommentare über youtubei/v1/next (26.09.2026)
+
+Gemessen an `dQw4w9WgXcQ`, `9bZkp7q19f0`, `jNQXAC9IVRw`, `aqz-KE-bpKQ`, ohne Anmeldung
+aus Node und angemeldet-los aus der gebauten Erweiterung (headless Chromium):
+
+- Starttoken im `itemSectionRenderer` mit `sectionIdentifier: comment-item-section`
+  der Watch-Seite; zwanzig Kommentare je Abruf. Der Text steht in
+  `frameworkUpdates.entityBatchUpdate.mutations[].payload.commentEntityPayload`, der
+  Baum trägt nur `commentKey`/`toolbarStateKey`.
+- Formatierung als Läufe mit `startIndex`/`length` in UTF-16-Einheiten (😭 = 2):
+  `styleRuns` (fett = `weightLabel: FONT_WEIGHT_MEDIUM`, `italic: true`),
+  `commandRuns` (Zeitmarken als `watchEndpoint`, Erwähnungen, Links),
+  `attachmentRuns` (Emojis als Bild; bei Unicode-Emojis ist `label` das Zeichen selbst,
+  bei Kanal-Emojis ein Name wie `:yt-smile:`). Durchgestrichen nicht beobachtet.
+- **„Top-Kommentare“ endet früh:** `aqz-KE-bpKQ` lieferte über Top 1128
+  Hauptkommentare, über „Neueste“ 3775. Mit Antworten 5175 – genau so viele wie
+  `yt-dlp --write-comments` (5175, YouTube zeigt „5.180“). 626 Abrufe, 123 s.
+- Antworten haben einen eigenen Token unter `commentRepliesRenderer.subThreads`,
+  „Mehr Antworten ansehen“ einen weiteren; `replyLevel` 2 kommt vor.
+
+## Welche YouTube-Adressen die Sidebar bekommen (27.09.2026)
+
+Gebaute Erweiterung, headless Chromium, nicht angemeldet. Transkript = Zeilen im
+Transkript-Tab nach 12 s.
+
+| Adresse | Sidebar | Transkript |
+|---|---|---|
+| `/watch?v=`, mit `&t=`, mit `&list=` | ja | ja |
+| `youtu.be/…`, `/v/…`, `attribution_link`, `m.youtube.com` | ja (YouTube leitet auf `/watch` um) | ja |
+| `/live/<id>` (Aufzeichnung) | **bis 0.9.2 nein**, jetzt ja | ja |
+| laufender Livestream (`jfKfPfyJRdk`) | ja | „keine Untertitel“ |
+| `/shorts/`, `/embed/`, `youtube-nocookie.com`, `music.youtube.com` | nein, gewollt | – |

@@ -16,12 +16,14 @@ import {
   transcriptToText,
   tsToSeconds,
   TS_GROUP_PATTERN,
+  TS_RANGE_SEP,
   TS_PATTERN,
   TS_SINGLE,
   duenneMarkenAus,
 } from "../../shared/src/lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdAusText, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
 import { chatStream } from "../../shared/src/lib/chat.ts";
+import { inhaltAlsHtml, jsonNach } from "../../shared/src/lib/kommentare.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
 import { deltaText, modelleAusListe, preis, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
@@ -148,6 +150,8 @@ check("videoIdFromUrl schliesst Shorts aus", () => {
   assert.equal(videoIdFromUrl("https://www.youtube.com/watch?v=abc12345678"), "abc12345678");
   assert.equal(videoIdFromUrl("https://www.youtube.com/watch?v=abc12345678&t=42"), "abc12345678");
   assert.equal(videoIdFromUrl("https://www.youtube.com/shorts/abc12345678"), null);
+  assert.equal(videoIdFromUrl("https://www.youtube.com/live/-1iHM9E9_JQ?si=x"), "-1iHM9E9_JQ");
+  assert.equal(videoIdFromUrl("https://www.youtube.com/live/zu-kurz"), null);
   assert.equal(videoIdFromUrl("https://www.youtube.com/"), null);
   assert.equal(videoIdFromUrl("kaputt"), null);
 });
@@ -429,6 +433,49 @@ check("TS_GROUP_PATTERN fasst mehrere Zeiten in einer Klammer", () => {
   // Zahlen ohne Klammern bleiben in Ruhe.
   TS_GROUP_PATTERN.lastIndex = 0;
   assert.equal(TS_GROUP_PATTERN.test("Preise 3,55 bis 11,587 Dollar"), false);
+});
+
+check("Zeitspannen: die Klammer trifft, nur der Anfang ist Sprungziel", () => {
+  const text = "Behauptung [12:34–13:10], auch [01:00 - 02:00] und [05:00 bis 06:00].";
+  TS_GROUP_PATTERN.lastIndex = 0;
+  const treffer = [...text.matchAll(TS_GROUP_PATTERN)].map((m) => m[1]);
+  assert.deepEqual(treffer, ["12:34–13:10", "01:00 - 02:00", "05:00 bis 06:00"]);
+  assert.equal(TS_RANGE_SEP.test("–"), true);
+  assert.equal(TS_RANGE_SEP.test(" - "), true);
+  assert.equal(TS_RANGE_SEP.test(", "), false);
+  assert.equal(TS_RANGE_SEP.test(" und "), false);
+});
+
+check("Kommentar-HTML: Fett, Kursiv, Links, Emojis nach UTF-16-Index", () => {
+  // Aufbau wie gemessen am 26.09.2026: „😭“ zählt zwei Einheiten, Läufe überlappen.
+  const html = inhaltAlsHtml({
+    content: "😭 fett kursiv 0:25 <x> :yt: link",
+    styleRuns: [
+      { startIndex: 3, length: 4, weightLabel: "FONT_WEIGHT_MEDIUM" },
+      { startIndex: 8, length: 6, weightLabel: "FONT_WEIGHT_NORMAL", italic: true },
+      { startIndex: 15, length: 4, weightLabel: "FONT_WEIGHT_NORMAL" },
+    ],
+    commandRuns: [
+      { startIndex: 15, length: 4, onTap: { innertubeCommand: { commandMetadata: { webCommandMetadata: { url: "/watch?v=abc&t=25s" } } } } },
+      { startIndex: 29, length: 4, onTap: { innertubeCommand: { urlEndpoint: { url: "https://www.youtube.com/redirect?q=https%3A%2F%2Fexample.org%2F" } } } },
+    ],
+    attachmentRuns: [
+      { startIndex: 0, length: 2, element: { type: { imageType: { image: { sources: [{ url: "https://e/u1f62d.png" }] } } }, properties: { accessibilityProperties: { label: "😭" } } } },
+      { startIndex: 24, length: 4, element: { type: { imageType: { image: { sources: [{ url: "https://e/yt.png" }] } } }, properties: { accessibilityProperties: { label: ":yt-smile:" } } } },
+    ],
+  });
+  assert.equal(
+    html,
+    '😭 <b>fett</b> <i>kursiv</i> <a href="https://www.youtube.com/watch?v=abc&amp;t=25s">0:25</a> &lt;x&gt; ' +
+      '<img class="emoji" src="https://e/yt.png" alt=":yt-smile:"> <a href="https://example.org/">link</a>',
+  );
+  // Ein Redirect auf `javascript:` wird kein Link.
+  const boese = inhaltAlsHtml({
+    content: "klick",
+    commandRuns: [{ startIndex: 0, length: 5, onTap: { innertubeCommand: { urlEndpoint: { url: "https://www.youtube.com/redirect?q=javascript%3Aalert(1)" } } } }],
+  });
+  assert.equal(boese, "klick");
+  assert.deepEqual(jsonNach('x = {"a":"}{","b":{"c":1}};', "x = "), { a: "}{", b: { c: 1 } });
 });
 
 check("Zu dichte Zeitmarken werden ausgedünnt", () => {

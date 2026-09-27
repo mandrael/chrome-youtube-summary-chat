@@ -5,6 +5,7 @@ import rehypeHighlight from "rehype-highlight";
 import {
   duenneMarkenAus,
   TS_GROUP_PATTERN,
+  TS_RANGE_SEP,
   TS_SINGLE,
   tsToSeconds,
 } from "@shared/lib/timestamps";
@@ -62,6 +63,8 @@ function splitTimestamps(text: string): HNode[] | null {
   let m: RegExpExecArray | null;
 
   while ((m = TS_GROUP_PATTERN.exec(text)) !== null) {
+    // „[18:46]–[21:03]“: die zweite Klammer ist das Ende einer Spanne und bleibt Text.
+    if (out.length && TS_RANGE_SEP.test(text.slice(last, m.index))) continue;
     const knoepfe = zeitKnoepfe(m[1] ?? "");
     if (!knoepfe.length) continue;
     if (m.index > last) out.push({ type: "text", value: text.slice(last, m.index) });
@@ -82,9 +85,15 @@ function zeitKnoepfe(inhalt: string): HNode[] {
   TS_SINGLE.lastIndex = 0;
   const treffer: { index: number; laenge: number; sekunden: number }[] = [];
   let t: RegExpExecArray | null;
+  let ende = 0;
   while ((t = TS_SINGLE.exec(inhalt)) !== null) {
     const seconds = tsToSeconds(t[1], t[2], t[3]);
-    if (seconds !== null) treffer.push({ index: t.index, laenge: t[0].length, sekunden: seconds });
+    // Das Ende einer Spanne bleibt Text: verlinkt ist nur ihr Anfang.
+    const spannenEnde = treffer.length > 0 && TS_RANGE_SEP.test(inhalt.slice(ende, t.index));
+    ende = t.index + t[0].length;
+    if (seconds !== null && !spannenEnde) {
+      treffer.push({ index: t.index, laenge: t[0].length, sekunden: seconds });
+    }
   }
   // Zu dichte Marken belegen dieselbe Stelle und fallen samt Trennzeichen weg.
   const behalten = duenneMarkenAus(treffer.map((x) => x.sekunden));

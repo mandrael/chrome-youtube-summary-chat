@@ -32,7 +32,7 @@ export default defineBackground(() => {
   // Einstellungen – ein Content-Script darf `openOptionsPage` nicht selbst aufrufen.
   chrome.action.onClicked.addListener((tab) => {
     void (async () => {
-      if (tab.url && /youtube\.com\/watch/.test(tab.url)) {
+      if (tab.url && /youtube\.com\/(watch|live\/)/.test(tab.url)) {
         const zu = await collapsedItem.getValue();
         // Über das Symbol kommt die Sidebar in YouTubes eigener Spaltenbreite; wer sie
         // breiter will, klappt in der Seite auf oder zieht am Griff.

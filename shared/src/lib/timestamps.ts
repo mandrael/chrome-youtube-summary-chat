@@ -20,10 +20,14 @@ export const TS_PATTERN = /\[(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\]/g;
 /**
  * Eine Klammer mit mehreren Zeiten: „[18:46, 21:03, 34:44]“. Das Modell belegt damit
  * eine Aussage, die an mehreren Stellen fällt – bisher blieb so eine Gruppe stummer
- * Text, weil das Einzelmuster am ersten Komma abbrach.
+ * Text, weil das Einzelmuster am ersten Komma abbrach. Auch Spannen „[18:46–21:03]“
+ * gehören dazu; deren Ende ist kein Sprungziel (`TS_RANGE_SEP`).
  */
 export const TS_GROUP_PATTERN =
-  /\[(\d{1,2}:[0-5]\d(?::[0-5]\d)?(?:\s*,\s*\d{1,2}:[0-5]\d(?::[0-5]\d)?)*)\]/g;
+  /\[(\d{1,2}:[0-5]\d(?::[0-5]\d)?(?:\s*(?:,|[-–—]|bis|to)\s*\d{1,2}:[0-5]\d(?::[0-5]\d)?)*)\]/g;
+
+/** Trenner, nach dem eine Zeit das Ende einer Spanne ist: „18:46–21:03“, „18:46 bis 21:03“. */
+export const TS_RANGE_SEP = /^\s*(?:[-–—]|bis|to)\s*$/;
 
 /** Die einzelnen Zeiten aus einer Gruppe, ohne Klammern. */
 export const TS_SINGLE = /(\d{1,2}):([0-5]\d)(?::([0-5]\d))?/g;

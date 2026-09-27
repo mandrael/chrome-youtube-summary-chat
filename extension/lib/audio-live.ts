@@ -182,6 +182,7 @@ export function starteLiveTranskription(opts: {
       stumm: video.muted,
       pausiert: video.paused,
       pitch: video.preservesPitch,
+      quelle: video.currentSrc,
     };
 
     /*
@@ -488,12 +489,16 @@ export function starteLiveTranskription(opts: {
       quelle.disconnect();
       for (const spur of stream.getTracks()) spur.stop();
       void ctx.close();
-      video.pause();
       video.playbackRate = vorher.rate;
       video.preservesPitch = vorher.pitch;
       video.muted = vorher.stumm;
-      video.currentTime = vorher.zeit;
-      if (!vorher.pausiert) void video.play().catch(() => {});
+      // YouTube nimmt bei SPA-Navigation dasselbe `<video>` für das nächste Video. Zeigt
+      // es inzwischen eine andere Quelle, gehören Position und Pause nicht mehr dazu.
+      if (video.currentSrc === vorher.quelle) {
+        video.pause();
+        video.currentTime = vorher.zeit;
+        if (!vorher.pausiert) void video.play().catch(() => {});
+      }
     }
 
     const cues: Cue[] = segmente

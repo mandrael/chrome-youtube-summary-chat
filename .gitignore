@@ -29,3 +29,6 @@ app/dist/
 _system/reviews/laeufe-*/*.err
 _system/reviews/laeufe-*/*.log
 _system/reviews/laeufe-*/commit-msg.txt
+
+# Tester-Pakete aus scripts/release.sh, nur lokal.
+releases/

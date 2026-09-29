@@ -2,6 +2,9 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
+**Tester-Pakete:** `scripts/release.sh` baut und prüft alles und legt die Zips (full,
+store) und die Debug-APK nach `releases/` (nur lokal, in `.gitignore`).
+
 **Braucht Michael (nur er kann es):**
 
 1. **Spike-APK am Gerät messen** – sie baut am Mac (JDK 21, Aufruf in der Übergabe),

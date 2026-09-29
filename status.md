@@ -2,6 +2,13 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
+**Modellwahl neu messen (30.09.):** `node extension/scripts/modellmessung.ts` mit
+`OPENROUTER_API_KEY` aus der Umgebung (Michael startet es, der Schlüssel bleibt bei ihm).
+Kandidaten: gpt-6-luna (0,10/0,50 $/M, halb so teuer wie 5.6-luna), OpenRouter-Aliase
+`~openai/gpt-luna-latest` und `~google/gemini-flash-latest`, gemini-3.5-flash-lite
+(neueste Lite, kein Alias vorhanden), gemini-3.8-flash. Offen: Aliase statt fester
+Versionen, und Updates über GitHub (Repo ist privat).
+
 **Tester-Pakete:** `scripts/release.sh` baut und prüft alles und legt die Zips (full,
 store) und die Debug-APK nach `releases/` (nur lokal, in `.gitignore`).
 

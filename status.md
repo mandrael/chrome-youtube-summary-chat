@@ -19,6 +19,16 @@
    (docs/messungen.md), drei davon erst nach 49 bis 86 s.
 4a. **Klickweg „Audio herunterladen“ mit installiertem Helfer prüfen** (0.11.0): der Helfer
    ist direkt geprüft (m4a, AAC), der Dialog nur bis „Native-Host nicht erreichbar“.
+4e. **Bei Michael zu testen (0.12.0, cfe2915):** Kommentarstimmung mit echtem Schlüssel
+   (Testprofil ohne: nur der Weg bis zur Anfrage geprüft); Vorschaubild-Balken erst nach
+   Einschalten in den Einstellungen (Standard aus), Anzeige auf der angemeldeten
+   Startseite ungeprüft (getestet: Suche, Kanalseite); kursive graue Schätzzahl nicht mehr
+   angesehen. Ein Commit = ein Versionssprung: „0.12.0“ deckt mehrere Stände desselben
+   Tages – nach dem Bauen die Erweiterung neu laden. **Offene Idee:** Bauzeit neben der
+   Version auf der Optionsseite (Michael noch nicht entschieden).
+4f. **YouTube sperrte am 29.09. abends die IP** („ungewöhnlicher Datenverkehr“, Google-
+   `sorry`-Seite) nach vielen Playwright-Läufen an einem Tag. Weitere Browser-Tests gegen
+   youtube.com sparsam bündeln; ob und wann die Sperre endet, ungemessen.
 4b. **Entscheidung offen: Android-App in den Play Store?** (29.09.: „noch offen“.) Wenn ja,
    gelten die Store-Grenzen (keine Downloads, keine Dislikes, keine Kommentare) auch dort.
 4c. **Aus dem Gesamtreview 29.09. noch offen** (bewusst nicht in 0.12.0): Positions-

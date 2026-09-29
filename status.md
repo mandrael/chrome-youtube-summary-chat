@@ -52,6 +52,14 @@ Offen: fremdes `iframe_api`-Skript im selben Dokument wie die Schlüsselfelder (
 die echte App-Oberfläche); ob das Transkript als `.txt` im Store-Build bleiben soll,
 während Kommentare dort wegen der Richtlinie fehlen.
 
+## Nachtrag 29.09.2026 – 0.11.0: Audio herunterladen
+
+Menüpunkt „Audio herunterladen“ (nur `full`) öffnet den Download-Dialog mit „Nur Ton“
+vorgewählt. Im Helfer ist Höhe 0 die Tonspur: `bestaudio[ext=m4a]/bestaudio`, kein
+ffmpeg, Dateiname ohne Höhe. Nebenbei: `int(msg.get("height") or 720)` hätte 0 zu
+720 gemacht. Die Videowahl nach `downloadHeight` übergeht die Tonspur. Klickweg mit
+installiertem Helfer ungeprüft (README).
+
 ## Nachtrag 26.09.2026 – 0.10.0: Download-Menü mit Transkript und Kommentaren
 
 Der Download-Knopf ist ein Menü: Video (nur `full`), Transkript `.txt`, Kommentare

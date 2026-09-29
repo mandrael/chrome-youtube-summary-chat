@@ -29,6 +29,7 @@ in [app/README.md](app/README.md). Was daran ungeprüft ist, steht unter
 | Spracherkennung aus dem laufenden Ton | ja | ja |
 | Tonspur herunterladen und transkribieren | ja | **nein** |
 | Untertitel über yt-dlp holen | ja | **nein** |
+| Audio (.m4a) herunterladen | ja | **nein** |
 | Transkript (.txt) sichern | ja | ja |
 | Kommentare (.html) sichern | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
@@ -54,7 +55,8 @@ den `full`-Build – sonst würde ein Test bestehen, der überhaupt nichts misst
 
 ## Bedienung
 
-**Download-Menü** (Pfeil oben rechts): Video (nur `full`), Transkript als `.txt` mit
+**Download-Menü** (Pfeil oben rechts): Video und Audio (nur `full`; Audio ist die
+Tonspur als `.m4a`, so wie YouTube sie liefert, ohne Umkodieren und ohne ffmpeg), Transkript als `.txt` mit
 Titel und Link, Kommentare als `.html` (nur `full`) – mit Antworten, Fett, Kursiv, Emojis, Zeit- und
 Kanal-Links, ganz oben der Link zum Video. Die Kommentare kommen seitenweise über
 YouTubes eigene Schnittstelle, sortiert nach „Neueste“ (nur so vollständig); der
@@ -510,6 +512,11 @@ automatische Downloads.
 ## Was nicht geprüft ist
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
+
+- **Audio-Download aus der Sidebar (0.11.0).** Der Helfer ist direkt geprüft
+  (`jNQXAC9IVRw` → m4a, AAC, 19 s, Fortschritt bis 100 %), der Klickweg über den Dialog
+  nur bis zur Meldung „Native-Host nicht erreichbar“ – im Testprofil ist kein Helfer
+  installiert.
 
 - **Websuche mit Videokontext (0.10.0).** Mit eingeschalteter Weltkugel steht das
   Transkript als erste Nachricht im Verlauf statt im System-Prompt, weil das Modell

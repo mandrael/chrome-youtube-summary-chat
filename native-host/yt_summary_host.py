@@ -615,6 +615,9 @@ def list_formats(video_id: str) -> dict[str, Any]:
         for h in sorted(nach_hoehe, reverse=True)
         if h in (2160, 1440, 1080, 720, 480, 360)
     ]
+    # Hoehe 0 heisst: nur die Tonspur, ohne Bild.
+    if tonspuren:
+        angebot.append({"height": 0, "bytes": ton_bytes or None})
     return {
         "type": "formats",
         "title": daten.get("title") or video_id,
@@ -624,14 +627,17 @@ def list_formats(video_id: str) -> dict[str, Any]:
 
 
 def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
-    """Laedt das Video in der gewuenschten Hoehe in den Zielordner.
+    """Laedt das Video in der gewuenschten Hoehe in den Zielordner; Hoehe 0 = nur Ton.
 
-    ffmpeg ist zwingend: YouTube liefert ab 480p getrennte Video- und Tonspuren
-    (DASH), die erst lokal zusammengefuegt werden. Ohne ffmpeg bliebe nur die
-    progressive 360p-Spur.
+    ffmpeg ist fuer Video zwingend: YouTube liefert ab 480p getrennte Video- und
+    Tonspuren (DASH), die erst lokal zusammengefuegt werden. Ohne ffmpeg bliebe nur die
+    progressive 360p-Spur. Die Tonspur allein kommt ohne ffmpeg aus: m4a so, wie
+    YouTube sie liefert, nichts wird umkodiert.
     """
     exe = require("yt-dlp")
-    require("ffmpeg")
+    nur_ton = hoehe == 0
+    if not nur_ton:
+        require("ffmpeg")
     ordner = Path(ziel).expanduser()
     if not ordner.is_dir():
         raise HostError(f"Der Zielordner existiert nicht: {ordner}")
@@ -639,7 +645,8 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     progress("download", "Spuren werden ermittelt ...")
     # Ton zuerst: yt-dlp laedt die Spuren in der Reihenfolge des Formatausdrucks, und die
     # kleine Tonspur vorweg gibt sofort sichtbaren Fortschritt (Michaels Wunsch, 05.09.2026).
-    wahl = f"bestaudio+bestvideo[height<={hoehe}]/best[height<={hoehe}]"
+    wahl = ("bestaudio[ext=m4a]/bestaudio" if nur_ton
+            else f"bestaudio+bestvideo[height<={hoehe}]/best[height<={hoehe}]")
     url = f"https://www.youtube.com/watch?v={video_id}"
 
     # Erst die Spuren samt Groesse erfragen (ein Metadaten-Abruf, rund 1-2 s): nur so gibt
@@ -657,7 +664,8 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     gesamt = sum(groesse.values())
 
     cmd = [
-        exe, "-f", wahl, "--merge-output-format", "mp4", "--no-playlist", "--no-warnings",
+        exe, "-f", wahl, *([] if nur_ton else ["--merge-output-format", "mp4"]),
+        "--no-playlist", "--no-warnings",
         # --newline: eine Zeile je Aktualisierung statt Wagenruecklauf. Die Vorlage nennt
         # Spur und geladene Bytes, daraus wird der gemeinsame Stand gerechnet.
         # --no-quiet: --print schaltet yt-dlp stumm, dann fehlt die [Merger]-Zeile.
@@ -665,7 +673,8 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
         "--progress-template", "download:FORT=%(info.format_id)s %(progress.downloaded_bytes)s",
         # Eindeutiger Praefix: so entscheidet kein Zeilenformat, welche Zeile der Pfad ist.
         "--print", "after_move:PFAD=%(filepath)s",
-        "-o", str(ordner / "%(title).150B [%(id)s] %(height)sp.%(ext)s"),
+        "-o", str(ordner / ("%(title).150B [%(id)s].%(ext)s" if nur_ton
+                            else "%(title).150B [%(id)s] %(height)sp.%(ext)s")),
         url,
     ]
     global _KIND
@@ -851,7 +860,9 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
         send(reveal_file(str(msg.get("path") or ""), ziel))
         return
     if art == "download":
-        hoehe = int(msg.get("height") or 720)
+        # Nicht `or 720`: 0 ist gueltig und heisst "nur Ton".
+        roh = msg.get("height")
+        hoehe = 720 if roh is None else int(roh)
         ziel = str(msg.get("target") or Path.home() / "Downloads")
         progress("start", "Vorbereitung ...")
         send(download_video(video_id, hoehe, ziel))

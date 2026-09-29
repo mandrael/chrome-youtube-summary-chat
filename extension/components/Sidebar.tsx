@@ -783,7 +783,8 @@ export function Sidebar({
     return brichDownloadAb;
   }, [videoId]);
 
-  function oeffneDownload() {
+  /** @param nurTon Aus „Audio herunterladen“: dann ist die Tonspur (Höhe 0) vorgewählt. */
+  function oeffneDownload(nurTon = false) {
     if (!__FALLBACK__) return;
     brichDownloadAb();
     const lauf = dlLauf.current;
@@ -793,13 +794,18 @@ export function Sidebar({
       .then((formate) => {
         if (lauf !== dlLauf.current) return;
         const wunsch = settings?.downloadHeight ?? 720;
-        const passend = formate.filter((f) => f.height <= wunsch);
+        // Höhe 0 ist die Tonspur allein; sie zählt bei der Videowahl nicht mit.
+        const bild = formate.filter((f) => f.height > 0);
+        const passend = bild.filter((f) => f.height <= wunsch);
         // Nächstkleinere vorhandene Höhe; gibt es keine darunter, die kleinste darüber.
-        const hoehe = passend.length
-          ? Math.max(...passend.map((f) => f.height))
-          : formate.length
-            ? Math.min(...formate.map((f) => f.height))
-            : null;
+        const hoehe =
+          nurTon && formate.some((f) => f.height === 0)
+            ? 0
+            : passend.length
+              ? Math.max(...passend.map((f) => f.height))
+              : bild.length
+                ? Math.min(...bild.map((f) => f.height))
+                : null;
         setDl((d) => d && { ...d, formate, hoehe });
       })
       .catch((e) => {
@@ -1057,7 +1063,8 @@ export function Sidebar({
         t={t}
         tab={tab}
         setTab={setTab}
-        onVideoDownload={__FALLBACK__ ? oeffneDownload : undefined}
+        onVideoDownload={__FALLBACK__ ? () => oeffneDownload() : undefined}
+        onAudioDownload={__FALLBACK__ ? () => oeffneDownload(true) : undefined}
         onTranscriptTxt={transcript ? transkriptTxt : undefined}
         onComments={__FALLBACK__ ? (kommentare ? undefined : () => void kommentareLaden()) : undefined}
         presetsToggle={
@@ -1409,6 +1416,7 @@ function Header({
   setTab,
   presetsToggle,
   onVideoDownload,
+  onAudioDownload,
   onTranscriptTxt,
   onComments,
   onCollapse,
@@ -1419,6 +1427,8 @@ function Header({
   presetsToggle?: { open: boolean; toggle: () => void };
   /** Nur im Build "full" gesetzt (§4a): der Knopf muss sofort sichtbar sein, ohne Transkript. */
   onVideoDownload?: () => void;
+  /** Wie `onVideoDownload`, mit der Tonspur vorgewählt. Nur im Build "full". */
+  onAudioDownload?: () => void;
   /** Fehlt, solange kein Transkript geladen ist. */
   onTranscriptTxt?: () => void;
   /** Fehlt, solange Kommentare schon laden. */
@@ -1463,6 +1473,7 @@ function Header({
           punkte={[
             // Nur im Build "full" (§4a); im Store-Build fehlt der Eintrag ganz.
             ...(onVideoDownload ? [{ text: t("downloadVideo"), los: onVideoDownload }] : []),
+            ...(onAudioDownload ? [{ text: t("downloadAudio"), los: onAudioDownload }] : []),
             { text: t("downloadTranscriptTxt"), los: onTranscriptTxt },
             // Im Store-Build fehlt der Eintrag ganz, statt ausgegraut zu sein.
             ...(__FALLBACK__ ? [{ text: t("downloadComments"), los: onComments }] : []),
@@ -1647,7 +1658,7 @@ function DownloadDialog({
                 disabled={lage.status === "laeuft"}
                 onChange={() => onHoehe(f.height)}
               />
-              <span className="w-14">{f.height}p</span>
+              <span className="w-14">{f.height === 0 ? t("downloadAudioOnly") : `${f.height}p`}</span>
               <span className="text-muted-foreground">{mb(f.bytes)}</span>
             </label>
           ))}

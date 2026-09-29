@@ -27,6 +27,14 @@ einer Stelle (`shared/src/lib/chat.ts`, §6). Was nur OpenRouter kann (Web-Plugi
 Mistral sichtbar, nicht heimlich. Groq ausschliesslich über OpenRouters
 Provider-Routing.
 
+**Einzige Ausnahme (Michael, 29.09.2026): `returnyoutubedislikeapi.com`** für die
+Dislikes am Dislike-Knopf – nur im `full`-Build, nur die Video-ID geht hin, abschaltbar
+(`showDislikes`, Standard an). Dazu Balken unter Vorschaubildern (`showThumbRatings`,
+Standard **aus** – dann gehen die IDs aller sichtbaren Vorschläge hin). Kein KI-Anbieter. Ist der Dienst nicht erreichbar, und im
+Store-Build immer, schätzt `shared/src/lib/bewertung.ts` aus Aufrufen und Likes der
+Seite – ohne Abruf. Im Store-Build fehlt der Dienst samt Permission;
+`verify-store-bundle.sh` Test 2f beweist beides.
+
 **2. Der Store-Build enthält keinen Download-Code.** Nicht ausgeblendet, sondern nicht
 vorhanden: Native Messaging, yt-dlp-Weg und Helfer-Routen fehlen im Bundle. Das gilt für
 den Audio-Fallback ebenso wie für den Videodownload (§4a) – beide Wege laufen über
@@ -55,7 +63,8 @@ Hinweis auf eigene, gemeinfreie und lizenzfreie Nutzung. Einordnung mit Quellen:
 [docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
-`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`. In der App
+`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`; im
+`full`-Build zusätzlich `returnyoutubedislikeapi.com` (Ausnahme in §1). In der App
 bleiben die Android-Permissions bei `INTERNET`; keine Analytics-Abhängigkeit im Gradle
 (kein Firebase, kein Crashlytics).
 

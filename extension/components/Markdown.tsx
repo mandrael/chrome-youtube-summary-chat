@@ -216,6 +216,10 @@ export function Markdown({ children, onSeek, className }: MarkdownProps) {
         rehypePlugins={[rehypeTimestamps, rehypeHighlight]}
         components={{
           table: ({ node: _n, children: c }) => <TabelleAdaptiv>{c}</TabelleAdaptiv>,
+          // Kein <img> aus Modellantworten: ein Bild lädt ohne Klick, und über eine
+          // Prompt-Injection im Transkript könnte seine URL den Chat an einen fremden
+          // Server tragen (Regel 5). Stehen bleibt der Alt-Text.
+          img: ({ alt }) => (alt ? <span>[{alt}]</span> : null),
           a: ({ node: _n, ...props }) => (
             <a {...props} target="_blank" rel="noreferrer noopener" />
           ),

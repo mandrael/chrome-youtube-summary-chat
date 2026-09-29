@@ -830,6 +830,37 @@ export function Options() {
           <Switch checked={s.showCost} onCheckedChange={(v) => patch({ showCost: v })} />
         </Field>
 
+        <Field
+          label="Dislikes anzeigen"
+          hint={
+            __FALLBACK__ ? (
+              <>
+                Zahl neben YouTubes Dislike-Knopf und ein Balken mit dem Anteil der Likes
+                darunter. YouTube zeigt seit 2021 keine Dislikes mehr; die Zahl ist eine
+                Schätzung von{" "}
+                <a href="https://returnyoutubedislike.com" target="_blank" rel="noreferrer" className="underline">
+                  Return YouTube Dislike
+                </a>
+                , dorthin geht je Video nur die Video-ID. Ist der Dienst nicht erreichbar,
+                wird grob aus Aufrufen und Likes geschätzt.
+              </>
+            ) : (
+              "Zahl neben YouTubes Dislike-Knopf und ein Balken mit dem Anteil der Likes darunter. YouTube zeigt seit 2021 keine Dislikes mehr; die Zahl ist grob aus Aufrufen und Likes des Videos geschätzt (Modell aus 46 849 Videos mit echten Dislikes, Stand 2021). Es wird nichts abgerufen."
+            )
+          }
+        >
+          <Switch checked={s.showDislikes} onCheckedChange={(v) => patch({ showDislikes: v })} />
+        </Field>
+
+        {__FALLBACK__ && (
+          <Field
+            label="Bewertungsbalken unter Vorschaubildern"
+            hint="Grün/roter Balken unter jedem sichtbaren Vorschaubild: Anteil der Likes laut Return YouTube Dislike. Dafür geht die Video-ID jedes sichtbaren Vorschlags an den Dienst – daraus lassen sich Interessen ablesen. Höchstens ein Abruf je Sekunde."
+          >
+            <Switch checked={s.showThumbRatings} onCheckedChange={(v) => patch({ showThumbRatings: v })} />
+          </Field>
+        )}
+
         <Button
           variant="ghost"
           size="sm"
@@ -870,7 +901,7 @@ function Field({
   children,
 }: {
   label: string;
-  hint?: string;
+  hint?: React.ReactNode;
   /** Zeigt „Zurücksetzen" neben der Beschriftung – nur übergeben, wenn abgewichen wird. */
   onReset?: () => void;
   children: React.ReactNode;

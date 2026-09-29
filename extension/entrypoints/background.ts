@@ -100,6 +100,25 @@ export default defineBackground(() => {
             sendResponse({ ok: true, data: await pingHost() });
             break;
           }
+          case "dislikes": {
+            // Einzige dritte Gegenstelle, nur im Build "full" (CLAUDE.md §1, 29.09.2026).
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const id = String(msg.videoId);
+            if (!/^[\w-]{11}$/.test(id)) throw new Error("Ungültige Video-ID");
+            // Nutzungsbedingungen (returnyoutubedislike.com/docs/usage-rights, 29.09.2026):
+            // 100 Abrufe je Minute, 10 000 je Tag; auf 429 hin zurückhalten.
+            const r = await fetch(`https://returnyoutubedislikeapi.com/votes?videoId=${id}`);
+            if (!r.ok) throw new Error(`Return YouTube Dislike: HTTP ${r.status}`);
+            const { likes, dislikes } = (await r.json()) as { likes?: number; dislikes?: number };
+            if (typeof dislikes !== "number" || typeof likes !== "number") {
+              throw new Error("Return YouTube Dislike: keine Zahl");
+            }
+            sendResponse({ ok: true, data: { likes, dislikes } });
+            break;
+          }
           case "videoFormats": {
             if (!__FALLBACK__) {
               sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
@@ -248,7 +267,11 @@ function handleDownloadPort(port: chrome.runtime.Port) {
 /** Nur im Build "full" erreichbar – siehe __FALLBACK__ in wxt.config.ts. */
 function handleFallbackPort(port: chrome.runtime.Port) {
   let cancel: (() => void) | null = null;
-  port.onDisconnect.addListener(() => cancel?.());
+  let abgebrochen = false;
+  port.onDisconnect.addListener(() => {
+    abgebrochen = true;
+    cancel?.();
+  });
 
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as { type: string; videoId: string; job?: "subtitles" | "audio" };
@@ -258,6 +281,8 @@ function handleFallbackPort(port: chrome.runtime.Port) {
       try {
         const { runFallback } = await import("@/lib/fallback");
         const settings = await getSettings();
+        // Trennung während der beiden awaits: die bezahlte STT darf gar nicht erst starten.
+        if (abgebrochen) return;
 
         const job = runFallback(
           {

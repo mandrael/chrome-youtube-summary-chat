@@ -24,6 +24,7 @@ import { ask, startChat, startDownload, startFallback } from "@/lib/chat-client"
 import { makeT, resolveUiLang, type T } from "@shared/lib/i18n";
 import {
   PRESETS,
+  kommentarStimmungPrompt,
   webKontext,
   webLookupPrompt,
 } from "@shared/lib/prompts";
@@ -52,7 +53,7 @@ import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
 import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
 import { transcriptToText } from "@shared/lib/timestamps";
-import { kommentareAlsHtml, ladeKommentare } from "@shared/lib/kommentare";
+import { kommentareAlsHtml, kommentareAlsText, ladeKommentare } from "@shared/lib/kommentare";
 import { translateCuesViaOpenRouter } from "@shared/lib/translate-cues";
 import { NoCaptionsError } from "@/lib/transcript";
 import { formatTs } from "@shared/lib/timestamps";
@@ -174,7 +175,11 @@ export function Sidebar({
     })();
     // Änderungen in der Options-Page sollen ohne Reload ankommen, und das Symbol in der
     // Werkzeugleiste klappt über denselben Schlüssel auf und zu.
-    const onChange = () => void getSettings().then(setSettings);
+    // Nur der Einstellungs-Schlüssel: der Verlauf schreibt in denselben Speicher, und jede
+    // Antwort liesse sonst in jedem offenen Tab die ganze Sidebar neu rendern.
+    const onChange = (aenderung: Record<string, chrome.storage.StorageChange>) => {
+      if ("settings" in aenderung) void getSettings().then(setSettings);
+    };
     chrome.storage.local.onChanged.addListener(onChange);
     const stop = collapsedItem.watch((v) => setCollapsed(!!v));
     return () => {
@@ -247,15 +252,16 @@ export function Sidebar({
 
   /* ---- Verlauf sichern ---- */
 
+  // Nicht während des Streams: sonst schriebe jedes Delta die ganze Unterhaltung neu.
   React.useEffect(() => {
-    if (!messages.length) return;
+    if (!messages.length || streaming) return;
     void saveConversation({
       videoId,
       title: videoTitle,
       updatedAt: Date.now(),
       messages,
     });
-  }, [messages, videoId, videoTitle]);
+  }, [messages, videoId, videoTitle, streaming]);
 
   /*
    * Eine gespeicherte Übersetzung gehört zu Video, Spursprache und Zielsprache. Passt
@@ -383,8 +389,15 @@ export function Sidebar({
     // `preset`). Hier bleibt er draussen: sonst verdirbt ein liegengebliebener Zusatz
     // still auch Übersetzung und Netzrecherche.
     const prompt = nutzlast ? `${text}\n\n---\n\n${nutzlast}` : text;
+    // Leere oder fehlgeschlagene Antworten (Abbruch vor dem ersten Token, Fehlermeldung)
+    // gehen nicht mit, samt der Frage davor – sonst lehnen manche Modelle jede weitere
+    // Anfrage mit leerem Assistenten-Inhalt ab, und Fehlertexte stünden als Antwort da.
+    const kaputt = (m?: ChatMessage) => m?.role === "assistant" && (!m.content || m.error);
+    const verlauf = messages.filter(
+      (m, i) => !kaputt(m) && !(m.role === "user" && kaputt(messages[i + 1])),
+    );
     const next: ChatMessage[] = [
-      ...messages,
+      ...verlauf,
       { role: "user", content: prompt, ...(label ? { label } : {}) },
     ];
     setMessages([...next, { role: "assistant", content: "" }]);
@@ -617,7 +630,11 @@ export function Sidebar({
       target,
       targetName: settings.translationTarget,
       route,
-      texts: from ? [...uebersetzung!.texts] : new Array<string | null>(n).fill(null),
+      // Ab `from` leeren: der abgebrochene Block hat schon Zeilen gestreamt, und `onCue`
+      // hängt an Vorhandenes an – ohne Leeren stünde jede Zeile doppelt da.
+      texts: from
+        ? uebersetzung!.texts.map((x, i) => (i < from ? x : null))
+        : new Array<string | null>(n).fill(null),
       done: from,
       status: "running",
     });
@@ -990,6 +1007,44 @@ export function Sidebar({
     }
   }
 
+  /**
+   * Kommentarstimmung (nur Build "full"): dieselbe Abrufroutine wie der Export, aber nur
+   * die rund 100 Top-Kommentare, ohne Antworten und ohne Datei. Die Kommentare gehen als
+   * Nutzlast an das Modell, im Chat steht nur der Knopfname.
+   */
+  async function kommentarStimmung() {
+    if (!__FALLBACK__ || kommentare || streaming) return;
+    const lauf = ++kommentarLauf.current;
+    const ab = new AbortController();
+    kommentarAbbruch.current = ab;
+    setKommentarMeldung("");
+    setKommentare({ geladen: 0, stopp: () => ab.abort() });
+    try {
+      const lage = await ladeKommentare(videoId, {
+        signal: ab.signal,
+        hoechstens: 100,
+        onProgress: (geladen) =>
+          lauf === kommentarLauf.current && setKommentare((k) => k && { ...k, geladen }),
+      });
+      if (lauf !== kommentarLauf.current || ab.signal.aborted) return;
+      setKommentare(null);
+      if (!lage.kommentare.length) {
+        setKommentarMeldung(t("commentsNone"));
+        return;
+      }
+      void send(
+        kommentarStimmungPrompt(uiLang, lage.kommentare.length, lage.anzahlText),
+        undefined,
+        kommentareAlsText(lage),
+        t("presetSentiment"),
+      );
+    } catch (e) {
+      if (lauf === kommentarLauf.current) setKommentarMeldung(String((e as Error)?.message ?? e));
+    } finally {
+      if (lauf === kommentarLauf.current) setKommentare(null);
+    }
+  }
+
   /* ---- Darstellung ---- */
 
   if (collapsed && collapsible) {
@@ -1150,6 +1205,17 @@ export function Sidebar({
                     {t(label as Parameters<typeof t>[0])}
                   </Button>
                 ))}
+                {n === 1 && __FALLBACK__ && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!transcript || streaming || !!kommentare}
+                    title={t("presetSentimentHint")}
+                    onClick={() => void kommentarStimmung()}
+                  >
+                    {t("presetSentiment")}
+                  </Button>
+                )}
               </div>
             ))}
             {/*
@@ -1179,7 +1245,10 @@ export function Sidebar({
                 busy={fallbackState}
                 onStart={runFallbackJob}
                 onLive={runLive}
-                onCancel={() => liveRef.current?.cancel()}
+                onCancel={() => {
+                  liveRef.current?.cancel();
+                  fallbackRef.current?.cancel();
+                }}
                 keyFehlt={!settings?.apiKey}
                 spurenVorhanden={tracks.length > 0}
               />
@@ -1205,7 +1274,10 @@ export function Sidebar({
                 busy={fallbackState}
                 onStart={runFallbackJob}
                 onLive={runLive}
-                onCancel={() => liveRef.current?.cancel()}
+                onCancel={() => {
+                  liveRef.current?.cancel();
+                  fallbackRef.current?.cancel();
+                }}
                 keyFehlt={!settings?.apiKey}
                 spurenVorhanden={tracks.length > 0}
               />

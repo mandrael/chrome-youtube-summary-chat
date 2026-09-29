@@ -30,6 +30,9 @@ in [app/README.md](app/README.md). Was daran ungeprüft ist, steht unter
 | Tonspur herunterladen und transkribieren | ja | **nein** |
 | Untertitel über yt-dlp holen | ja | **nein** |
 | Audio (.m4a) herunterladen | ja | **nein** |
+| Dislikes am Dislike-Knopf samt Balken | ja: Return YouTube Dislike, sonst Schätzung | ja: nur Schätzung aus Aufrufen und Likes |
+| Grün/rote Balken unter Vorschaubildern | ja, Schalter, Standard aus | **nein** |
+| Kommentarstimmung (Schnellbefehl) | ja | **nein** |
 | Transkript (.txt) sichern | ja | ja |
 | Kommentare (.html) sichern | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
@@ -512,6 +515,10 @@ automatische Downloads.
 ## Was nicht geprüft ist
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
+
+- **Kommentarstimmung (0.12.0):** Abruf der 100 Top-Kommentare und die Anfrage ans
+  Modell sind im Browser geprüft, eine echte Antwort nicht – im Testprofil liegt kein
+  Schlüssel.
 
 - **Audio-Download aus der Sidebar (0.11.0).** Der Helfer ist direkt geprüft
   (`jNQXAC9IVRw` → m4a, AAC, 19 s, Fortschritt bis 100 %), der Klickweg über den Dialog

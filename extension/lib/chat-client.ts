@@ -108,7 +108,20 @@ export function startFallback(
   });
 
   port.postMessage({ type: "start", videoId, job });
-  return { promise, cancel: () => port.disconnect() };
+  // Das eigene disconnect() löst hier kein onDisconnect aus – ohne eigenes reject bliebe
+  // die Sidebar nach „Abbrechen“ für immer auf „läuft“ stehen.
+  let abbrechen: (e: Error) => void = () => {};
+  promise.catch(() => {});
+  const abgebrochen = new Promise<never>((_, ab) => (abbrechen = ab));
+  return {
+    promise: Promise.race([promise, abgebrochen]),
+    cancel: () => {
+      if (settled) return;
+      settled = true;
+      port.disconnect();
+      abbrechen(new Error("Abgebrochen."));
+    },
+  };
 }
 
 /** Videodownload über den Service Worker. Nur im Build "full" aufgerufen. */

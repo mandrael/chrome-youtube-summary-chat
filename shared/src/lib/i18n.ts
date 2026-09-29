@@ -75,6 +75,10 @@ const de = {
   presetGlossary: "Begriffe",
   presetGlossaryHint:
     "Fachbegriffe und Methoden mit der Erklärung, die der Sprecher selbst gibt.",
+  presetSentiment: "Kommentarstimmung",
+  presetSentimentHint:
+    "Lädt die rund 100 obersten Kommentare (nur in den Arbeitsspeicher) und lässt das Modell ihre Stimmung auswerten: Anteile, Lob- und Kritikpunkte, drei Zitate.",
+  commentsNone: "Keine Kommentare gefunden.",
   presetQuiz: "Lernfragen",
   presetQuizHint:
     "Zur Lernkontrolle: Fragen zum Stoff, je mit der Antwort aus dem Video.",
@@ -235,6 +239,10 @@ const en: Record<Keys, string> = {
   presetComparison: "Comparison",
   presetGlossary: "Terms",
   presetGlossaryHint: "Technical terms and methods with the explanation the speaker gives.",
+  presetSentiment: "Comment mood",
+  presetSentimentHint:
+    "Loads the ~100 top comments (in memory only) and has the model assess their sentiment: shares, praise and criticism, three quotes.",
+  commentsNone: "No comments found.",
   presetQuiz: "Self-check",
   presetQuizHint: "To test yourself: questions on the material, each with the answer from the video.",
   extraPrecedence:

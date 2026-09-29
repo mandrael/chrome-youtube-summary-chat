@@ -104,6 +104,11 @@ export interface LadeOptionen {
   http?: Http;
   signal?: AbortSignal;
   onProgress?: (geladen: number) => void;
+  /**
+   * Nur die ersten so vielen Hauptkommentare der Top-Liste, ohne nachgeladene Antworten –
+   * für die Stimmungsauswertung. Ohne Angabe: alles, sortiert nach „Neueste“ (Export).
+   */
+  hoechstens?: number;
 }
 
 export async function ladeKommentare(videoId: string, o: LadeOptionen = {}): Promise<KommentarLage> {
@@ -169,7 +174,7 @@ export async function ladeKommentare(videoId: string, o: LadeOptionen = {}): Pro
           // Hauptkommentare über „Top“, 3775 über „Neueste“ (yt-dlp sortiert genauso).
           const neueste = tokenIn(h.sortMenu?.sortFilterSubMenuRenderer?.subMenuItems?.[1]);
           // Die sortierte Liste bringt denselben Kopf wieder mit – nur einmal umschalten.
-          if (neueste && !umgeschaltet) {
+          if (neueste && !umgeschaltet && !o.hoechstens) {
             umgeschaltet = true;
             token = neueste;
             break;
@@ -195,6 +200,7 @@ export async function ladeKommentare(videoId: string, o: LadeOptionen = {}): Pro
     gesehen.add(k.id);
     ziel.push(k);
     o.onProgress?.(++geladen);
+    if (o.hoechstens && ziel === lage.kommentare && ziel.length >= o.hoechstens) return true;
 
     // Antworten stehen entweder direkt da oder hinter einem eigenen Token. Die mit Token
     // kommen erst nach allen Hauptkommentaren dran: ein Kommentar mit tausend Antworten
@@ -203,7 +209,7 @@ export async function ladeKommentare(videoId: string, o: LadeOptionen = {}): Pro
       if (s.commentThreadRenderer) await eintrag(s, entitaeten, k.antworten);
       else if (s.continuationItemRenderer) {
         const t = tokenIn(s.continuationItemRenderer);
-        offen.push(() => liste(t, k.antworten));
+        if (!o.hoechstens) offen.push(() => liste(t, k.antworten));
       }
     }
     return false;
@@ -242,6 +248,21 @@ function kommentarAus(vm: Json, entitaeten: Map<string, Json>): Kommentar | null
     verifiziert: a.isVerified === true,
     antworten: [],
   };
+}
+
+/**
+ * Hauptkommentare als Klartext für ein Sprachmodell: eine Zeile je Kommentar mit Likes
+ * davor, lange Kommentare gekürzt. Antworten bleiben weg – sie reagieren auf den
+ * Kommentar, nicht auf das Video.
+ */
+export function kommentareAlsText(lage: KommentarLage, zeichenJeKommentar = 500): string {
+  return lage.kommentare
+    .map((k) => {
+      const text = (k.inhalt.content ?? "").replace(/\s+/g, " ").trim();
+      const kurz = text.length > zeichenJeKommentar ? `${text.slice(0, zeichenJeKommentar)} …` : text;
+      return `[${k.likes || "0"} Likes${k.vomKanal ? ", Kanal selbst" : ""}] ${kurz}`;
+    })
+    .join("\n");
 }
 
 /* ---- HTML ---- */

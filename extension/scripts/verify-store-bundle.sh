@@ -29,6 +29,28 @@ fi
 echo "  Permissions: $(python3 -c "import json,sys;print(json.load(open('$OUT/manifest.json')).get('permissions'))")"
 
 echo
+echo "== 1b. Manifest: Permissions und Hosts exakt wie erlaubt (Regel 5) =="
+# Positivliste statt einzelner Verbote: eine neue Permission (downloads, tabs …) oder
+# ein neuer Host fiele sonst durch (Review 29.09.2026).
+if python3 - "$OUT/manifest.json" <<'PY'
+import json, sys
+m = json.load(open(sys.argv[1]))
+perm_ok = m.get("permissions") == ["storage"]
+hosts = set(m.get("host_permissions", []))
+erlaubt = {"*://*.youtube.com/*", "https://openrouter.ai/*", "https://api.eu.mistral.ai/*", "https://api.mistral.ai/*"}
+extra = [k for k in ("optional_permissions", "optional_host_permissions", "externally_connectable") if k in m]
+if not perm_ok or hosts != erlaubt or extra:
+    print(f"  permissions={m.get('permissions')} hosts={sorted(hosts)} zusätzlich={extra}")
+    sys.exit(1)
+PY
+then
+  echo "  ok – storage; youtube, openrouter, mistral (eu/global)"
+else
+  echo "  FEHLGESCHLAGEN – Store-Manifest weicht von der Positivliste ab"
+  FAIL=1
+fi
+
+echo
 echo "== 2. Bundle: keine Fallback-Faehigkeit =="
 # Harte Kriterien: die Bezeichner, ohne die der Fallback technisch unmoeglich ist.
 # Das sind die Native-Messaging-API und der Host-Name.
@@ -121,6 +143,28 @@ else
 fi
 
 echo
+echo "== 2f. Dislikes: Return YouTube Dislike nicht im Store-Bundle, die Schätzung schon =="
+# Ausnahme zu Regel 1 nur im full-Build (29.09.2026). Geprüft auch das Manifest: dort
+# stünde die Host-Permission. Die Schätzung aus Aufrufen und Likes ruft nichts ab und
+# gehört in beide Builds – fehlt sie, wäre der Test oben bestanden, ohne dass die
+# Anzeige im Store überhaupt existiert.
+if grep -rqE "function schaetzeDislikes" "$OUT" --include='*.js'; then
+  echo "  ok – Schätzung aus Aufrufen und Likes ist drin"
+else
+  echo "  FEHLGESCHLAGEN – die Schätzung fehlt im Store-Bundle"
+  FAIL=1
+fi
+RYD='returnyoutubedislikeapi|starteVorschauBalken|showThumbRatings: v'
+RHITS=$(grep -rInoE "$RYD" "$OUT" --include='*.js' --include='*.json' 2>/dev/null || true)
+if [ -n "$RHITS" ]; then
+  echo "  FEHLGESCHLAGEN – Dislike-Abruf im Store-Bundle:"
+  echo "$RHITS" | cut -c1-160
+  FAIL=1
+else
+  echo "  ok – keiner von: $RYD"
+fi
+
+echo
 echo "== 2c. Der erlaubte Weg MUSS drin sein =="
 # Ein Test, der nur Verbotenes sucht, wuerde auch bestehen, wenn das Store-Bundle gar
 # nichts mehr kann. Die Spracherkennung aus dem laufenden Ton ist dort der einzige Weg
@@ -142,6 +186,12 @@ if [ -d "$FULL" ]; then
   else
     echo "  FEHLGESCHLAGEN – auch der full-Build enthält keinen Fallback-Code."
     echo "  Damit prüft Test 2 nichts. Erst 'pnpm run build' ausführen."
+    FAIL=1
+  fi
+  if grep -rqE "returnyoutubedislikeapi" "$FULL" --include='*.js' && grep -qF "returnyoutubedislikeapi" "$FULL/manifest.json"; then
+    echo "  ok – full-Build enthält den Dislike-Abruf samt Permission (Test 2f greift also überhaupt)"
+  else
+    echo "  FEHLGESCHLAGEN – auch der full-Build enthält keinen Dislike-Abruf; Test 2f prüft nichts."
     FAIL=1
   fi
   if grep -rqE "comment-item-section" "$FULL" --include='*.js'; then

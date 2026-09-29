@@ -23,7 +23,8 @@ import {
 } from "../../shared/src/lib/timestamps.ts";
 import { parseJson3, pickTrack, videoIdAusText, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
 import { chatStream } from "../../shared/src/lib/chat.ts";
-import { inhaltAlsHtml, jsonNach } from "../../shared/src/lib/kommentare.ts";
+import { inhaltAlsHtml, jsonNach, kommentareAlsText } from "../../shared/src/lib/kommentare.ts";
+import { anteilPositiv, ganzeZahl, schaetzeDislikes } from "../../shared/src/lib/bewertung.ts";
 import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
 import { deltaText, modelleAusListe, preis, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
@@ -475,6 +476,41 @@ check("Kommentar-HTML: Fett, Kursiv, Links, Emojis nach UTF-16-Index", () => {
   });
   assert.equal(boese, "klick");
   assert.deepEqual(jsonNach('x = {"a":"}{","b":{"c":1}};', "x = "), { a: "}{", b: { c: 1 } });
+});
+
+check("Dislike-Schätzung aus Aufrufen und Likes, Zahlen aus Seitentexten", () => {
+  // Mediane aus dem Archiv 2021 (docs/messungen.md): Like-Rate 1 % → Anteil 5,1 %,
+  // 10 % → 1,4 %, 0,1 % → 19,8 %. Die Gerade muss in deren Nähe liegen.
+  const anteil = (v: number, l: number) => {
+    const d = schaetzeDislikes(v, l)!;
+    return d / (d + l);
+  };
+  assert.ok(Math.abs(anteil(100_000, 1_000) - 0.05) < 0.01, String(anteil(100_000, 1_000)));
+  assert.ok(Math.abs(anteil(100_000, 10_000) - 0.014) < 0.005, String(anteil(100_000, 10_000)));
+  assert.ok(Math.abs(anteil(100_000, 100) - 0.198) < 0.03, String(anteil(100_000, 100)));
+  assert.equal(schaetzeDislikes(0, 5), null);
+  assert.equal(schaetzeDislikes(1000, 0), null);
+  assert.equal(schaetzeDislikes(10, 50), null); // mehr Likes als Aufrufe: Unsinn
+  assert.equal(anteilPositiv(0, 0), null);
+  assert.equal(anteilPositiv(3, 1), 0.75);
+  assert.equal(ganzeZahl("Dieses Video liken (bisher 110.047 positive Bewertungen)"), 110047);
+  assert.equal(ganzeZahl("like this video along with 110,047 other people"), 110047);
+  assert.equal(ganzeZahl("23\u202f400\u202f861 vues"), 23400861);
+  assert.equal(ganzeZahl("Dieses Video liken"), null);
+});
+
+check("Kommentare als Text für die Stimmungsauswertung", () => {
+  const k = (content: string, likes: string, vomKanal = false) => ({
+    id: content, autor: "", autorUrl: "", avatar: "", inhalt: { content }, zeit: "", likes,
+    angepinnt: "", herz: false, vomKanal, verifiziert: false, antworten: [],
+  });
+  const text = kommentareAlsText(
+    { anzahlText: "", unvollstaendig: false, kommentare: [k("Super\nVideo", "12"), k("x".repeat(600), "", true)] },
+    500,
+  );
+  const [a, b] = text.split("\n");
+  assert.equal(a, "[12 Likes] Super Video");
+  assert.ok(b!.startsWith("[0 Likes, Kanal selbst] xxx") && b!.endsWith(" …") && b!.length < 540);
 });
 
 check("Zu dichte Zeitmarken werden ausgedünnt", () => {

@@ -123,6 +123,11 @@ export default defineContentScript({
       entferneSpaltenbreite();
     });
     schuetzeTastatur(ctx);
+    // Beide Builds: die Schätzung aus Aufrufen und Likes kommt ohne Abruf aus. Return
+    // YouTube Dislike fragt nur der Build "full" (§1), die Weiche steht in dislikes.ts.
+    void import("@/lib/dislikes").then((m) => m.starteDislikes(ctx));
+    // Balken unter Vorschaubildern nur mit Return YouTube Dislike, also nur "full".
+    if (__FALLBACK__) void import("@/lib/vorschau-balken").then((m) => m.starteVorschauBalken(ctx));
   },
 });
 
@@ -257,6 +262,8 @@ function currentTitle(): string {
  * sobald das Hauptvideo geladen ist.
  */
 let pendingSeek: number | null = null;
+/** Video, zu dem der vorgemerkte Sprung gehört – das `<video>` überlebt den Wechsel. */
+let pendingVideo: string | null = null;
 
 function currentVideo(): HTMLVideoElement | null {
   return document.querySelector<HTMLVideoElement>(
@@ -267,6 +274,13 @@ function currentVideo(): HTMLVideoElement | null {
 function applyPendingSeek(): void {
   if (pendingSeek === null) return;
   const video = currentVideo();
+  // Inzwischen ein anderes Video: der Sprung gehört nicht mehr dazu (Review 29.09.2026).
+  if (videoIdFromUrl(location.href) !== pendingVideo) {
+    pendingSeek = null;
+    video?.removeEventListener("durationchange", applyPendingSeek);
+    video?.removeEventListener("loadedmetadata", applyPendingSeek);
+    return;
+  }
   if (!video || document.getElementById("movie_player")?.classList.contains("ad-showing")) {
     return;
   }
@@ -287,6 +301,7 @@ function seek(seconds: number): void {
   // Werbung spulen statt das Video. Also vormerken und nachholen, sobald sie vorbei ist.
   if (document.getElementById("movie_player")?.classList.contains("ad-showing")) {
     pendingSeek = seconds;
+    pendingVideo = videoIdFromUrl(location.href);
     video.addEventListener("durationchange", applyPendingSeek);
     video.addEventListener("loadedmetadata", applyPendingSeek);
     return;
@@ -297,6 +312,7 @@ function seek(seconds: number): void {
   if (Math.abs(video.currentTime - seconds) > 2) {
     // Nicht angekommen – vormerken und nachholen, sobald der Player umschaltet.
     pendingSeek = seconds;
+    pendingVideo = videoIdFromUrl(location.href);
     video.addEventListener("durationchange", applyPendingSeek);
     video.addEventListener("loadedmetadata", applyPendingSeek);
     return;

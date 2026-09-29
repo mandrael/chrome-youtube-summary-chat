@@ -134,6 +134,10 @@ export interface Settings {
   captionLang: string;
   uiLang: UiLang | "auto";
   showCost: boolean;
+  /** Berechnete Dislikes (Return YouTube Dislike) am Dislike-Knopf. Nur Build "full". */
+  showDislikes: boolean;
+  /** Grün/roter Balken unter Vorschaubildern (Return YouTube Dislike). Nur Build "full". */
+  showThumbRatings: boolean;
   sttRoute: SttRoute;
   /** Vorgewählte Auflösung im Download-Dialog. */
   downloadHeight: 360 | 480 | 720 | 1080;

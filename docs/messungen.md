@@ -1121,3 +1121,31 @@ Transkript-Tab nach 12 s.
 | `/live/<id>` (Aufzeichnung) | **bis 0.9.2 nein**, jetzt ja | ja |
 | laufender Livestream (`jfKfPfyJRdk`) | ja | „keine Untertitel“ |
 | `/shorts/`, `/embed/`, `youtube-nocookie.com`, `music.youtube.com` | nein, gewollt | – |
+
+## Dislikes aus Aufrufen und Likes schätzen (29.09.2026)
+
+Daten: YouTube-Dislike-Archiv Ende 2021 (archive.org, ClickHouse-Spiegel
+`clickhouse-public-datasets.s3.amazonaws.com/youtube/original/files/`), zwei Teildateien
+vom 27.11.2021. Filter: ≥ 1000 Aufrufe, ≥ 50 Stimmen, ≥ 1 Like. Gelernt an 46 849
+Videos, geprüft an 41 888 anderen. Skripte: `docs/tests/dislike-modell/`.
+
+Dislike-Anteil (Median) je Like-Rate: 0,1 % → 19,8 %, 0,32 % → 9,6 %, 1 % → 5,1 %,
+3,2 % → 2,6 %, 10 % → 1,4 %, 25 % → 0,5 %.
+
+| Variante | Anteil-Fehler Median | Dislikes auf Faktor 1,5 | auf Faktor 2 |
+|---|---|---|---|
+| fester Anteil für alle (Basis) | 2,26 pp | 32 % | 51 % |
+| Stufentabelle (0,1 in log10) | 1,88 pp | 38 % | 59 % |
+| Logit-Gerade, kleinste Quadrate über alle | 1,77 pp | 36 % | 57 % |
+| dieselbe + log10(Aufrufe) | 1,79 pp | 35 % | 57 % |
+| **Logit-Gerade durch die Mediane (gewählt)** | 1,88 pp | 38 % | 59 % |
+
+Gewählt: `logit = −5,6911 − 1,3943 · log10(Likes/Aufrufe)`. Die Kleinste-Quadrate-Gerade
+liegt bei hohen Like-Raten zu tief (10 % → 0,84 % statt 1,4 %), weil Videos ohne jeden
+Dislike den Logit nach unten ziehen. Aufrufe als zweite Grösse bringen nichts.
+Grenze: Daten von 2021; ob sich das Like-Verhalten seither verschoben hat, ist ungemessen.
+
+Auf der Seite, ungerundet: Likes aus `aria-label` des Like-Knopfs („bisher 110.047
+positive Bewertungen“ / „along with 110,047 other people“), Aufrufe aus der Infozeile
+vor dem „•“ („23.400.861 Aufrufe • 10.11.2014“). Gemessen an `aqz-KE-bpKQ`, de und en.
+Ergebnis dort: Schätzung ≈ 9538 (92 % positiv), Return YouTube Dislike 18.609 (86 %).

@@ -626,3 +626,39 @@ export function webLookupPrompt(
   );
 }
 
+
+/**
+ * Stimmung der Kommentare. Grundlage sind die Top-Kommentare mit ihren Likes (bis zu 100,
+ * `kommentareAlsText`), nicht alle: YouTube sortiert dort nach Zustimmung, die Auswahl ist
+ * also das, was Zuschauer zuerst sehen – und nicht repräsentativ für alle Kommentare. Das
+ * soll die Antwort auch sagen.
+ */
+export function kommentarStimmungPrompt(uiLang: "de" | "en", anzahl: number, gesamt: string): string {
+  if (uiLang === "de") {
+    return (
+      `Unten stehen die ${anzahl} obersten Kommentare zu diesem Video (YouTube-Sortierung ` +
+      `„Top“${gesamt ? `, insgesamt ${gesamt}` : ""}), je mit ihren Likes. Werte ihre Stimmung ` +
+      `gegenüber dem Video aus:\n` +
+      `1. Eine Zeile: Anteil positiv / neutral / negativ in Prozent, gezählt je Kommentar; ` +
+      `danach ein Satz, ob die Likes das Bild verschieben (etwa wenn kritische Kommentare ` +
+      `viel Zustimmung haben).\n` +
+      `2. Die häufigsten Lobpunkte und die häufigsten Kritikpunkte, je höchstens vier, ` +
+      `knapp, mit ungefährer Häufigkeit.\n` +
+      `3. Höchstens drei kurze, typische Zitate im Wortlaut.\n` +
+      `Witze, Zeitstempel-Kommentare und Grüsse zählen als neutral. Sag am Ende in einem ` +
+      `Satz, dass nur die obersten Kommentare ausgewertet sind. Erfinde nichts, was nicht ` +
+      `in den Kommentaren steht.`
+    );
+  }
+  return (
+    `Below are the top ${anzahl} comments on this video (YouTube's "Top" sort` +
+    `${gesamt ? `, ${gesamt} in total` : ""}), each with its likes. Assess their sentiment ` +
+    `towards the video:\n` +
+    `1. One line: share positive / neutral / negative in percent, counted per comment; then ` +
+    `one sentence on whether the likes shift the picture.\n` +
+    `2. The most frequent praise and criticism, at most four each, brief, with rough frequency.\n` +
+    `3. At most three short, typical verbatim quotes.\n` +
+    `Jokes, timestamp comments and greetings count as neutral. End with one sentence saying ` +
+    `only the top comments were assessed. Invent nothing that is not in the comments.`
+  );
+}

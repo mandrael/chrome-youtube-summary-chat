@@ -17,6 +17,20 @@
    dem Fall ein Satz im Chat statt nichts. Ohne diesen Satz bleibt „nur Luna geht"
    unerklärt – acht Modelle antworteten am 06.09. durch die Extension selbst
    (docs/messungen.md), drei davon erst nach 49 bis 86 s.
+4a. **Klickweg „Audio herunterladen“ mit installiertem Helfer prüfen** (0.11.0): der Helfer
+   ist direkt geprüft (m4a, AAC), der Dialog nur bis „Native-Host nicht erreichbar“.
+4b. **Entscheidung offen: Android-App in den Play Store?** (29.09.: „noch offen“.) Wenn ja,
+   gelten die Store-Grenzen (keine Downloads, keine Dislikes, keine Kommentare) auch dort.
+4c. **Aus dem Gesamtreview 29.09. noch offen** (bewusst nicht in 0.12.0): Positions-
+   Restore während einer Werbung (audio-live, kappt die Werbung); Verlauf rückt beim
+   blossen Öffnen nach vorn (`updatedAt`); Transkript-Panel-Weg ohne Abbruch bei
+   Videowechsel, Panel-Transkripte ohne `lang`; Dislikes ohne Wiederholung nach einem
+   Fehlabruf; Download-Texte (i18n) stehen als Text im Store-Bundle (Reviewer-Risiko,
+   kein Code); Store-Bundle-Hosts nicht per Positivliste geprüft (Bibliothekskommentare
+   voller Doku-URLs). 0.12.0 ist noch nicht committet.
+4d. **Android-App bekommt später alles, was die Erweiterung hat** (Michael, 29.09.):
+   Transkript-, Kommentar-, Audio-Export und Dislikes – nach Messung A, nur soweit die
+   Plattform-Regeln es erlauben.
 4. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
    venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
 
@@ -51,6 +65,68 @@ Stufe 2 und 2b). Zwei Fehler behoben, einer davon selbst eingebaut:
 Offen: fremdes `iframe_api`-Skript im selben Dokument wie die Schlüsselfelder (Frage für
 die echte App-Oberfläche); ob das Transkript als `.txt` im Store-Build bleiben soll,
 während Kommentare dort wegen der Richtlinie fehlen.
+
+## Nachtrag 29.09.2026 – 0.12.0: Vorschaubild-Balken und Kommentarstimmung (nur full)
+
+- **Geschätzte Dislike-Zahl** kursiv und in YouTubes gedämpfter Schriftfarbe, dazu „≈“
+  (Michael: erkennbar anders als echte Daten).
+- **Balken unter Vorschaubildern**, grün/rot, 3 px unter dem Bild (auf dem Bild zeichnet
+  YouTube rot den Sehfortschritt). Quelle Return YouTube Dislike, nur sichtbare
+  Vorschaubilder, 1 Abruf/s, einmal je Video und Seitenleben, 1 min Pause nach Fehler.
+  Schalter `showThumbRatings`, Standard aus (IDs aller sichtbaren Vorschläge gehen an den
+  Dienst). Wiedergabelisten ohne Balken. Store: keiner – dort bräuchte jedes
+  Vorschaubild einen eigenen Abruf bei YouTube. Geprüft: Suchseite nach Scrollen 4
+  Balken (97,6–99,6 %), Kanalseite 6, keine doppelten, keine Seitenfehler.
+- **Kommentarstimmung** als Schnellbefehl: `ladeKommentare(…, { hoechstens: 100 })`
+  holt die Top-Kommentare ohne Antworten nur in den Arbeitsspeicher (gemessen
+  `arj7oStGLkU`: 100 Kommentare, 6 Abrufe, 2,8 s, 14 294 Zeichen), das Modell liefert
+  Anteile positiv/neutral/negativ, Lob- und Kritikpunkte, höchstens drei Zitate.
+  Im Browser bis zur Anfrage geprüft (Testprofil ohne Schlüssel: „kein Key“); **eine
+  echte Modellantwort ist ungeprüft.**
+
+## Nachtrag 29.09.2026 – 0.12.0: Dislikes mit Balken, Schätzung auch im Store
+
+Nachgeschärft nach Michaels Vorgabe „lieber eine Schätzung als gar nichts“: Zahl plus
+schmaler Balken (Anteil der Likes) unter Like/Dislike, Tooltip mit Quelle.
+- `full`: Return YouTube Dislike, ihre Zahl auf die aktuellen Likes der Seite
+  hochgerechnet (ihre eigene Formel); 15 min Zwischenspeicher je Video, 1 min Pause nach
+  Fehlschlag (Nutzungsbedingungen: 100/min, 10 000/Tag, Namensnennung mit Link).
+- Ohne Dienst und im Store-Build: Schätzung aus Aufrufen und Likes der Seite, am
+  Dislike-Archiv 2021 gelernt und geprüft (docs/messungen.md): Dislike-Zahl in 59 % der
+  Fälle auf Faktor 2 genau, Anteil im Median 1,9 Prozentpunkte daneben. Anzeige mit „≈“,
+  Balken blasser.
+- Im Browser geprüft an `aqz-KE-bpKQ`: full 18.609 (86 %), full mit gesperrtem Dienst
+  und store ≈ 9538 (92 %), keine Seitenfehler.
+- Verworfen: Punktzahl 0–100, Wilson-Sicherheit, Balken unter Vorschaubildern,
+  Stimmungsanalyse der Kommentare – Michael: „nicht zu viel umsetzen“.
+
+## Nachtrag 29.09.2026 – 0.12.0: Berechnete Dislikes (nur full)
+
+Zahl hinter YouTubes Dislike-Knopf, Schätzung von Return YouTube Dislike
+(`returnyoutubedislikeapi.com`, nur Video-ID). Selbst berechnen geht nicht: die Schätzung
+braucht die Stimmen der RYD-Nutzer. **Ausnahme zu Regel 1/5 auf Michaels Entscheidung**,
+nur `full`, Einstellung „Berechnete Dislikes anzeigen“ (Standard an). Store-Build ohne
+Code und Permission (Test 2f). Geprüft auf echtem YouTube: 18.599 bei `aqz-KE-bpKQ`,
+nach SPA-Wechsel die Zahl des neuen Videos (= API), Abschalten stellt YouTubes Knopf
+wieder her. Play Store für die App: noch offen (29.09.).
+
+### Gesamtreview 29.09.2026 (zwei Prüfer: Sicherheit/Store, Korrektheit) – eingearbeitet
+
+Store-Build am gebauten Bundle sauber (nur `storage`, vier Hosts, kein Download-,
+Kommentar- oder Dislike-Code). Behoben:
+- **Bilder aus Modellantworten** wurden als `<img>` geladen – Datenabfluss ohne Klick per
+  Prompt-Injection möglich. Jetzt nur Alt-Text (`Markdown.tsx`), gerendert geprüft.
+- **Übersetzung fortsetzen** verdoppelte die Zeilen des abgebrochenen Blocks.
+- **Abbrechen beim Helfer-Job** tat nichts und liess „läuft“ stehen (eigenes
+  `disconnect()` feuert kein `onDisconnect`); Port-Trennung vor Start startete die
+  bezahlte STT trotzdem.
+- **Leere/fehlerhafte Antworten** gingen bei jeder Folgefrage mit an die API.
+- **Live-Erkennung**: scheiterte sie vor der Aufnahme (Abbruch beim Werbewarten), blieb
+  das Video stumm und spielte – Regel 4. Jetzt `try` ab Zustandsmerken.
+- Verlauf wurde bei jedem Stream-Delta gespeichert und jeder Schreibvorgang renderte
+  alle Tabs neu; vorgemerkter Sprung überlebte den Videowechsel; Dislike-Zahl kam nach
+  dem Abschalten noch an, und YouTubes Klassen-Reset schnitt sie ab (im Browser geprüft).
+- `verify-store-bundle.sh` Test 1b: Store-Manifest exakt gegen Positivliste.
 
 ## Nachtrag 29.09.2026 – 0.11.0: Audio herunterladen
 

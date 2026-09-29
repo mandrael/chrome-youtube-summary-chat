@@ -32,6 +32,9 @@ export const DEFAULT_SETTINGS: Settings = {
   captionLang: "auto",
   uiLang: "auto",
   showCost: false,
+  showDislikes: true,
+  // Aus: sonst gingen die IDs aller vorgeschlagenen Videos an Return YouTube Dislike.
+  showThumbRatings: false,
   sttRoute: "parakeet-primeline",
   // 720p ist der Punkt, an dem YouTube auf getrennte Spuren umstellt und die Datei noch
   // handlich bleibt; darüber wächst sie schneller als der sichtbare Gewinn.

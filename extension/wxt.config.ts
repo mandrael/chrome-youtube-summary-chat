@@ -67,7 +67,7 @@ export default defineConfig({
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
     // Schema major.function.fix (status.md, 03.09.2026). 0.3.0 wäre der Funktionssprung gewesen (Vergleich-Preset, adaptive
     // Tabellen, Videodownload, Installer), 0.3.1 der Fix des Ladefehlers, 0.3.2 Download-Knopf im Kopf, 0.4.0 Fortschritt und „Im Ordner zeigen", 0.4.1 gemeinsamer Fortschritt Ton+Bild, 0.5.0 Ordnerdialog und Zielordner-Anzeige, 0.6.0 Mistral AI als zweiter Anbieter.
-    version: "0.11.0",
+    version: "0.12.0",
     // Bewusst ohne `sidePanel`: Vivaldi trägt jede Extension, die diese Permission
     // deklariert, ungefragt in seine Panel-Leiste ein und öffnet dort beim Installieren
     // ein leeres Panel (Vivaldi-Bug VB-123452, Stand 8.1 offen). Verhindern lässt sich
@@ -83,6 +83,8 @@ export default defineConfig({
       // Mistral direkt: EU-Endpunkt (Standard) und globaler Endpunkt.
       "https://api.eu.mistral.ai/*",
       "https://api.mistral.ai/*",
+      // Berechnete Dislikes, nur im full-Build (Ausnahme zu Regel 1, 29.09.2026).
+      ...(isFull(env.mode) ? ["https://returnyoutubedislikeapi.com/*"] : []),
     ],
     options_ui: {
       page: "options.html",

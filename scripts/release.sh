@@ -29,8 +29,34 @@ apk="app/android/app/build/outputs/apk/debug/app-debug.apk"
 
 echo "== Packen =="
 rm -rf releases && mkdir releases
-# Inhalt ohne Oberordner: entpacken, Ordner in chrome://extensions laden.
-(cd build-full && zip -qr -X "$wurzel/releases/chrome-youtube-summary-chat-$version-full.zip" .)
+# store: Inhalt ohne Oberordner – entpacken, Ordner in chrome://extensions laden.
+# full: Erweiterung, Helfer und Anleitung – ohne den Helfer gehen keine Downloads, und
+# die Optionsseite verweist auf eine README, die Tester sonst nicht haben.
+paket="$(mktemp -d)/chrome-youtube-summary-chat-$version-full"
+mkdir -p "$paket/native-host"
+cp -R build-full "$paket/erweiterung"
+cp native-host/yt_summary_host.py native-host/install-macos.sh native-host/install-windows.ps1 \
+   native-host/manifest.template.json native-host/selfcheck.py "$paket/native-host/"
+cat > "$paket/LIESMICH.txt" <<EOF
+YouTube Summary Chat $version (full)
+
+1. Diesen Ordner an einen festen Platz legen, danach nicht mehr verschieben:
+   der Helfer wird mit seinem Pfad in Chrome registriert.
+2. Chrome: chrome://extensions, Entwicklermodus ein, "Entpackte Erweiterung laden",
+   den Ordner "erweiterung" wählen.
+3. Nur für Downloads (Video, Audio) und Transkript aus der Tonspur – der Helfer:
+   macOS:
+     brew install yt-dlp ffmpeg python   (Python ab 3.10)
+     cd native-host && ./install-macos.sh
+   Windows (ungetestet):
+     winget install yt-dlp.yt-dlp
+     winget install ffmpeg
+     powershell -ExecutionPolicy Bypass -File .\\native-host\\install-windows.ps1
+   Der Installer richtet auch Python-Umgebung und Sprachmodell ein (rund 670 MB).
+   Danach Chrome einmal ganz beenden und neu starten.
+4. Den API-Schlüssel (OpenRouter oder Mistral) auf der Optionsseite eintragen.
+EOF
+(cd "$paket/.." && zip -qr -X "$wurzel/releases/chrome-youtube-summary-chat-$version-full.zip" "$(basename "$paket")")
 (cd build-store && zip -qr -X "$wurzel/releases/chrome-youtube-summary-chat-$version-store.zip" .)
 cp "$apk" "releases/youtube-summary-chat-app-$app_version-debug.apk"
 ls -l releases

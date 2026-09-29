@@ -23,8 +23,10 @@
    (Testprofil ohne: nur der Weg bis zur Anfrage geprüft); Vorschaubild-Balken bei Michael
    bestätigt (29.09., nach Einschalten in den Einstellungen); kursive graue Schätzzahl nicht mehr
    angesehen. Ein Commit = ein Versionssprung: „0.12.0“ deckt mehrere Stände desselben
-   Tages – nach dem Bauen die Erweiterung neu laden. **Offene Idee:** Bauzeit neben der
-   Version auf der Optionsseite (Michael noch nicht entschieden). **Offen:** Pull Request des Zweigs
+   Tages – nach dem Bauen die Erweiterung neu laden. Seit 0.12.1 steht die
+   Bauzeit neben der Version auf der Optionsseite („0.12.1 full · gebaut 29.09.26, 23:47“,
+   headless geprüft). Die 13 node-Prozesse der Bestandsaufnahme gehörten nicht zu diesem
+   Projekt (keiner mit Projektpfad). **Offen:** Pull Request des Zweigs
    nach `main` – angeboten, unbeantwortet.
 4f. **YouTube sperrte am 29.09. abends die IP** („ungewöhnlicher Datenverkehr“, Google-
    `sorry`-Seite) nach vielen Playwright-Läufen an einem Tag. Weitere Browser-Tests gegen

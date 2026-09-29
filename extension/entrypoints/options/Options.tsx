@@ -218,6 +218,8 @@ export function Options() {
         <span className="text-sm font-normal text-muted-foreground">
           {chrome.runtime.getManifest().version}
           {__FALLBACK__ ? " full" : " store"}
+          {" · gebaut "}
+          {new Date(__BAUZEIT__).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}
         </span>
       </h1>
       <p className="mb-6 text-sm text-muted-foreground">

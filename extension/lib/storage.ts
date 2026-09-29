@@ -1,42 +1,15 @@
 import { storage } from "wxt/utils/storage";
-import { DEFAULT_SYSTEM_PROMPT } from "./prompts";
-import type { Conversation, Settings, TranscriptTranslation } from "./types";
+import {
+  convKeyName,
+  DEFAULT_SETTINGS,
+  sortiereUnterhaltungen,
+  trKeyName,
+  zumSpeichern,
+  zwischenspeicherKeys,
+} from "@shared/lib/settings";
+import type { Conversation, Settings, TranscriptTranslation } from "@shared/lib/types";
 
-// Beste Mischung aus Preis und Antwortqualität für lange Transkripte; siehe
-// EMPFEHLUNG in openrouter.ts.
-export const DEFAULT_MODEL = "openai/gpt-5.6-luna";
-
-export const DEFAULT_SETTINGS: Settings = {
-  provider: "openrouter",
-  apiKey: "",
-  model: DEFAULT_MODEL,
-  mistralApiKey: "",
-  // EU ist der Sinn der Option: Datenschutz. Wer den globalen Endpunkt will, schaltet um.
-  mistralRegion: "eu",
-  // Bewusst leer: Mistrals Doku führt keine Tabelle stabiler Aliase, die Liste kommt
-  // per „Modelle laden" von /v1/models.
-  mistralModel: "",
-  reasoning: "minimal",
-  systemPrompt: DEFAULT_SYSTEM_PROMPT,
-  answerLang: "auto",
-  translationTarget: "Deutsch",
-  captionLang: "auto",
-  uiLang: "auto",
-  showCost: false,
-  sttRoute: "parakeet-primeline",
-  // 720p ist der Punkt, an dem YouTube auf getrennte Spuren umstellt und die Datei noch
-  // handlich bleibt; darüber wächst sie schneller als der sichtbare Gewinn.
-  downloadHeight: 720,
-  downloadTarget: "",
-  downloadAsk: false,
-  preferLocalTranslate: false,
-  uiScale: 110,
-  // Knapp über YouTubes eigenem Wert (400 bis 490 px je nach Fenster): spürbar mehr
-  // Platz als ohne Erweiterung, ohne dass das Video sichtbar schrumpft.
-  columnWidth: 500,
-  transcriptMode: "cues",
-  dictionary: "",
-};
+export { DEFAULT_MODEL, DEFAULT_SETTINGS } from "@shared/lib/settings";
 
 /**
  * Alle Einstellungen in einem Eintrag. Ein Objekt statt zwanzig Schlüsseln, weil die
@@ -55,14 +28,7 @@ export async function getSettings(): Promise<Settings> {
 
 export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
   const next = { ...(await getSettings()), ...patch };
-  // Den unveränderten System-Prompt nicht mitschreiben: sonst friert die erste
-  // beliebige Einstellungsänderung den damaligen Wortlaut ein, und jede spätere
-  // Verbesserung am Default erreicht dieses Profil nie mehr. Gemessen an einem
-  // Testprofil, das noch eine ältere Fassung trug.
-  const { systemPrompt, ...ohnePrompt } = next;
-  await settingsItem.setValue(
-    systemPrompt === DEFAULT_SYSTEM_PROMPT ? (ohnePrompt as Settings) : next,
-  );
+  await settingsItem.setValue(zumSpeichern(next));
   return next;
 }
 
@@ -86,7 +52,7 @@ export const wideItem = storage.defineItem<boolean>("local:wide", {
   fallback: false,
 });
 
-const convKey = (videoId: string) => `local:conv:${videoId}` as const;
+const convKey = (videoId: string) => `local:${convKeyName(videoId)}` as `local:${string}`;
 
 /**
  * Übersetzungen des Transkripts, je Video, Spursprache und Zielsprache. Rund 22 kB je
@@ -94,7 +60,7 @@ const convKey = (videoId: string) => `local:conv:${videoId}` as const;
  * und, auf der Cloud-Route, wieder Geld kostet.
  */
 const trKey = (videoId: string, lang: string, target: string) =>
-  `local:tr:${videoId}:${lang}:${target}` as const;
+  `local:${trKeyName(videoId, lang, target)}` as `local:${string}`;
 
 export async function loadTranslation(
   videoId: string,
@@ -127,11 +93,11 @@ export async function deleteConversation(videoId: string): Promise<void> {
 /** Alle gespeicherten Unterhaltungen, neueste zuerst. */
 export async function listConversations(): Promise<Conversation[]> {
   const all = await storage.snapshot("local");
-  return Object.entries(all)
-    .filter(([k]) => k.startsWith("conv:"))
-    .map(([, v]) => v as Conversation)
-    .filter((c) => c && Array.isArray(c.messages))
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+  return sortiereUnterhaltungen(
+    Object.entries(all)
+      .filter(([k]) => k.startsWith("conv:"))
+      .map(([, v]) => v),
+  );
 }
 
 
@@ -141,10 +107,7 @@ export async function listConversations(): Promise<Conversation[]> {
  */
 export async function clearCache(): Promise<number> {
   const all = await storage.snapshot("local");
-  const keys = Object.keys(all).filter(
-    (k) =>
-      k.startsWith("conv:") || k.startsWith("tr:") || k === "collapsed" || k === "wide",
-  );
+  const keys = zwischenspeicherKeys(Object.keys(all));
   await Promise.all(keys.map((k) => storage.removeItem(`local:${k}` as `local:${string}`)));
   return keys.length;
 }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ZIELSPRACHEN } from "@/lib/tracks";
+import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { availability as localAvailability, baseLang, downloadModel, isSupported } from "@/lib/translate-local";
 import { Check, Copy, Loader2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { ask } from "@/lib/chat-client";
 import { ModellWahl } from "./ModellWahl";
-import { preis as mistralPreis, PREISSTAND } from "@/lib/mistral";
+import { preis as mistralPreis, PREISSTAND } from "@shared/lib/mistral";
 import {
   empfohleneModelle,
   FALLBACK_MODELS,
@@ -22,10 +22,10 @@ import {
   isLiteModel,
   ONE_M_CONTEXT,
   preisProAnfrage,
-} from "@/lib/openrouter";
+} from "@shared/lib/openrouter";
 import { clearCache, DEFAULT_SETTINGS, getSettings, setSettings } from "@/lib/storage";
-import { parseWoerterbuch } from "@/lib/korrektur";
-import { DEFAULT_SYSTEM_PROMPT } from "@/lib/prompts";
+import { parseWoerterbuch } from "@shared/lib/korrektur";
+import { DEFAULT_SYSTEM_PROMPT } from "@shared/lib/prompts";
 import type {
   KeyStatus,
   ModelInfo,
@@ -33,7 +33,7 @@ import type {
   Settings,
   SttModelInfo,
   SttRoute,
-} from "@/lib/types";
+} from "@shared/lib/types";
 
 const REASONING_STEPS: ReasoningEffort[] = ["minimal", "low", "medium", "high"];
 
@@ -218,6 +218,8 @@ export function Options() {
         <span className="text-sm font-normal text-muted-foreground">
           {chrome.runtime.getManifest().version}
           {__FALLBACK__ ? " full" : " store"}
+          {" · gebaut "}
+          {new Date(__BAUZEIT__).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}
         </span>
       </h1>
       <p className="mb-6 text-sm text-muted-foreground">
@@ -830,6 +832,37 @@ export function Options() {
           <Switch checked={s.showCost} onCheckedChange={(v) => patch({ showCost: v })} />
         </Field>
 
+        <Field
+          label="Dislikes anzeigen"
+          hint={
+            __FALLBACK__ ? (
+              <>
+                Zahl neben YouTubes Dislike-Knopf und ein Balken mit dem Anteil der Likes
+                darunter. YouTube zeigt seit 2021 keine Dislikes mehr; die Zahl ist eine
+                Schätzung von{" "}
+                <a href="https://returnyoutubedislike.com" target="_blank" rel="noreferrer" className="underline">
+                  Return YouTube Dislike
+                </a>
+                , dorthin geht je Video nur die Video-ID. Ist der Dienst nicht erreichbar,
+                wird grob aus Aufrufen und Likes geschätzt.
+              </>
+            ) : (
+              "Zahl neben YouTubes Dislike-Knopf und ein Balken mit dem Anteil der Likes darunter. YouTube zeigt seit 2021 keine Dislikes mehr; die Zahl ist grob aus Aufrufen und Likes des Videos geschätzt (Modell aus 46 849 Videos mit echten Dislikes, Stand 2021). Es wird nichts abgerufen."
+            )
+          }
+        >
+          <Switch checked={s.showDislikes} onCheckedChange={(v) => patch({ showDislikes: v })} />
+        </Field>
+
+        {__FALLBACK__ && (
+          <Field
+            label="Bewertungsbalken unter Vorschaubildern"
+            hint="Grün/roter Balken unter jedem sichtbaren Vorschaubild: Anteil der Likes laut Return YouTube Dislike. Dafür geht die Video-ID jedes sichtbaren Vorschlags an den Dienst – daraus lassen sich Interessen ablesen. Höchstens ein Abruf je Sekunde."
+          >
+            <Switch checked={s.showThumbRatings} onCheckedChange={(v) => patch({ showThumbRatings: v })} />
+          </Field>
+        )}
+
         <Button
           variant="ghost"
           size="sm"
@@ -870,7 +903,7 @@ function Field({
   children,
 }: {
   label: string;
-  hint?: string;
+  hint?: React.ReactNode;
   /** Zeigt „Zurücksetzen" neben der Beschriftung – nur übergeben, wenn abgewichen wird. */
   onReset?: () => void;
   children: React.ReactNode;

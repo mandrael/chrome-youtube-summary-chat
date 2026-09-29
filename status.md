@@ -4,31 +4,241 @@
 
 **Braucht Michael (nur er kann es):**
 
-1. **Mistral mit eigenem Schlüssel prüfen** (0.9.2): „Modelle laden" muss eine Liste
+1. **Spike-APK am Gerät messen** – sie baut am Mac (JDK 21, Aufruf in der Übergabe),
+   Einstieg: [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md),
+   Ablauf der sieben Messungen in `app/README.md`. Ohne Messung A (trägt der
+   Transkript-Weg auf Android?) wird an der App-Oberfläche nicht weitergebaut. Bei
+   Messung D zählen: kalt wie warm genau **ein** Ereignis je Teilen.
+2. **Mistral mit eigenem Schlüssel prüfen** (0.9.2): „Modelle laden" muss eine Liste
    liefern (der Filter, der am 05.09. alles strich, ist behoben und im Selbsttest
    abgedeckt, aber nie gegen die echte API gelaufen), ein Modell wählen, eine Frage
    stellen. Erwartet: Antwort streamt, darunter Token und „≈ $…" mit Preisstand.
-2. **Fehlertext nachreichen, falls ein Modell wieder stumm bleibt.** Seit 0.8.1 steht in
+3. **Fehlertext nachreichen, falls ein Modell wieder stumm bleibt.** Seit 0.8.1 steht in
    dem Fall ein Satz im Chat statt nichts. Ohne diesen Satz bleibt „nur Luna geht"
    unerklärt – acht Modelle antworteten am 06.09. durch die Extension selbst
    (docs/messungen.md), drei davon erst nach 49 bis 86 s.
-3. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
+4a. **Klickweg „Audio herunterladen“ mit installiertem Helfer prüfen** (0.11.0): der Helfer
+   ist direkt geprüft (m4a, AAC), der Dialog nur bis „Native-Host nicht erreichbar“.
+4e. **Bei Michael zu testen (0.12.0, cfe2915):** Kommentarstimmung mit echtem Schlüssel
+   (Testprofil ohne: nur der Weg bis zur Anfrage geprüft); Vorschaubild-Balken bei Michael
+   bestätigt (29.09., nach Einschalten in den Einstellungen); kursive graue Schätzzahl nicht mehr
+   angesehen. Ein Commit = ein Versionssprung: „0.12.0“ deckt mehrere Stände desselben
+   Tages – nach dem Bauen die Erweiterung neu laden. Seit 0.12.1 steht die
+   Bauzeit neben der Version auf der Optionsseite („0.12.1 full · gebaut 29.09.26, 23:47“,
+   headless geprüft). Die 13 node-Prozesse der Bestandsaufnahme gehörten nicht zu diesem
+   Projekt (keiner mit Projektpfad). **Offen:** Pull Request des Zweigs
+   nach `main` – angeboten, unbeantwortet.
+4f. **YouTube sperrte am 29.09. abends die IP** („ungewöhnlicher Datenverkehr“, Google-
+   `sorry`-Seite) nach vielen Playwright-Läufen an einem Tag. Weitere Browser-Tests gegen
+   youtube.com sparsam bündeln; ob und wann die Sperre endet, ungemessen.
+4b. **Entscheidung offen: Android-App in den Play Store?** (29.09.: „noch offen“.) Wenn ja,
+   gelten die Store-Grenzen (keine Downloads, keine Dislikes, keine Kommentare) auch dort.
+4c. **Aus dem Gesamtreview 29.09. noch offen** (bewusst nicht in 0.12.0): Positions-
+   Restore während einer Werbung (audio-live, kappt die Werbung); Verlauf rückt beim
+   blossen Öffnen nach vorn (`updatedAt`); Transkript-Panel-Weg ohne Abbruch bei
+   Videowechsel, Panel-Transkripte ohne `lang`; Dislikes ohne Wiederholung nach einem
+   Fehlabruf; Download-Texte (i18n) stehen als Text im Store-Bundle (Reviewer-Risiko,
+   kein Code); Store-Bundle-Hosts nicht per Positivliste geprüft (Bibliothekskommentare
+   voller Doku-URLs). 0.12.0 ist noch nicht committet.
+4d. **Android-App bekommt später alles, was die Erweiterung hat** (Michael, 29.09.):
+   Transkript-, Kommentar-, Audio-Export und Dislikes – nach Messung A, nur soweit die
+   Plattform-Regeln es erlauben.
+4. **Windows-Installer ausführen**, sobald ein Windows-Rechner zur Hand ist – jetzt inkl.
    venv, sherpa-onnx und Modell-Download (ungetestet, 04.09.2026).
 
 **Offen, ohne Auftrag nicht anfassen:**
 
-4. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
+5. Kleine Messung: `provider="directml"` (Windows) bzw. `"cuda"` (Linux) in der
    sherpa-Route – eine Zeile, drei Läufe, ungemessen. Auf dem Mac laut Michael nicht
    relevant.
-5. de/en-Prompts sind seit 0.9.1 nicht mehr inhaltsgleich (Codex, niedrig): en fehlt die
+6. de/en-Prompts sind seit 0.9.1 nicht mehr inhaltsgleich (Codex, niedrig): en fehlt die
    Abgrenzung Angabe/Behauptung, körperliche Abläufe in „Anleitung", die Überlaufregel in
    „Ausführlich"; Hinweistexte ebenso. Hier arbeitet niemand auf en.
-6. Optional: Store-Build einreichen.
-7. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
+7. Optional: Store-Build einreichen.
+8. Offen aus Fables Entwurf: Zielsprache und Übersetzen-Knopf zu einem Auswahlfeld
    verschmelzen – nur, wenn gewünscht.
-8. Versionsnummern 0.9.0 bis 0.9.2 sind nach der geschärften Regel eigentlich 0.8.2 bis
+9. Versionsnummern 0.9.0 bis 0.9.2 sind nach der geschärften Regel eigentlich 0.8.2 bis
    0.8.4 (Kachel- und Promptarbeit ist „fix"). Bleibt stehen; ein Rewrite kostet mehr als
    der Schönheitsfehler.
+
+## Nachtrag 27.09.2026 – Gesamtreview des Android-Branches samt 0.10.0
+
+Alle Prüfungen grün (27 + 8 Selbsttests, Store-Bundle, beide Ladeproben, APK samt
+Stufe 2 und 2b). Zwei Fehler behoben, einer davon selbst eingebaut:
+
+- **`MainActivity` lieferte das Teilen-Ereignis beim Kaltstart doppelt.** Die am 21.09.
+  eingebaute Weiterleitung beruhte auf Kimis Befund „Kaltstart kommt nie an" – falsch,
+  `BridgeActivity.load()` leitet den Start-Intent schon selbst weiter. Zurückgebaut, in
+  der gebauten APK geprüft (nur noch der Konstruktor).
+- **Live-Erkennung stellte nach Werbung den Player nicht wieder her** (aus 0.10.0):
+  der Vergleich lief über `currentSrc`, Werbung hat eine eigene Quelle. Jetzt über die
+  Video-ID der Adresse. Logik, kein Live-Lauf mit Werbeblock.
+
+Offen: fremdes `iframe_api`-Skript im selben Dokument wie die Schlüsselfelder (Frage für
+die echte App-Oberfläche); ob das Transkript als `.txt` im Store-Build bleiben soll,
+während Kommentare dort wegen der Richtlinie fehlen.
+
+## Nachtrag 29.09.2026 – 0.12.0: Vorschaubild-Balken und Kommentarstimmung (nur full)
+
+- **Geschätzte Dislike-Zahl** kursiv und in YouTubes gedämpfter Schriftfarbe, dazu „≈“
+  (Michael: erkennbar anders als echte Daten).
+- **Balken unter Vorschaubildern**, grün/rot, 3 px unter dem Bild (auf dem Bild zeichnet
+  YouTube rot den Sehfortschritt). Quelle Return YouTube Dislike, nur sichtbare
+  Vorschaubilder, 1 Abruf/s, einmal je Video und Seitenleben, 1 min Pause nach Fehler.
+  Schalter `showThumbRatings`, Standard aus (IDs aller sichtbaren Vorschläge gehen an den
+  Dienst). Wiedergabelisten ohne Balken. Store: keiner – dort bräuchte jedes
+  Vorschaubild einen eigenen Abruf bei YouTube. Geprüft: Suchseite nach Scrollen 4
+  Balken (97,6–99,6 %), Kanalseite 6, keine doppelten, keine Seitenfehler.
+- **Kommentarstimmung** als Schnellbefehl: `ladeKommentare(…, { hoechstens: 100 })`
+  holt die Top-Kommentare ohne Antworten nur in den Arbeitsspeicher (gemessen
+  `arj7oStGLkU`: 100 Kommentare, 6 Abrufe, 2,8 s, 14 294 Zeichen), das Modell liefert
+  Anteile positiv/neutral/negativ, Lob- und Kritikpunkte, höchstens drei Zitate.
+  Im Browser bis zur Anfrage geprüft (Testprofil ohne Schlüssel: „kein Key“); **eine
+  echte Modellantwort ist ungeprüft.**
+
+## Nachtrag 29.09.2026 – 0.12.0: Dislikes mit Balken, Schätzung auch im Store
+
+Nachgeschärft nach Michaels Vorgabe „lieber eine Schätzung als gar nichts“: Zahl plus
+schmaler Balken (Anteil der Likes) unter Like/Dislike, Tooltip mit Quelle.
+- `full`: Return YouTube Dislike, ihre Zahl auf die aktuellen Likes der Seite
+  hochgerechnet (ihre eigene Formel); 15 min Zwischenspeicher je Video, 1 min Pause nach
+  Fehlschlag (Nutzungsbedingungen: 100/min, 10 000/Tag, Namensnennung mit Link).
+- Ohne Dienst und im Store-Build: Schätzung aus Aufrufen und Likes der Seite, am
+  Dislike-Archiv 2021 gelernt und geprüft (docs/messungen.md): Dislike-Zahl in 59 % der
+  Fälle auf Faktor 2 genau, Anteil im Median 1,9 Prozentpunkte daneben. Anzeige mit „≈“,
+  Balken blasser.
+- Im Browser geprüft an `aqz-KE-bpKQ`: full 18.609 (86 %), full mit gesperrtem Dienst
+  und store ≈ 9538 (92 %), keine Seitenfehler.
+- Verworfen: Punktzahl 0–100, Wilson-Sicherheit, Balken unter Vorschaubildern,
+  Stimmungsanalyse der Kommentare – Michael: „nicht zu viel umsetzen“.
+
+## Nachtrag 29.09.2026 – 0.12.0: Berechnete Dislikes (nur full)
+
+Zahl hinter YouTubes Dislike-Knopf, Schätzung von Return YouTube Dislike
+(`returnyoutubedislikeapi.com`, nur Video-ID). Selbst berechnen geht nicht: die Schätzung
+braucht die Stimmen der RYD-Nutzer. **Ausnahme zu Regel 1/5 auf Michaels Entscheidung**,
+nur `full`, Einstellung „Berechnete Dislikes anzeigen“ (Standard an). Store-Build ohne
+Code und Permission (Test 2f). Geprüft auf echtem YouTube: 18.599 bei `aqz-KE-bpKQ`,
+nach SPA-Wechsel die Zahl des neuen Videos (= API), Abschalten stellt YouTubes Knopf
+wieder her. Play Store für die App: noch offen (29.09.).
+
+### Gesamtreview 29.09.2026 (zwei Prüfer: Sicherheit/Store, Korrektheit) – eingearbeitet
+
+Store-Build am gebauten Bundle sauber (nur `storage`, vier Hosts, kein Download-,
+Kommentar- oder Dislike-Code). Behoben:
+- **Bilder aus Modellantworten** wurden als `<img>` geladen – Datenabfluss ohne Klick per
+  Prompt-Injection möglich. Jetzt nur Alt-Text (`Markdown.tsx`), gerendert geprüft.
+- **Übersetzung fortsetzen** verdoppelte die Zeilen des abgebrochenen Blocks.
+- **Abbrechen beim Helfer-Job** tat nichts und liess „läuft“ stehen (eigenes
+  `disconnect()` feuert kein `onDisconnect`); Port-Trennung vor Start startete die
+  bezahlte STT trotzdem.
+- **Leere/fehlerhafte Antworten** gingen bei jeder Folgefrage mit an die API.
+- **Live-Erkennung**: scheiterte sie vor der Aufnahme (Abbruch beim Werbewarten), blieb
+  das Video stumm und spielte – Regel 4. Jetzt `try` ab Zustandsmerken.
+- Verlauf wurde bei jedem Stream-Delta gespeichert und jeder Schreibvorgang renderte
+  alle Tabs neu; vorgemerkter Sprung überlebte den Videowechsel; Dislike-Zahl kam nach
+  dem Abschalten noch an, und YouTubes Klassen-Reset schnitt sie ab (im Browser geprüft).
+- `verify-store-bundle.sh` Test 1b: Store-Manifest exakt gegen Positivliste.
+
+## Nachtrag 29.09.2026 – 0.11.0: Audio herunterladen
+
+Menüpunkt „Audio herunterladen“ (nur `full`) öffnet den Download-Dialog mit „Nur Ton“
+vorgewählt. Im Helfer ist Höhe 0 die Tonspur: `bestaudio[ext=m4a]/bestaudio`, kein
+ffmpeg, Dateiname ohne Höhe. Nebenbei: `int(msg.get("height") or 720)` hätte 0 zu
+720 gemacht. Die Videowahl nach `downloadHeight` übergeht die Tonspur. Klickweg mit
+installiertem Helfer ungeprüft (README).
+
+## Nachtrag 26.09.2026 – 0.10.0: Download-Menü mit Transkript und Kommentaren
+
+Der Download-Knopf ist ein Menü: Video (nur `full`), Transkript `.txt`, Kommentare
+`.html` (`shared/src/lib/kommentare.ts`, Messung in docs/messungen.md). **Kommentare
+nur `full`:** die Store-Richtlinien verbieten das Herunterladen geschützter Inhalte,
+Kommentare sind Inhalte Dritter (geprüft 27.09.2026); `verify-store-bundle.sh` Test 2e
+beweist das am Bundle. Transkript-Export in beiden Builds (gab es als `.md` schon).
+
+`/live/<id>`-Adressen (Livestreams und ihre Aufzeichnungen) bekamen keine Sidebar –
+`videoIdFromUrl` kannte nur `/watch`. Behoben, URL-Arten in docs/messungen.md. Geprüft im echten
+Browser: Kommentare mit Stopp (1240, als unvollständig markiert), Transkript an
+`arj7oStGLkU`. Zählt mit den 0.9.3-Fixes als ein Sprung von 0.9.2.
+
+## Nachtrag 26.09.2026 – 0.9.3: Websuche, Scrollen, Zeitspannen, Aufräumen bei Videowechsel
+
+- Websuche: Transkript als erste Nutzernachricht statt im System-Prompt (Modell fragte
+  sonst nach dem Video). Ungeprüft gegen die echte API – Michael testet.
+- Chat scrollt nur noch bei neuer Nachricht nach unten, nicht bei jedem Stream-Delta.
+- Zeitspannen „[12:34–13:10]“, „[12:34]–[13:10]“, „bis“/„to“: nur der Anfang ist Link.
+- Bug-Audit: Helfer-Job wird bei Videowechsel abgebrochen; Transkript-Übersetzung auch
+  bei Spurwechsel; Live-Erkennung setzt Position/Pause nicht mehr auf ein neues Video.
+
+## Nachtrag 18.09.2026 – Workspace-Umbau und Android-Spike
+
+Ziel: eine eigenständige Android-App mit der Funktion der Erweiterung – Teilen-Ziel für
+YouTube-Links, Transkript, dieselben Schnellbefehle, Chat, Web-Recherche, dieselbe
+KI-Anbindung. Zwei Dinge sind dabei zuerst entschieden worden, bevor eine Zeile
+Oberfläche entstand.
+
+### Entscheidung 1: Capacitor, nicht Kotlin
+
+Begründung liegt in der Änderungshistorie dieses Projekts, nicht im Allgemeinen: am
+häufigsten geändert werden die Prompts (0.9.0, 0.9.1) und die beiden Clients. Ein
+Kotlin-Port hätte `prompts.ts` ein zweites Mal, in zwei Sprachen – die Drift zwischen de
+und en ist hier schon einmal ein Befund gewesen. Der Player wäre in beiden Fällen
+derselbe: IFrame-API im WebView, Googles eigener Weg seit der Abkündigung der Android
+Player API.
+
+Was damit **nicht** geht und auch mit Kotlin nicht ginge: Anmeldung. Google sperrt
+Sign-in in eingebetteten WebViews (403 `disallowed_useragent`), und der WebView hat
+seinen eigenen Cookie-Topf. Also kein Premium im eingebetteten Player, also Werbung.
+Wer ohne Werbung springen will, geht über den Deep-Link in die YouTube-App – deshalb ist
+der Knopf Pflichtpfad und nicht Kür.
+
+### Entscheidung 2: ein Repo, ein Kern
+
+`shared/` als pnpm-Workspace-Paket, rund 2.700 Zeilen laufen unverändert in beiden
+Zielen. Vier Nähte statt einer Abstraktion: `chat.ts` (die §1-Verzweigung, jetzt an einer
+Stelle statt im Service Worker), eine `Http`-Naht im Transkript-Abruf, Vorgaben und
+Schlüsselnamen in `settings.ts`, und der Chat-Strom wird in `translate-cues.ts`
+injiziert statt importiert. `shared/scripts/check.sh` hält den Kern sauber – inklusive
+der Prüfung, dass `provider === "mistral"` an genau einer Stelle steht.
+
+Die Erweiterung verhält sich unverändert; deshalb kein Versionssprung für den Umbau.
+
+### Was gemessen wurde, hier, ohne Gerät
+
+`pnpm -r run compile` grün, selfcheck 23/23 (neu: die Lesart geteilter Links),
+`shared/scripts/check.sh` bestanden, beide Extension-Builds gebaut,
+`verify-store-bundle.sh` bestanden, **Ladeprobe bestanden** gegen `build-full` und
+`build-store` – die fünfte Prüfung aus CLAUDE.md ist jetzt ein Skript
+(`extension/scripts/ladeprobe.mjs`) statt Handarbeit: sie leitet `www.youtube.com` per
+`--host-resolver-rules` auf einen lokalen Stub um und sammelt `pageerror` ein. Wichtig
+dabei: `channel: "chromium"`, die Headless-Shell lädt gar keine Extensions – ohne das
+hätte die Probe bestanden, ohne etwas zu messen.
+
+Für die App: Typprüfung grün, Bundle gebaut, `verify-app-bundle.sh` Stufe 1 bestanden,
+`cap add android` erzeugt und eingecheckt. Der Actions-Lauf hat danach **die APK
+gebaut** (2:54) und Stufe 2 gegen die entpackte Datei bestanden – der Gradle-Weg trägt
+also, bevor am Mac überhaupt jemand anfängt. Die fertige Debug-APK hängt als Artefakt am
+Lauf; sie lässt sich auch direkt installieren, statt sie am Mac neu zu bauen. Fables Angabe zu `adjustMarginsForEdgeToEdge`
+war überholt – in 8.5.2 läuft Edge-to-Edge über `plugins.SystemBars.insetsHandling`,
+abgelesen an den Typen, nicht geraten.
+
+### Was offen ist – und ohne Gerät offen bleibt
+
+Die App ist in der Cloud weder baubar noch startbar: `dl.google.com` und `youtube.com`
+sind dort gesperrt. Der Spike hat genau deshalb sieben Messungen, damit eine einzige
+Installation reicht (Liste in `app/README.md`). Die wichtigste ist A: trägt der
+signierte Player-Call aus einem Nicht-Browser-Client? Trägt er nicht, ist der Rückfall
+ein unsichtbarer WebView auf youtube.com-Origin – dann ändert sich der Aufbau, und gut,
+dass die Oberfläche noch nicht gebaut ist.
+
+### Offene To-Dos aus diesem Schritt
+
+1. Spike-APK am Mac bauen, installieren, A bis F messen, Ergebnisse nach
+   `docs/messungen.md` (mit Gerät, Android- und WebView-Version).
+2. Danach erst: Oberfläche der App (Sidebar-Komponenten nach `shared/src/components`,
+   Schnellbefehle, Chat, Verlauf), Speicher über Dateien statt Preferences.
+3. Ton-Weg (MediaProjection + AudioPlaybackCapture → OpenRouter-STT) nur, wenn A trägt
+   und die Oberfläche steht; höchstens 2× Tempo, der 8×-Trick der Erweiterung entfällt.
 
 ## Nachtrag 04.09.2026 (Nachmittag) – Download-Knopf gebaut, Codex-Review, React-Produktionsbuild, Parakeet-Bewertung
 

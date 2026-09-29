@@ -1,0 +1,101 @@
+# Code-Review Android-Branch `claude/youtube-transcription-android-app-1ts44f` (HEAD `cd1340f`, gegen `origin/main`)
+
+## CRITICAL
+
+**1. Das Teilen-Ziel liest die falschen Felder – jede geteilte Video-ID geht verloren.**
+`app/src/main.ts:287–294`
+```ts
+void CapacitorShareTarget.addListener("shareReceived", (ereignis: unknown) => {
+  const e = ereignis as { text?: string; subject?: string; url?: string };
+  const roh = [e.url, e.text, e.subject].filter(Boolean).join(" ");
+  ...
+  const id = videoIdAusText(roh);
+```
+Das Plugin (`@capgo/capacitor-share-target` 8.0.53) sendet `{ title: string; texts: string[]; files: SharedFile[] }` – nicht `text`/`subject`/`url`. Beleg (installiertes Paket, nicht die Beschreibung):
+```java
+// CapacitorShareTargetPlugin.java, handleIntent()
+shareData.put("title", title != null ? title : "");
+JSArray texts = new JSArray(); texts.put(sharedText); shareData.put("texts", texts);
+shareData.put("files", files);
+notifyListeners("shareReceived", shareData, true);
+```
+```ts
+// dist/esm/definitions.d.ts
+export interface ShareReceivedEvent { title: string; texts: string[]; files: SharedFile[]; }
+```
+Szenario: YouTube-App → „Teilen" → `texts: ["Schau https://youtu.be/aqz-KE-bpKQ?si=x"]`. `e.url`, `e.text`, `e.subject` sind alle `undefined` → `roh === ""` → `videoIdAusText("") === null`. Nachgestellt (Kopie unter `/tmp`):
+```
+echtes Plugin-Ereignis   roh= ""  id= null
+Erwartung des Codes      roh= "https://youtu.be/aqz-KE-bpKQ ... YouTube"  id= "aqz-KE-bpKQ"
+```
+Die Messung D ist damit dauerhaft „KEINE", das Spike-Ziel „geteilter Link, kalt wie warm" ist nie erreichbar. Vorschlag: `(ereignis as ShareReceivedEvent)` typisieren und `[e.title, ...(e.texts ?? [])].join(" ")` übergeben – der `unknown`-Cast in Zeile 288 verhindert genau den Compilerfehler, der das gefunden hätte.
+
+## MAJOR
+
+**2. API-Schlüssel liegen im Auto-Backup.**
+`app/android/app/src/main/AndroidManifest.xml:4–5`
+```xml
+<application
+    android:allowBackup="true"
+```
+`app/src/main.ts:61–62` schreibt beide Schlüssel über `Preferences` (Capacitor) – nachweislich unverschlüsselt in SharedPreferences:
+```java
+// @capacitor/preferences/android .../Preferences.java
+this.preferences = context.getSharedPreferences(configuration.group, Activity.MODE_PRIVATE);
+// PreferencesConfiguration: DEFAULTS.group = "CapacitorStorage"
+```
+Ohne `android:fullBackupContent`/`android:dataExtractionRules` nimmt Androids Auto-Backup `CapacitorStorage.xml` mit – also `spike.orKey`/`spike.miKey` im Klartext in Google Drive bzw. beim Gerätewechsel. Szenario: `adb backup com.at.gasperl.ytsummary` oder Wiederherstellung auf einem Zweitgerät liest die Schlüssel. Vorschlag: `allowBackup="false"` oder eine `dataExtractionRules`-Datei, die `CapacitorStorage` ausschließt.
+
+**3. Versionsstand des Android-Zweigs ist gegenüber `origin/main` nicht erhöht.**
+`app/android/app/build.gradle:12–13` (`versionCode 901`, `versionName "0.9.1-spike"`), zugleich `app/package.json:3`, `shared/package.json:3`, `package.json:3` auf `0.9.1`, während `extension/wxt.config.ts:70` und `extension/package.json:3` bereits `0.9.2` sind. `git show origin/main:extension/package.json` ergibt ebenfalls `0.9.2`, der Branch hat main also übernommen, ohne die App nachzuziehen. Szenario: neue APK mit unverändertem `versionCode 901` wird von Android nicht als Update erkannt; `versionName` und `versionCode` widersprechen der Formel, die direkt darüber im Code steht (`major*10000 + function*100 + fix` → 902). Vorschlag: `versionCode 902`, `versionName "0.9.2-spike"` und die drei `package.json` angleichen.
+
+**4. Regression in der `Http`-Naht: Cookies gehen jetzt an den `base.js`-CDN-Abruf (und bei jedem Abruf an jeden Host).**
+`shared/src/lib/transcript.ts:30–39`
+```ts
+export const browserHttp: Http = async (url, init) => {
+  const res = await fetch(url, {
+    method: init?.method ?? "GET",
+    headers: init?.headers,
+    body: init?.body,
+    credentials: "include",
+  });
+```
+Vorher in `origin/main` nur an drei Stellen gesetzt (`extension/lib/transcript.ts`, main: Z. 31 watch, 93 player, 188 cues); `signatureTimestamp` (main: Z. 104) nutzte `fetch(jsUrl…)` ohne `credentials` – also `same-origin`, keine Cookies an `*.googlevideo.com`/`*.ytimg.com`. Jetzt läuft dieser Abruf über `browserHttp` (`transcript.ts:107`) und sendet `credentials: "include"` an einen fremden CDN-Host. Zusätzlich bindet die neue Naht `credentials: "include"` an *jeden* künftigen Http-Aufruf, auch an einen der beiden KI-Endpunkte. Vorschlag: `credentials` als Feld in `HttpAnfrage` durchreichen und nur für die YouTube-Abrufe auf `"include"` setzen.
+
+## MINOR
+
+**5. Testprüfung `videoIdAusText` deckt zwei Regex-Schwächen nicht ab.**
+`shared/src/lib/transcript.ts:333–338`
+```ts
+new RegExp(`youtube\\.com/watch\\?(?:[^\\s]*&)?v=${id}`),
+```
+Der unbegrenzte Teilausdruck nimmt das **letzte** `v=` der Query, YouTube das erste. Nachgestellt:
+```
+https://www.youtube.com/watch?list=X&v=FIRSTID1234&v=SECONDID567 -> "SECONDID567"
+```
+Der Selbsttest (`extension/scripts/selfcheck.ts:157–162`) prüft nur einfache URLs. Vorschlag: Teilausdruck auf `[^\\s&]*` einschränken (dann gilt das erste `v=`) und einen Doppel-`v=`-Fall in den Selbsttest aufnehmen.
+
+**6. `INTERNET`-Prüfung im App-Skript ist ein Teilstring-Treffer.**
+`app/scripts/verify-app-bundle.sh:72–80`
+```bash
+RECHTE=$(grep -oE 'android:name="android.permission.[A-Z_]+"' "$M" | sort -u)
+...
+if echo "$RECHTE" | grep -qvE 'INTERNET'; then
+```
+Nachgestellt mit `INTERNET`, `INTERNET_EXTRA`, `RECORD_AUDIO`: die Zeile `INTERNET` wird korrekt nicht gemeldet, eine zusätzliche `android.permission.INTERNET_*` würde wegen `grep -vE 'INTERNET'` ebenfalls durchrutschen. Vorschlag: mit `grep -qvxE 'android:name="android.permission.INTERNET"'` auf den exakten Eintrag prüfen.
+
+**7. Das native Teilen-Plugin schreibt den geteilten Inhalt ins Logcat.**
+`app/src/main.ts:287` (Nutzertext landet zusätzlich in `log()` → `console.log`, Z. 36–39); auf der Plugin-Seite:
+```java
+// CapacitorShareTargetPlugin.java
+Log.d(TAG, "Share received: " + shareData.toString());
+```
+Damit stehen geteilte URLs (und der `title`/`title`-Text) in den Systemlogs. Für einen Spike mit fremden Inhalten auf einem Gerät ist das ein unnötiger Datenabfluss. Vorschlag: den `console.log`-Spiegel in `log()` für geteilte Inhalte weglassen und die Plugin-Logzeile nicht als „ungeprüft" abhaken.
+
+## Nicht als Befund gewertet (belegt unauffällig)
+
+- `pnpm -r run compile` → alle drei Projekte grün; `node extension/scripts/selfcheck.ts` → 25/25, Exit 0; `bash shared/scripts/check.sh` → bestanden (und Gegenprobe: mit eingefügtem `__FALLBACK__` in `shared/src/lib/types.ts` korrekt `FEHLGESCHLAGEN`, Exit 1); `extension/scripts/verify-store-bundle.sh` → bestanden inkl. Gegenprobe gegen `build-full`; `app/scripts/verify-app-bundle.sh` → Stufe 1 bestanden. Der Selbsttest weist den Kostenfehler in `chat.ts` nach (eingebaute Formel `prompt*ein` → `AssertionError: erwartet 0,06 – bekommen 0.045`, Exit 1).
+- Manifest (`build-store`/`build-full`): Permissions bzw. Host-Permissions genau `storage`/`storage+nativeMessaging` und die vier erlaubten Hosts; keine Analytics-/Firebase-Abhängigkeit in `app/android/app/capacitor.build.gradle` (nur app-launcher, filesystem, preferences, share-target).
+- `capacitorHttp` (`app/src/http-capacitor.ts:26–27`): Der `text`-Zweig ist korrekt, weil `CapacitorHttp.request` mit `responseType: "text"` bei jeder Antwort `data` als String zurückgibt (`CapacitorHttp.java` löst auch bei 4xx/5xx normal auf, `HttpRequestHandler.java:216–222`); nur echte Verbindungsfehler werden als Ablehnung geworfen.
+
+Gele Gene: 4 `git`-Diff-/Log-/Show-Aufrufe, 1 Dateikopie nach `/tmp`, 2 Builds (`pnpm run build`, `build:store`), `pnpm -r run compile`, `node extension/scripts/selfcheck.ts` (3×, davon 2 mit injiziertem Fehler), `bash shared/scripts/check.sh` (1× negativ, 1× positiv), `verify-store-bundle.sh`, `verify-app-bundle.sh`, `pnpm -r list`, 4 Node-Proben (Regex-/SSE-/Parse-Randfälle) – insgesamt 21 Befehle.

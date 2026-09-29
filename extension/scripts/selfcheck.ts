@@ -16,28 +16,38 @@ import {
   transcriptToText,
   tsToSeconds,
   TS_GROUP_PATTERN,
+  TS_RANGE_SEP,
   TS_PATTERN,
   TS_SINGLE,
   duenneMarkenAus,
-} from "../lib/timestamps.ts";
-import { parseJson3, pickTrack, videoIdFromUrl } from "../lib/transcript.ts";
-import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../lib/openrouter.ts";
-import { deltaText, modelleAusListe, preis, verarbeiteSse, type MistralChunk, type RawModel } from "../lib/mistral.ts";
+} from "../../shared/src/lib/timestamps.ts";
+import { parseJson3, pickTrack, videoIdAusText, videoIdFromUrl } from "../../shared/src/lib/transcript.ts";
+import { chatStream } from "../../shared/src/lib/chat.ts";
+import { inhaltAlsHtml, jsonNach, kommentareAlsText } from "../../shared/src/lib/kommentare.ts";
+import { anteilPositiv, ganzeZahl, schaetzeDislikes } from "../../shared/src/lib/bewertung.ts";
+import { guessPriceUnit, isValidSlug, toUsdPerHour } from "../../shared/src/lib/openrouter.ts";
+import { deltaText, modelleAusListe, preis, verarbeiteSse, type MistralChunk, type RawModel } from "../../shared/src/lib/mistral.ts";
 import { toTranscript } from "../lib/fallback.ts";
 import { panelTimeToSeconds } from "../lib/transcript-panel.ts";
-import type { CaptionTrack, Transcript } from "../lib/types.ts";
-import { bildeAbsaetze, bildeLeseabsaetze } from "../lib/absaetze.ts";
+import type { CaptionTrack, Settings, Transcript, Usage } from "../../shared/src/lib/types.ts";
+import { bildeAbsaetze, bildeLeseabsaetze } from "../../shared/src/lib/absaetze.ts";
 import { baueWav } from "../lib/audio-live.ts";
 import {
   korrigiere,
   korrigiereTranskript,
   parseWoerterbuch,
   schreibweisenHinweis,
-} from "../lib/korrektur.ts";
+} from "../../shared/src/lib/korrektur.ts";
 
 let checks = 0;
 const check = (name: string, fn: () => void) => {
   fn();
+  checks++;
+  console.log("  ok:", name);
+};
+
+const checkAsync = async (name: string, fn: () => Promise<void>) => {
+  await fn();
   checks++;
   console.log("  ok:", name);
 };
@@ -141,11 +151,30 @@ check("videoIdFromUrl schliesst Shorts aus", () => {
   assert.equal(videoIdFromUrl("https://www.youtube.com/watch?v=abc12345678"), "abc12345678");
   assert.equal(videoIdFromUrl("https://www.youtube.com/watch?v=abc12345678&t=42"), "abc12345678");
   assert.equal(videoIdFromUrl("https://www.youtube.com/shorts/abc12345678"), null);
+  assert.equal(videoIdFromUrl("https://www.youtube.com/live/-1iHM9E9_JQ?si=x"), "-1iHM9E9_JQ");
+  assert.equal(videoIdFromUrl("https://www.youtube.com/live/zu-kurz"), null);
   assert.equal(videoIdFromUrl("https://www.youtube.com/"), null);
   assert.equal(videoIdFromUrl("kaputt"), null);
 });
 
 console.log("transkript-panel");
+
+check("Geteilter Text: Video-ID aus youtu.be, watch, live – Shorts nicht", () => {
+  // Was die YouTube-App beim Teilen schickt, ist kein sauberer Link.
+  assert.equal(videoIdAusText("Schau mal https://youtu.be/aqz-KE-bpKQ?si=Ab12"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("https://m.youtube.com/watch?v=9CZBIaaiPRI&t=30s"), "9CZBIaaiPRI");
+  assert.equal(videoIdAusText("https://www.youtube.com/live/aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("https://www.youtube.com/shorts/aqz-KE-bpKQ"), null);
+  assert.equal(videoIdAusText("gar kein Link"), null);
+  // Fremde Hosts, die nur so aussehen, zählen nicht; Subdomain und fehlendes Schema schon.
+  assert.equal(videoIdAusText("https://notyoutube.com/watch?v=aqz-KE-bpKQ"), null);
+  assert.equal(videoIdAusText("https://evil.test/youtu.be/aqz-KE-bpKQ"), null);
+  assert.equal(videoIdAusText("https://music.youtube.com/watch?v=aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("Titel youtu.be/aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  // Mehrere Parameter vor v=, und bei doppeltem v= gilt das erste – wie bei YouTube.
+  assert.equal(videoIdAusText("https://www.youtube.com/watch?list=PLx&index=2&v=aqz-KE-bpKQ"), "aqz-KE-bpKQ");
+  assert.equal(videoIdAusText("https://www.youtube.com/watch?v=aqz-KE-bpKQ&v=9CZBIaaiPRI"), "aqz-KE-bpKQ");
+});
 
 check("panelTimeToSeconds liest YouTubes Panel-Format", () => {
   // Real gemessen: das Panel schreibt „0:00“ bis „18:29“, bei langen Videos „1:02:03“.
@@ -278,6 +307,46 @@ check("Mistral-Preistabelle: Familie erkannt, EU-Aufpreis 10 %, Unbekanntes ohne
   assert.ok(m && Math.abs((m.pricePrompt ?? 0) - 0.165e-6) < 1e-15);
 });
 
+// Die Rechnung selbst, nicht nur die Tabelle: bis hierher prüfte nur `preis()`. Eine
+// Formel in chat.ts ohne Division, mit vertauschten Faktoren oder mit stillem cost: 0
+// wäre grün geblieben (Grok, 18.09.2026). Deshalb läuft hier der echte Weg mit
+// gefälschter Gegenstelle.
+await checkAsync("Mistral-Kosten je Antwort: Token mal Tabellenpreis, sonst gar nichts", async () => {
+  const strom = [
+    'data: {"choices":[{"delta":{"content":"hallo"}}]}',
+    'data: {"usage":{"prompt_tokens":30000,"completion_tokens":2000}}',
+    "data: [DONE]",
+    "",
+  ].join("\n\n");
+
+  const lauf = async (model: string): Promise<Usage | undefined> => {
+    const echtes = globalThis.fetch;
+    globalThis.fetch = (async () => new Response(strom, { status: 200 })) as typeof fetch;
+    try {
+      let gesehen: Usage | undefined;
+      await chatStream(
+        { provider: "mistral", mistralApiKey: "test", mistralModel: model, mistralRegion: "global" } as Settings,
+        { model: "", supportsReasoning: false, reasoning: "minimal", system: "", messages: [] },
+        { onDelta: () => {}, onUsage: (u) => { gesehen = u; } },
+        new AbortController().signal,
+      );
+      return gesehen;
+    } finally {
+      globalThis.fetch = echtes;
+    }
+  };
+
+  // 30.000 × 1,50 $ + 2.000 × 7,50 $ je Million = 0,045 + 0,015 = 0,06 $.
+  const mitPreis = await lauf("mistral-medium-latest");
+  assert.equal(mitPreis?.prompt_tokens, 30_000);
+  assert.ok(Math.abs((mitPreis?.cost ?? 0) - 0.06) < 1e-12, `erwartet 0,06 – bekommen ${mitPreis?.cost}`);
+
+  // Ohne Tabellenpreis bleibt das Feld weg; ein cost von 0 wäre eine erfundene Zahl.
+  const ohnePreis = await lauf("magistral-medium-latest");
+  assert.equal(ohnePreis?.completion_tokens, 2_000);
+  assert.equal(ohnePreis?.cost, undefined);
+});
+
 check("Mistral-Delta ohne Inhalt ergibt leeren Text", () => {
   assert.equal(deltaText({}), "");
   assert.equal(deltaText({ choices: [{ delta: { content: null } }] }), "");
@@ -364,6 +433,84 @@ check("TS_GROUP_PATTERN fasst mehrere Zeiten in einer Klammer", () => {
   // Zahlen ohne Klammern bleiben in Ruhe.
   TS_GROUP_PATTERN.lastIndex = 0;
   assert.equal(TS_GROUP_PATTERN.test("Preise 3,55 bis 11,587 Dollar"), false);
+});
+
+check("Zeitspannen: die Klammer trifft, nur der Anfang ist Sprungziel", () => {
+  const text = "Behauptung [12:34–13:10], auch [01:00 - 02:00] und [05:00 bis 06:00].";
+  TS_GROUP_PATTERN.lastIndex = 0;
+  const treffer = [...text.matchAll(TS_GROUP_PATTERN)].map((m) => m[1]);
+  assert.deepEqual(treffer, ["12:34–13:10", "01:00 - 02:00", "05:00 bis 06:00"]);
+  assert.equal(TS_RANGE_SEP.test("–"), true);
+  assert.equal(TS_RANGE_SEP.test(" - "), true);
+  assert.equal(TS_RANGE_SEP.test(", "), false);
+  assert.equal(TS_RANGE_SEP.test(" und "), false);
+});
+
+check("Kommentar-HTML: Fett, Kursiv, Links, Emojis nach UTF-16-Index", () => {
+  // Aufbau wie gemessen am 26.09.2026: „😭“ zählt zwei Einheiten, Läufe überlappen.
+  const html = inhaltAlsHtml({
+    content: "😭 fett kursiv 0:25 <x> :yt: link",
+    styleRuns: [
+      { startIndex: 3, length: 4, weightLabel: "FONT_WEIGHT_MEDIUM" },
+      { startIndex: 8, length: 6, weightLabel: "FONT_WEIGHT_NORMAL", italic: true },
+      { startIndex: 15, length: 4, weightLabel: "FONT_WEIGHT_NORMAL" },
+    ],
+    commandRuns: [
+      { startIndex: 15, length: 4, onTap: { innertubeCommand: { commandMetadata: { webCommandMetadata: { url: "/watch?v=abc&t=25s" } } } } },
+      { startIndex: 29, length: 4, onTap: { innertubeCommand: { urlEndpoint: { url: "https://www.youtube.com/redirect?q=https%3A%2F%2Fexample.org%2F" } } } },
+    ],
+    attachmentRuns: [
+      { startIndex: 0, length: 2, element: { type: { imageType: { image: { sources: [{ url: "https://e/u1f62d.png" }] } } }, properties: { accessibilityProperties: { label: "😭" } } } },
+      { startIndex: 24, length: 4, element: { type: { imageType: { image: { sources: [{ url: "https://e/yt.png" }] } } }, properties: { accessibilityProperties: { label: ":yt-smile:" } } } },
+    ],
+  });
+  assert.equal(
+    html,
+    '😭 <b>fett</b> <i>kursiv</i> <a href="https://www.youtube.com/watch?v=abc&amp;t=25s">0:25</a> &lt;x&gt; ' +
+      '<img class="emoji" src="https://e/yt.png" alt=":yt-smile:"> <a href="https://example.org/">link</a>',
+  );
+  // Ein Redirect auf `javascript:` wird kein Link.
+  const boese = inhaltAlsHtml({
+    content: "klick",
+    commandRuns: [{ startIndex: 0, length: 5, onTap: { innertubeCommand: { urlEndpoint: { url: "https://www.youtube.com/redirect?q=javascript%3Aalert(1)" } } } }],
+  });
+  assert.equal(boese, "klick");
+  assert.deepEqual(jsonNach('x = {"a":"}{","b":{"c":1}};', "x = "), { a: "}{", b: { c: 1 } });
+});
+
+check("Dislike-Schätzung aus Aufrufen und Likes, Zahlen aus Seitentexten", () => {
+  // Mediane aus dem Archiv 2021 (docs/messungen.md): Like-Rate 1 % → Anteil 5,1 %,
+  // 10 % → 1,4 %, 0,1 % → 19,8 %. Die Gerade muss in deren Nähe liegen.
+  const anteil = (v: number, l: number) => {
+    const d = schaetzeDislikes(v, l)!;
+    return d / (d + l);
+  };
+  assert.ok(Math.abs(anteil(100_000, 1_000) - 0.05) < 0.01, String(anteil(100_000, 1_000)));
+  assert.ok(Math.abs(anteil(100_000, 10_000) - 0.014) < 0.005, String(anteil(100_000, 10_000)));
+  assert.ok(Math.abs(anteil(100_000, 100) - 0.198) < 0.03, String(anteil(100_000, 100)));
+  assert.equal(schaetzeDislikes(0, 5), null);
+  assert.equal(schaetzeDislikes(1000, 0), null);
+  assert.equal(schaetzeDislikes(10, 50), null); // mehr Likes als Aufrufe: Unsinn
+  assert.equal(anteilPositiv(0, 0), null);
+  assert.equal(anteilPositiv(3, 1), 0.75);
+  assert.equal(ganzeZahl("Dieses Video liken (bisher 110.047 positive Bewertungen)"), 110047);
+  assert.equal(ganzeZahl("like this video along with 110,047 other people"), 110047);
+  assert.equal(ganzeZahl("23\u202f400\u202f861 vues"), 23400861);
+  assert.equal(ganzeZahl("Dieses Video liken"), null);
+});
+
+check("Kommentare als Text für die Stimmungsauswertung", () => {
+  const k = (content: string, likes: string, vomKanal = false) => ({
+    id: content, autor: "", autorUrl: "", avatar: "", inhalt: { content }, zeit: "", likes,
+    angepinnt: "", herz: false, vomKanal, verifiziert: false, antworten: [],
+  });
+  const text = kommentareAlsText(
+    { anzahlText: "", unvollstaendig: false, kommentare: [k("Super\nVideo", "12"), k("x".repeat(600), "", true)] },
+    500,
+  );
+  const [a, b] = text.split("\n");
+  assert.equal(a, "[12 Likes] Super Video");
+  assert.ok(b!.startsWith("[0 Likes, Kanal selbst] xxx") && b!.endsWith(" …") && b!.length < 540);
 });
 
 check("Zu dichte Zeitmarken werden ausgedünnt", () => {

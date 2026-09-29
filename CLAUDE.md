@@ -4,8 +4,13 @@ Chrome-Extension (MV3): Chat-Sidebar auf YouTube-Videoseiten. Transkript-Chat,
 Zusammenfassung, Kapitel, Übersetzung. Stack: WXT, React 19, TypeScript, Tailwind 4,
 shadcn/ui, pnpm.
 
+Dazu eine Android-App (Capacitor) in `app/`, die sich den Kern in `shared/` mit der
+Erweiterung teilt – Stand: Spike, siehe §6.
+
 Aktueller Stand, offene Punkte und Historie stehen in [status.md](status.md) – zuerst
-lesen. Nutzerseitige Doku in [README.md](README.md).
+lesen. Nutzerseitige Doku in [README.md](README.md). Wer die App am Mac weiterbaut,
+fängt bei [docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md)
+an.
 
 ---
 
@@ -17,10 +22,18 @@ lesen. Nutzerseitige Doku in [README.md](README.md).
 aufruft, auch nicht als optionaler Zweig. Kein Fallback zwischen beiden: fällt der
 gewählte Anbieter aus, sagt die UI das, statt still zum anderen zu wechseln. Keine
 generische Provider-Abstraktion – ein Schalter (`settings.provider`), zwei Clients
-(`lib/openrouter.ts`, `lib/mistral.ts`), der Service Worker verzweigt an genau einer
-Stelle. Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Preise, STT), fehlt bei
+(`shared/src/lib/openrouter.ts`, `shared/src/lib/mistral.ts`), verzweigt wird an genau
+einer Stelle (`shared/src/lib/chat.ts`, §6). Was nur OpenRouter kann (Web-Plugin, Reasoning-Regler, Preise, STT), fehlt bei
 Mistral sichtbar, nicht heimlich. Groq ausschliesslich über OpenRouters
 Provider-Routing.
+
+**Einzige Ausnahme (Michael, 29.09.2026): `returnyoutubedislikeapi.com`** für die
+Dislikes am Dislike-Knopf – nur im `full`-Build, nur die Video-ID geht hin, abschaltbar
+(`showDislikes`, Standard an). Dazu Balken unter Vorschaubildern (`showThumbRatings`,
+Standard **aus** – dann gehen die IDs aller sichtbaren Vorschläge hin). Kein KI-Anbieter. Ist der Dienst nicht erreichbar, und im
+Store-Build immer, schätzt `shared/src/lib/bewertung.ts` aus Aufrufen und Likes der
+Seite – ohne Abruf. Im Store-Build fehlt der Dienst samt Permission;
+`verify-store-bundle.sh` Test 2f beweist beides.
 
 **2. Der Store-Build enthält keinen Download-Code.** Nicht ausgeblendet, sondern nicht
 vorhanden: Native Messaging, yt-dlp-Weg und Helfer-Routen fehlen im Bundle. Das gilt für
@@ -50,7 +63,22 @@ Hinweis auf eigene, gemeinfreie und lizenzfreie Nutzung. Einordnung mit Quellen:
 [docs/gutachten-agy-video-download-2026-09-03.md](docs/gutachten-agy-video-download-2026-09-03.md).
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
-`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`.
+`youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`; im
+`full`-Build zusätzlich `returnyoutubedislikeapi.com` (Ausnahme in §1). In der App
+bleiben die Android-Permissions bei `INTERNET`; keine Analytics-Abhängigkeit im Gradle
+(kein Firebase, kein Crashlytics).
+
+**6. Zwei Ziele, ein Kern.** Chrome-Erweiterung und Android-App teilen sich `shared/`
+(pnpm-Workspace). Dort steht kein `chrome.`, kein `document.`, kein `window.`, nichts aus
+`wxt/` und kein `__FALLBACK__` – geprüft von `shared/scripts/check.sh`, Kommentare
+ausgenommen. Grund: `__FALLBACK__` wird in vorgebündelten Abhängigkeiten nicht ersetzt,
+und der Store-Beweis wäre still unwahr. Die Anbieter-Verzweigung aus §1 steht in
+`shared/src/lib/chat.ts` und **nur dort**; beide Plattformen rufen sie auf, statt sie zu
+kopieren – die App als Messgerät noch nicht, sie spricht die Clients für die Messungen B1
+und B2 absichtlich einzeln an. Für die App gilt §2 verschärft: es gibt keinen `full`-Build – kein Native
+Messaging, kein yt-dlp, kein Videodownload. Bewiesen wird das mit
+`app/scripts/verify-app-bundle.sh`, Stufe 1 gegen `app/dist`, Stufe 2 gegen die
+entpackte APK (nur die zeigt, dass Capacitors Kopierschritt nichts hinzufügt).
 
 ---
 
@@ -99,13 +127,18 @@ Seitenleiste dort nachlesen**, sonst wird eine bereits widerlegte Hypothese neu 
 
 ```
 build-full/           gebaute Erweiterung zum Laden (GitHub-Build)
+shared/               plattformneutraler Kern für Erweiterung und App
+  src/lib/            openrouter · mistral · chat · prompts · transcript · settings · i18n …
+app/                  Android-App (Capacitor + TypeScript), android/ eingecheckt
+  src/                main.ts (Spike-Messungen) · http-capacitor.ts
+  scripts/            verify-app-bundle.sh
 icon-source/          Icon-Quelle (Python/PIL) und die gerenderten Grössen
 build-store/          gebaute Erweiterung ohne Fallback
 extension/            WXT-Projekt (Quelltext, das Manifest entsteht erst beim Bauen)
   entrypoints/        content.tsx · background.ts · options/
   components/         Sidebar, Markdown, TranscriptView, HistoryView, ui/
-  lib/                openrouter · mistral · transcript · audio-live · fallback · korrektur · prompts …
-  scripts/            selfcheck.ts · verify-store-bundle.sh
+  lib/                audio-live · fallback · chat-client · storage · transcript-panel · translate-local …
+  scripts/            selfcheck.ts · verify-store-bundle.sh · ladeprobe.mjs
 native-host/          Python-Host für den Audio-Fallback (nur full)
 ```
 
@@ -116,7 +149,7 @@ der Bedingung.
 ## Prüfungen
 
 ```bash
-cd extension && pnpm run compile && pnpm run check
+pnpm -r run compile && pnpm -r run check          # Wurzel: extension, shared, app
 cd extension && pnpm run build && pnpm run build:store && ./scripts/verify-store-bundle.sh
 cd native-host && python3 selfcheck.py
 ```
@@ -126,9 +159,18 @@ steht im README-Abschnitt „Was nicht geprüft ist“ und wird dort gepflegt, n
 weggelassen.
 
 **Fünftens, nach jeder Build-Änderung: die Erweiterung einmal headless laden** und
-Konsole samt `pageerror` einsammeln (Playwright-Chromium, `--load-extension`). Am
+Konsole samt `pageerror` einsammeln. Das macht `extension/scripts/ladeprobe.mjs` (braucht
+Playwright, seit 18.09.2026 devDependency – der `pnpm dlx`-Weg kann nicht funktionieren,
+weil ESM vom Ort der Datei aus auflöst; Browser einmalig mit
+`pnpm exec playwright install chromium`, Notweg im Kopf des Skripts). Am
 05.09.2026 bestanden alle vier Prüfungen, während das Content-Script beim ersten Render
 warf – ein Bundle-Grep ersetzt keinen Ladeversuch.
+
+**Sechstens, für die App: nichts davon ist in der Cloud prüfbar.** Android-SDK
+(`dl.google.com`) und `youtube.com` sind in der Entwicklungsumgebung gesperrt. Gebaut und
+gemessen wird am Mac; bis eine Messung mit Gerät und Android-Version in
+[docs/messungen.md](docs/messungen.md) steht, gilt jede Aussage über App-Verhalten als
+ungeprüft und gehört in den README-Abschnitt „Was nicht geprüft ist".
 
 **Version vor jedem Commit mit Nutzerwirkung erhöhen**, Schema `major.function.fix`
 (status.md, 03.09.2026), an zwei Stellen: `extension/wxt.config.ts` (Manifest) und

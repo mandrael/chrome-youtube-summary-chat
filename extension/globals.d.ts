@@ -4,3 +4,6 @@
  * entfernt – im Store-Build steht `false` im Quelltext, nicht die Variable.
  */
 declare const __FALLBACK__: boolean;
+
+/** Zeitpunkt des Builds als ISO-String, gezeigt auf der Optionsseite. */
+declare const __BAUZEIT__: string;

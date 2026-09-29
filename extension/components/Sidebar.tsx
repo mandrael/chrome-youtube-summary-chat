@@ -21,13 +21,14 @@ import { Markdown } from "@/components/Markdown";
 import { TranscriptView } from "@/components/TranscriptView";
 import { HistoryView } from "@/components/HistoryView";
 import { ask, startChat, startDownload, startFallback } from "@/lib/chat-client";
-import { makeT, resolveUiLang, type T } from "@/lib/i18n";
+import { makeT, resolveUiLang, type T } from "@shared/lib/i18n";
 import {
   PRESETS,
+  kommentarStimmungPrompt,
   webKontext,
   webLookupPrompt,
-} from "@/lib/prompts";
-import { PREISSTAND } from "@/lib/mistral";
+} from "@shared/lib/prompts";
+import { PREISSTAND } from "@shared/lib/mistral";
 import {
   empfohleneModelle,
   FALLBACK_MODELS,
@@ -36,7 +37,7 @@ import {
   listModels,
   ONE_M_CONTEXT,
   preisProAnfrage,
-} from "@/lib/openrouter";
+} from "@shared/lib/openrouter";
 import {
   collapsedItem,
   deleteConversation,
@@ -49,16 +50,17 @@ import {
   wideItem,
 } from "@/lib/storage";
 import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
-import { ZIELSPRACHEN } from "@/lib/tracks";
+import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
-import { transcriptToText } from "@/lib/timestamps";
-import { translateCuesViaOpenRouter } from "@/lib/translate-cues";
+import { transcriptToText } from "@shared/lib/timestamps";
+import { kommentareAlsHtml, kommentareAlsText, ladeKommentare } from "@shared/lib/kommentare";
+import { translateCuesViaOpenRouter } from "@shared/lib/translate-cues";
 import { NoCaptionsError } from "@/lib/transcript";
-import { formatTs } from "@/lib/timestamps";
+import { formatTs } from "@shared/lib/timestamps";
 import { starteLiveTranskription } from "@/lib/audio-live";
-import { STT_MODEL_IDS } from "@/lib/openrouter";
+import { STT_MODEL_IDS } from "@shared/lib/openrouter";
 import { loadTrack, loadTranscript } from "@/lib/transcript";
-import { korrigiereTranskript, parseWoerterbuch, schreibweisenHinweis } from "@/lib/korrektur";
+import { korrigiereTranskript, parseWoerterbuch, schreibweisenHinweis } from "@shared/lib/korrektur";
 import {
   availability as localAvailability,
   baseLang,
@@ -75,7 +77,7 @@ import type {
   TranscriptTranslation,
   UiLang,
   VideoFormat,
-} from "@/lib/types";
+} from "@shared/lib/types";
 import { cn } from "@/lib/utils";
 
 type LoadState = "loading" | "ready" | "no-captions" | "error";
@@ -173,7 +175,11 @@ export function Sidebar({
     })();
     // Änderungen in der Options-Page sollen ohne Reload ankommen, und das Symbol in der
     // Werkzeugleiste klappt über denselben Schlüssel auf und zu.
-    const onChange = () => void getSettings().then(setSettings);
+    // Nur der Einstellungs-Schlüssel: der Verlauf schreibt in denselben Speicher, und jede
+    // Antwort liesse sonst in jedem offenen Tab die ganze Sidebar neu rendern.
+    const onChange = (aenderung: Record<string, chrome.storage.StorageChange>) => {
+      if ("settings" in aenderung) void getSettings().then(setSettings);
+    };
     chrome.storage.local.onChanged.addListener(onChange);
     const stop = collapsedItem.watch((v) => setCollapsed(!!v));
     return () => {
@@ -246,15 +252,16 @@ export function Sidebar({
 
   /* ---- Verlauf sichern ---- */
 
+  // Nicht während des Streams: sonst schriebe jedes Delta die ganze Unterhaltung neu.
   React.useEffect(() => {
-    if (!messages.length) return;
+    if (!messages.length || streaming) return;
     void saveConversation({
       videoId,
       title: videoTitle,
       updatedAt: Date.now(),
       messages,
     });
-  }, [messages, videoId, videoTitle]);
+  }, [messages, videoId, videoTitle, streaming]);
 
   /*
    * Eine gespeicherte Übersetzung gehört zu Video, Spursprache und Zielsprache. Passt
@@ -275,14 +282,17 @@ export function Sidebar({
     };
   }, [videoId, transcript, settings?.translationTarget]);
 
-  // Ein Videowechsel beendet einen laufenden Übersetzungslauf.
-  React.useEffect(() => () => abbruchRef.current?.abort(), [videoId]);
+  // Ein Video- oder Spurwechsel beendet einen laufenden Übersetzungslauf – sonst läuft
+  // er kostenpflichtig weiter, und der Reset oben verwirft sein Ergebnis still.
+  React.useEffect(() => () => abbruchRef.current?.abort(), [videoId, transcript]);
 
   const presetsVisible = messages.length === 0 || presetsOpen;
 
+  // Nur bei einer neuen Nachricht nach unten, nicht bei jedem Stream-Delta: sonst klebt
+  // die Ansicht am Ende, und wer weiter oben liest, wird ständig heruntergezogen.
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, streaming, presetsVisible]);
+  }, [messages.length, presetsVisible]);
 
   /* ---- Senden ---- */
 
@@ -305,7 +315,12 @@ export function Sidebar({
     return code;
   }
 
-  function buildSystem(s: AppSettings, tr: Transcript, override?: string): string {
+  function buildSystem(
+    s: AppSettings,
+    tr: Transcript,
+    override?: string,
+    ohneTranskript = false,
+  ): string {
     const parts = [override ?? s.systemPrompt];
 
     if (s.answerLang === "de") {
@@ -329,14 +344,18 @@ export function Sidebar({
     const hinweis = schreibweisenHinweis(transcriptToText(tr), woerterbuch);
     if (hinweis) parts.push(hinweis.trim());
 
-    parts.push(
-      "--- TRANSKRIPT ---\n" +
-        `Video: ${videoTitle}\n` +
-        (tr.lang ? `Sprache der Spur: ${tr.lang}\n` : "") +
-        `Quelle: ${tr.source}\n\n` +
-        transcriptToText(tr),
-    );
+    if (!ohneTranskript) parts.push(transkriptBlock(tr));
     return parts.join("\n\n");
+  }
+
+  function transkriptBlock(tr: Transcript): string {
+    return (
+      "--- TRANSKRIPT ---\n" +
+      `Video: ${videoTitle}\n` +
+      (tr.lang ? `Sprache der Spur: ${tr.lang}\n` : "") +
+      `Quelle: ${tr.source}\n\n` +
+      transcriptToText(tr)
+    );
   }
 
   /**
@@ -370,8 +389,15 @@ export function Sidebar({
     // `preset`). Hier bleibt er draussen: sonst verdirbt ein liegengebliebener Zusatz
     // still auch Übersetzung und Netzrecherche.
     const prompt = nutzlast ? `${text}\n\n---\n\n${nutzlast}` : text;
+    // Leere oder fehlgeschlagene Antworten (Abbruch vor dem ersten Token, Fehlermeldung)
+    // gehen nicht mit, samt der Frage davor – sonst lehnen manche Modelle jede weitere
+    // Anfrage mit leerem Assistenten-Inhalt ab, und Fehlertexte stünden als Antwort da.
+    const kaputt = (m?: ChatMessage) => m?.role === "assistant" && (!m.content || m.error);
+    const verlauf = messages.filter(
+      (m, i) => !kaputt(m) && !(m.role === "user" && kaputt(messages[i + 1])),
+    );
     const next: ChatMessage[] = [
-      ...messages,
+      ...verlauf,
       { role: "user", content: prompt, ...(label ? { label } : {}) },
     ];
     setMessages([...next, { role: "assistant", content: "" }]);
@@ -384,8 +410,18 @@ export function Sidebar({
         model: activeModel,
         supportsReasoning: modelInfo?.supportsReasoning ?? true,
         reasoning: settings.reasoning,
-        system: buildSystem(settings, transcript, systemOverride),
-        messages: next,
+        system: buildSystem(settings, transcript, systemOverride, web),
+        // Mit Websuche steht das Transkript als eigene Nachricht vorn im Verlauf statt im
+        // System-Prompt: mit dem Web-Plugin fragte das Modell sonst, um welches Video es
+        // geht (Michael, 26.09.2026) – der System-Prompt kam offenbar nicht mehr an. Die
+        // letzte Nachricht bleibt die Frage, aus ihr bildet das Plugin die Suchanfrage.
+        messages: web
+          ? [
+              { role: "user", content: transkriptBlock(transcript) },
+              { role: "assistant", content: "OK." },
+              ...next,
+            ]
+          : next,
         web,
         onSources: (quellen) =>
           setMessages((m) => {
@@ -594,7 +630,11 @@ export function Sidebar({
       target,
       targetName: settings.translationTarget,
       route,
-      texts: from ? [...uebersetzung!.texts] : new Array<string | null>(n).fill(null),
+      // Ab `from` leeren: der abgebrochene Block hat schon Zeilen gestreamt, und `onCue`
+      // hängt an Vorhandenes an – ohne Leeren stünde jede Zeile doppelt da.
+      texts: from
+        ? uebersetzung!.texts.map((x, i) => (i < from ? x : null))
+        : new Array<string | null>(n).fill(null),
       done: from,
       status: "running",
     });
@@ -632,6 +672,9 @@ export function Sidebar({
             onDownload: (loaded) => setDownloadAnteil(loaded),
           })
         : translateCuesViaOpenRouter(transcript.cues, {
+            // Der Chat-Strom der Erweiterung: Port zum Service Worker. Die Android-App
+            // reicht hier ihren eigenen ein – deshalb Parameter statt Import.
+            stream: startChat,
             model: activeModel,
             supportsReasoning: modelInfo?.supportsReasoning ?? true,
             reasoning: settings.reasoning,
@@ -700,9 +743,18 @@ export function Sidebar({
 
   // Beim Videowechsel läuft sonst die Erkennung des alten Videos weiter und stellt am
   // Ende die Wiedergabezeit des neuen zurück.
-  React.useEffect(() => () => liveRef.current?.cancel(), [videoId]);
+  React.useEffect(
+    () => () => {
+      liveRef.current?.cancel();
+      fallbackRef.current?.cancel();
+    },
+    [videoId],
+  );
 
   /* ---- Audio-Fallback (nur Build "full") ---- */
+
+  // Der Helfer-Job des verlassenen Videos wird beim Wechsel abgebrochen (Effekt oben).
+  const fallbackRef = React.useRef<{ cancel: () => void } | null>(null);
 
   function runFallbackJob(kind: HelperJob) {
     if (!__FALLBACK__) return;
@@ -710,6 +762,7 @@ export function Sidebar({
     const job = startFallback(videoId, kind, (p) =>
       setFallbackState(`${p.message}${p.percent != null ? ` (${p.percent}%)` : ""}`),
     );
+    fallbackRef.current = job;
     job.promise
       .then((tr) => {
         uebernimmTranskript(tr);
@@ -720,6 +773,9 @@ export function Sidebar({
         setLoadError(String(e?.message ?? e));
         setLoadState("error");
         setFallbackState(null);
+      })
+      .finally(() => {
+        if (fallbackRef.current === job) fallbackRef.current = null;
       });
   }
 
@@ -744,7 +800,8 @@ export function Sidebar({
     return brichDownloadAb;
   }, [videoId]);
 
-  function oeffneDownload() {
+  /** @param nurTon Aus „Audio herunterladen“: dann ist die Tonspur (Höhe 0) vorgewählt. */
+  function oeffneDownload(nurTon = false) {
     if (!__FALLBACK__) return;
     brichDownloadAb();
     const lauf = dlLauf.current;
@@ -754,13 +811,18 @@ export function Sidebar({
       .then((formate) => {
         if (lauf !== dlLauf.current) return;
         const wunsch = settings?.downloadHeight ?? 720;
-        const passend = formate.filter((f) => f.height <= wunsch);
+        // Höhe 0 ist die Tonspur allein; sie zählt bei der Videowahl nicht mit.
+        const bild = formate.filter((f) => f.height > 0);
+        const passend = bild.filter((f) => f.height <= wunsch);
         // Nächstkleinere vorhandene Höhe; gibt es keine darunter, die kleinste darüber.
-        const hoehe = passend.length
-          ? Math.max(...passend.map((f) => f.height))
-          : formate.length
-            ? Math.min(...formate.map((f) => f.height))
-            : null;
+        const hoehe =
+          nurTon && formate.some((f) => f.height === 0)
+            ? 0
+            : passend.length
+              ? Math.max(...passend.map((f) => f.height))
+              : bild.length
+                ? Math.min(...bild.map((f) => f.height))
+                : null;
         setDl((d) => d && { ...d, formate, hoehe });
       })
       .catch((e) => {
@@ -880,13 +942,107 @@ export function Sidebar({
     return teile.join("\n");
   };
 
-  function download(name: string, content: string) {
-    const url = URL.createObjectURL(new Blob([content], { type: "text/markdown" }));
+  function download(name: string, content: string, type = "text/markdown") {
+    const url = URL.createObjectURL(new Blob([content], { type: `${type};charset=utf-8` }));
     const a = document.createElement("a");
     a.href = url;
     a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /* ---- Transkript und Kommentare als Datei ---- */
+
+  function transkriptTxt() {
+    if (!transcript) return;
+    download(
+      `transkript-${videoId}.txt`,
+      `${videoTitle}\nhttps://www.youtube.com/watch?v=${videoId}\n\n${transcriptToText(transcript)}\n`,
+      "text/plain",
+    );
+  }
+
+  const [kommentare, setKommentare] = React.useState<{ geladen: number; stopp: () => void } | null>(null);
+  const kommentarAbbruch = React.useRef<AbortController | null>(null);
+  const [kommentarMeldung, setKommentarMeldung] = React.useState("");
+
+  // Laufen Kommentare für das verlassene Video, fällt ihr Ergebnis weg – die Datei
+  // gehörte zu einem Video, das nicht mehr auf dem Schirm ist.
+  const kommentarLauf = React.useRef(0);
+  React.useEffect(
+    () => () => {
+      kommentarLauf.current++;
+      kommentarAbbruch.current?.abort();
+      setKommentare(null);
+      setKommentarMeldung("");
+    },
+    [videoId],
+  );
+
+  // Nur im Build "full": Kommentare sind Inhalte Dritter, und der Store verbietet das
+  // Herunterladen geschützter Inhalte (Programmrichtlinien, geprüft 27.09.2026).
+  async function kommentareLaden() {
+    if (!__FALLBACK__ || kommentare) return;
+    const lauf = ++kommentarLauf.current;
+    const ab = new AbortController();
+    kommentarAbbruch.current = ab;
+    setKommentarMeldung("");
+    setKommentare({ geladen: 0, stopp: () => ab.abort() });
+    try {
+      const lage = await ladeKommentare(videoId, {
+        signal: ab.signal,
+        onProgress: (geladen) =>
+          lauf === kommentarLauf.current && setKommentare((k) => k && { ...k, geladen }),
+      });
+      if (lauf !== kommentarLauf.current) return;
+      download(
+        `kommentare-${videoId}.html`,
+        kommentareAlsHtml(lage, { id: videoId, titel: videoTitle, kanal: channel ?? "" }),
+        "text/html",
+      );
+    } catch (e) {
+      if (lauf === kommentarLauf.current) setKommentarMeldung(String((e as Error)?.message ?? e));
+    } finally {
+      if (lauf === kommentarLauf.current) setKommentare(null);
+    }
+  }
+
+  /**
+   * Kommentarstimmung (nur Build "full"): dieselbe Abrufroutine wie der Export, aber nur
+   * die rund 100 Top-Kommentare, ohne Antworten und ohne Datei. Die Kommentare gehen als
+   * Nutzlast an das Modell, im Chat steht nur der Knopfname.
+   */
+  async function kommentarStimmung() {
+    if (!__FALLBACK__ || kommentare || streaming) return;
+    const lauf = ++kommentarLauf.current;
+    const ab = new AbortController();
+    kommentarAbbruch.current = ab;
+    setKommentarMeldung("");
+    setKommentare({ geladen: 0, stopp: () => ab.abort() });
+    try {
+      const lage = await ladeKommentare(videoId, {
+        signal: ab.signal,
+        hoechstens: 100,
+        onProgress: (geladen) =>
+          lauf === kommentarLauf.current && setKommentare((k) => k && { ...k, geladen }),
+      });
+      if (lauf !== kommentarLauf.current || ab.signal.aborted) return;
+      setKommentare(null);
+      if (!lage.kommentare.length) {
+        setKommentarMeldung(t("commentsNone"));
+        return;
+      }
+      void send(
+        kommentarStimmungPrompt(uiLang, lage.kommentare.length, lage.anzahlText),
+        undefined,
+        kommentareAlsText(lage),
+        t("presetSentiment"),
+      );
+    } catch (e) {
+      if (lauf === kommentarLauf.current) setKommentarMeldung(String((e as Error)?.message ?? e));
+    } finally {
+      if (lauf === kommentarLauf.current) setKommentare(null);
+    }
   }
 
   /* ---- Darstellung ---- */
@@ -962,7 +1118,10 @@ export function Sidebar({
         t={t}
         tab={tab}
         setTab={setTab}
-        onVideoDownload={__FALLBACK__ ? oeffneDownload : undefined}
+        onVideoDownload={__FALLBACK__ ? () => oeffneDownload() : undefined}
+        onAudioDownload={__FALLBACK__ ? () => oeffneDownload(true) : undefined}
+        onTranscriptTxt={transcript ? transkriptTxt : undefined}
+        onComments={__FALLBACK__ ? (kommentare ? undefined : () => void kommentareLaden()) : undefined}
         presetsToggle={
           tab === "chat" && messages.length > 0
             ? { open: presetsOpen, toggle: () => setPresetsOpen((v) => !v) }
@@ -977,6 +1136,29 @@ export function Sidebar({
             : undefined
         }
       />
+
+      {(kommentare || kommentarMeldung) && (
+        <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-xs text-muted-foreground">
+          {kommentare ? (
+            <>
+              <Loader2 className="size-3 animate-spin" />
+              <span className="flex-1">
+                {t("commentsLoading")} … {kommentare.geladen}
+              </span>
+              <Button size="iconSm" variant="ghost" title={t("commentsStopHint")} onClick={kommentare.stopp}>
+                <Square />
+              </Button>
+            </>
+          ) : (
+            <>
+              <span className="flex-1 whitespace-pre-wrap text-destructive">{kommentarMeldung}</span>
+              <Button size="iconSm" variant="ghost" title={t("close")} onClick={() => setKommentarMeldung("")}>
+                <X />
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {tab === "chat" && (
         <>
@@ -1023,6 +1205,17 @@ export function Sidebar({
                     {t(label as Parameters<typeof t>[0])}
                   </Button>
                 ))}
+                {n === 1 && __FALLBACK__ && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!transcript || streaming || !!kommentare}
+                    title={t("presetSentimentHint")}
+                    onClick={() => void kommentarStimmung()}
+                  >
+                    {t("presetSentiment")}
+                  </Button>
+                )}
               </div>
             ))}
             {/*
@@ -1052,7 +1245,10 @@ export function Sidebar({
                 busy={fallbackState}
                 onStart={runFallbackJob}
                 onLive={runLive}
-                onCancel={() => liveRef.current?.cancel()}
+                onCancel={() => {
+                  liveRef.current?.cancel();
+                  fallbackRef.current?.cancel();
+                }}
                 keyFehlt={!settings?.apiKey}
                 spurenVorhanden={tracks.length > 0}
               />
@@ -1078,7 +1274,10 @@ export function Sidebar({
                 busy={fallbackState}
                 onStart={runFallbackJob}
                 onLive={runLive}
-                onCancel={() => liveRef.current?.cancel()}
+                onCancel={() => {
+                  liveRef.current?.cancel();
+                  fallbackRef.current?.cancel();
+                }}
                 keyFehlt={!settings?.apiKey}
                 spurenVorhanden={tracks.length > 0}
               />
@@ -1289,6 +1488,9 @@ function Header({
   setTab,
   presetsToggle,
   onVideoDownload,
+  onAudioDownload,
+  onTranscriptTxt,
+  onComments,
   onCollapse,
 }: {
   t: T;
@@ -1297,6 +1499,12 @@ function Header({
   presetsToggle?: { open: boolean; toggle: () => void };
   /** Nur im Build "full" gesetzt (§4a): der Knopf muss sofort sichtbar sein, ohne Transkript. */
   onVideoDownload?: () => void;
+  /** Wie `onVideoDownload`, mit der Tonspur vorgewählt. Nur im Build "full". */
+  onAudioDownload?: () => void;
+  /** Fehlt, solange kein Transkript geladen ist. */
+  onTranscriptTxt?: () => void;
+  /** Fehlt, solange Kommentare schon laden. */
+  onComments?: () => void;
   onCollapse?: () => void;
 }) {
   const tabs: Array<[Tab, string]> = [
@@ -1332,11 +1540,17 @@ function Header({
             <WandSparkles />
           </Button>
         )}
-        {onVideoDownload && (
-          <Button size="iconSm" variant="ghost" title={t("downloadVideo")} onClick={onVideoDownload}>
-            <Download />
-          </Button>
-        )}
+        <DownloadMenue
+          t={t}
+          punkte={[
+            // Nur im Build "full" (§4a); im Store-Build fehlt der Eintrag ganz.
+            ...(onVideoDownload ? [{ text: t("downloadVideo"), los: onVideoDownload }] : []),
+            ...(onAudioDownload ? [{ text: t("downloadAudio"), los: onAudioDownload }] : []),
+            { text: t("downloadTranscriptTxt"), los: onTranscriptTxt },
+            // Im Store-Build fehlt der Eintrag ganz, statt ausgegraut zu sein.
+            ...(__FALLBACK__ ? [{ text: t("downloadComments"), los: onComments }] : []),
+          ]}
+        />
         <Button size="iconSm" variant="ghost" title="Einstellungen" onClick={() => void chrome.runtime.sendMessage({ type: "openOptions" })}>
           <Settings />
         </Button>
@@ -1516,7 +1730,7 @@ function DownloadDialog({
                 disabled={lage.status === "laeuft"}
                 onChange={() => onHoehe(f.height)}
               />
-              <span className="w-14">{f.height}p</span>
+              <span className="w-14">{f.height === 0 ? t("downloadAudioOnly") : `${f.height}p`}</span>
               <span className="text-muted-foreground">{mb(f.bytes)}</span>
             </label>
           ))}
@@ -1728,6 +1942,64 @@ function languageToCode(name: string): string {
 /** Kurzname ohne Anbieter: aus „Google: Gemini 3.8 Flash" wird „Gemini 3.8 Flash". */
 function kurzName(m: ModelInfo | undefined, id: string): string {
   return m ? m.name.replace(/^[^:]+:\s*/, "") : id || "–";
+}
+
+/** Klappmenü am Download-Knopf; ein Eintrag ohne `los` ist ausgegraut. */
+function DownloadMenue({ t, punkte }: { t: T; punkte: Array<{ text: string; los?: () => void }> }) {
+  const [offen, setOffen] = React.useState(false);
+  const huelle = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!offen) return;
+    // composedPath wie im Modellmenü: die Sidebar sitzt im Shadow DOM.
+    const zu = (e: MouseEvent) => {
+      if (huelle.current && !e.composedPath().includes(huelle.current)) setOffen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOffen(false);
+    document.addEventListener("mousedown", zu);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", zu);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [offen]);
+
+  return (
+    <div ref={huelle} className="relative">
+      <Button
+        size="iconSm"
+        variant="ghost"
+        title={t("downloadMenu")}
+        aria-haspopup="menu"
+        aria-expanded={offen}
+        onClick={() => setOffen((v) => !v)}
+      >
+        <Download />
+      </Button>
+      {offen && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-md border border-border bg-card py-1 text-card-foreground shadow-md"
+        >
+          {punkte.map((p) => (
+            <button
+              key={p.text}
+              type="button"
+              role="menuitem"
+              disabled={!p.los}
+              className="block w-full px-3 py-1.5 text-left text-xs hover:bg-accent disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent"
+              onClick={() => {
+                setOffen(false);
+                p.los?.();
+              }}
+            >
+              {p.text}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ModellMenue({

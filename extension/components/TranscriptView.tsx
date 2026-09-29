@@ -16,12 +16,12 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatTs } from "@/lib/timestamps";
-import { bildeAbsaetze, bildeLeseabsaetze } from "@/lib/absaetze";
+import { formatTs } from "@shared/lib/timestamps";
+import { bildeAbsaetze, bildeLeseabsaetze } from "@shared/lib/absaetze";
 import { useFollow } from "@/lib/use-follow";
-import { ZIELSPRACHEN, langcode, langname } from "@/lib/tracks";
-import type { T } from "@/lib/i18n";
-import type { CaptionTrack, Transcript, TranscriptTranslation } from "@/lib/types";
+import { ZIELSPRACHEN, langcode, langname } from "@shared/lib/tracks";
+import type { T } from "@shared/lib/i18n";
+import type { CaptionTrack, Transcript, TranscriptTranslation } from "@shared/lib/types";
 import { cn } from "@/lib/utils";
 
 /**

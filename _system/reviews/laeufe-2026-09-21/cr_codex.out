@@ -1,0 +1,28 @@
+Alle Zeilen beziehen sich auf den angeforderten HEAD `cd1340f`.
+
+## CRITICAL
+
+Keine.
+
+## MAJOR
+
+- `app/src/main.ts:55–56, 227–235` – Die App lädt gespeicherte API-Schlüssel in DOM-Eingabefelder und führt anschließend `https://www.youtube.com/iframe_api` als Skript im selben privilegierten Dokument aus. Szenario: Schlüssel speichern → Messung C starten → ein kompromittiertes oder verändertes IFrame-API-Skript kann `#orKey.value` und `#miKey.value` lesen und versenden. Beleg: `ladeEingaben()` setzt beide Feldwerte; `ladeYtApi()` hängt das fremde Skript mit `document.head.appendChild(s)` ein; eine CSP fehlt. Vorschlag: Player-Code in einen isolierten, sandboxed IFrame verschieben und nur die nötigen Befehle per `postMessage` austauschen.
+
+- `app/android/app/src/main/AndroidManifest.xml:5` zusammen mit `app/src/main.ts:50–62` – `android:allowBackup="true"` schließt die als Preferences gespeicherten OpenRouter- und Mistral-Schlüssel nicht von Cloud-Backup oder Geräteübertragung aus. Szenario: Nutzer speichert Schlüssel → Android sichert die SharedPreferences → der Schlüssel verlässt entgegen der Dokumentation das Gerät beziehungsweise gelangt auf ein weiteres Gerät. Beleg: Manifest enthält wörtlich `android:allowBackup="true"`; die Schlüssel heißen `spike.orKey` und `spike.miKey`. Vorschlag: Backup deaktivieren und zusätzlich Backup-/Extraction-Regeln hinterlegen, die sämtliche Schlüssel-Preferences ausschließen.
+
+- `app/scripts/verify-app-bundle.sh:67–89, 98–103` – Die angebliche APK-Prüfung kontrolliert Permissions nur im Quellmanifest; aus der APK werden ausschließlich `assets/public/*` entpackt. Durch Abhängigkeiten in das gemergte Manifest eingebrachte Rechte bleiben unsichtbar. Reproduktion: Eine Test-APK mit `INTERNET` und `RECORD_AUDIO` ergab trotzdem Exit 0 und `ERGEBNIS: bestanden`; Ausgabe: `Permissions: ... INTERNET`, obwohl `unzip -p ... AndroidManifest.xml` zusätzlich `RECORD_AUDIO` zeigte. Vorschlag: Permissions mit `apkanalyzer manifest permissions` oder `aapt dump permissions` aus der fertigen APK lesen und exakt gegen `INTERNET` prüfen.
+
+## MINOR
+
+- `shared/src/lib/transcript.ts:329–340` – `videoIdAusText()` sucht nur nach Zeichenfolgen, validiert aber keinen URL-Host. Szenario: Share-Intent enthält `https://notyoutube.com/watch?v=aqz-KE-bpKQ` oder `https://evil.test/youtu.be/aqz-KE-bpKQ` → beide werden als YouTube-Link akzeptiert. Beleg:
+  ```text
+  https://notyoutube.com/watch?v=aqz-KE-bpKQ => aqz-KE-bpKQ
+  https://evil.test/youtu.be/aqz-KE-bpKQ => aqz-KE-bpKQ
+  ```
+  Vorschlag: URLs extrahieren, mit `URL` parsen und `hostname` exakt gegen `youtu.be`, `youtube.com` oder echte YouTube-Subdomains prüfen.
+
+- `shared/scripts/check.sh:38–55` – „Genau zwei Gegenstellen“ wird nur durch eine Vierer-Denylist geprüft; jeder andere dritte Endpunkt bleibt grün. Reproduktion: In der `/tmp`-Kopie wurde `fetch("https://evil.example/v1")` ergänzt; das unveränderte Skript meldete weiterhin Exit 0 und `ERGEBNIS: bestanden`. Vorschlag: gefundene HTTP(S)-Hosts gegen eine Positivliste der erlaubten Hosts prüfen.
+
+- `app/android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java:24` – Der Instrumentationstest erwartet `com.getcapacitor.app`, während `app/android/app/build.gradle:7` die Application-ID `at.gasperl.ytsummary` setzt. Szenario: `connectedAndroidTest` auf einem Gerät → `useAppContext()` schlägt garantiert fehl; der Workflow baut nur die APK und entdeckt das nicht. Vorschlag: Erwartungswert korrigieren und den Instrumentationstest im Geräte-/Emulatorlauf ausführen.
+
+Geprüft: 109/109 geänderte Dateien (82 Textdateien, 27 Binärdateien); ausgeführt: `git diff origin/main...HEAD`, `git diff --check`, `node extension/scripts/selfcheck.ts` (25/25), `bash shared/scripts/check.sh` (Exit 0), Parser-Reproduktionen, zwei manipulierte Prüfskript-Reproduktionen, `pnpm install --offline --frozen-lockfile` und `pnpm -r run compile` – der Compile-Beleg blieb wegen fehlender Store-Tarballs und gesperrter Namensauflösung aus.

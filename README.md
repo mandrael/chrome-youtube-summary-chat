@@ -10,6 +10,15 @@ Zwei Anbieter, einer davon gewählt: **OpenRouter** (Standard) oder **Mistral AI
 Proxy, keine Telemetrie. Was bei Mistral fehlt, steht unter
 [Anbieter wechseln](#anbieter-wechseln-openrouter-oder-mistral-ai).
 
+**Android-App: im Entstehen.** In `app/` liegt eine eigenständige App (Capacitor), die
+sich den Kern – KI-Clients, Prompts, Transkript-Abruf – über `shared/` mit der
+Erweiterung teilt. Sie ist als Teilen-Ziel für YouTube-Links gedacht. Stand heute ist sie
+ein **Messgerät**, kein Produkt: sie prüft auf einem echten Gerät die Annahmen, die
+über ihren Aufbau entscheiden. Einstieg:
+[docs/uebergabe-android-2026-09-18.md](docs/uebergabe-android-2026-09-18.md), Bedienung
+in [app/README.md](app/README.md). Was daran ungeprüft ist, steht unter
+[Was nicht geprüft ist](#was-nicht-geprüft-ist).
+
 ---
 
 ## Zwei Builds aus einer Codebase
@@ -20,6 +29,12 @@ Proxy, keine Telemetrie. Was bei Mistral fehlt, steht unter
 | Spracherkennung aus dem laufenden Ton | ja | ja |
 | Tonspur herunterladen und transkribieren | ja | **nein** |
 | Untertitel über yt-dlp holen | ja | **nein** |
+| Audio (.m4a) herunterladen | ja | **nein** |
+| Dislikes am Dislike-Knopf samt Balken | ja: Return YouTube Dislike, sonst Schätzung | ja: nur Schätzung aus Aufrufen und Likes |
+| Grün/rote Balken unter Vorschaubildern | ja, Schalter, Standard aus | **nein** |
+| Kommentarstimmung (Schnellbefehl) | ja | **nein** |
+| Transkript (.txt) sichern | ja | ja |
+| Kommentare (.html) sichern | ja | **nein** |
 | Permission `nativeMessaging` | ja | nein |
 | Fallback-Code im Bundle | ja | **nein, nachgemessen** |
 
@@ -42,6 +57,14 @@ den `full`-Build – sonst würde ein Test bestehen, der überhaupt nichts misst
 ---
 
 ## Bedienung
+
+**Download-Menü** (Pfeil oben rechts): Video und Audio (nur `full`; Audio ist die
+Tonspur als `.m4a`, so wie YouTube sie liefert, ohne Umkodieren und ohne ffmpeg), Transkript als `.txt` mit
+Titel und Link, Kommentare als `.html` (nur `full`) – mit Antworten, Fett, Kursiv, Emojis, Zeit- und
+Kanal-Links, ganz oben der Link zum Video. Die Kommentare kommen seitenweise über
+YouTubes eigene Schnittstelle, sortiert nach „Neueste“ (nur so vollständig); der
+Stopp-Knopf speichert das bisher Geladene, die Datei sagt dann, dass sie unvollständig
+ist. Grosse Videos dauern: 5175 Kommentare brauchten 626 Abrufe und rund zwei Minuten.
 
 Die Oberfläche sitzt **in der YouTube-Seite**, in der rechten Spalte über den
 Empfehlungen. Sie lässt sich am Kopf einklappen, bleibt beim Wechsel zwischen Videos
@@ -493,6 +516,34 @@ automatische Downloads.
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
 
+- **Kommentarstimmung (0.12.0):** Abruf der 100 Top-Kommentare und die Anfrage ans
+  Modell sind im Browser geprüft, eine echte Antwort nicht – im Testprofil liegt kein
+  Schlüssel.
+
+- **Audio-Download aus der Sidebar (0.11.0).** Der Helfer ist direkt geprüft
+  (`jNQXAC9IVRw` → m4a, AAC, 19 s, Fortschritt bis 100 %), der Klickweg über den Dialog
+  nur bis zur Meldung „Native-Host nicht erreichbar“ – im Testprofil ist kein Helfer
+  installiert.
+
+- **Websuche mit Videokontext (0.10.0).** Mit eingeschalteter Weltkugel steht das
+  Transkript als erste Nachricht im Verlauf statt im System-Prompt, weil das Modell
+  sonst fragte, um welches Video es geht. Ohne OpenRouter-Schlüssel in der
+  Entwicklungsumgebung nicht gegen die echte API gelaufen.
+
+- **Die Android-App auf einem Gerät.** In der Cloud-Umgebung ist sie weder baubar noch
+  startbar (`dl.google.com` und `youtube.com` gesperrt); am Mac baut sie seit 21.09.2026
+  (JDK 21 nötig, Aufruf in der Übergabe). Geprüft ist, was ohne Gerät geht: Typprüfung,
+  Bundle-Bau, der Grep gegen Web-Bundle und entpackte APK, die Rechte der fertigen APK
+  (nur `INTERNET`) und dass Backup dort aus ist. Was der erste Gerätelauf klären soll,
+  steht in [docs/messungen.md](docs/messungen.md) unter „Android-App"; solange dort
+  nichts mit Gerät und Android-Version steht, ist über das Verhalten der App nichts
+  bekannt – auch nicht, ob das Teilen-Ziel kalt und warm genau ein Ereignis liefert.
+
+- **Player-Zustand nach Werbung während der Live-Erkennung (27.09.2026).** Ob Position
+  und Pause wiederhergestellt werden, hängt jetzt an der Video-ID der Adresse statt an
+  `currentSrc`, weil Werbung im selben Element mit eigener Quelle läuft. Die Logik folgt
+  der Messung vom 02.09.2026; ein Lauf mit Werbeblock mitten in der Erkennung fehlt.
+
 - **Ein echter Chat gegen Mistral AI.** Endpunkte, Antwortform und Stream-Format sind
   gegen Mistrals OpenAPI-Spec verifiziert, der SSE-Parser hat einen Selbsttest, und beide
   Endpunkte antworten ohne gültigen Schlüssel mit HTTP 401 „Invalid API Key“ – genau
@@ -532,10 +583,10 @@ Verifiziert ist dagegen, jeweils mit Zahl statt Behauptung:
 | Alle drei STT-Routen end-to-end | siehe Tabelle oben |
 | `/api/v1/key`, Modellliste live | 375 Modelle in der Options-Page |
 | Sidebar-Platzierung, Dark-Mode, SPA-Wechsel | im Browser gesehen |
-| Extension-Logik / Host | 18 bzw. 8 Prüfungen |
+| Extension-Logik / Host | 27 bzw. 8 Prüfungen |
 
 ```bash
-cd extension    && pnpm run check          # 18 Prüfungen
+cd extension    && pnpm run check          # 27 Prüfungen
 cd native-host  && python3 selfcheck.py    # 8 Prüfungen
 ```
 

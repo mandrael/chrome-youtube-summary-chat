@@ -2,8 +2,8 @@ import * as React from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteConversation, listConversations } from "@/lib/storage";
-import type { T } from "@/lib/i18n";
-import type { Conversation } from "@/lib/types";
+import type { T } from "@shared/lib/i18n";
+import type { Conversation } from "@shared/lib/types";
 
 export function HistoryView({
   t,

@@ -1,6 +1,14 @@
 import { defineConfig } from "wxt";
 import tailwindcss from "@tailwindcss/vite";
 
+// Der plattformneutrale Kern liegt seit dem Workspace-Umbau in ../shared und wird von
+// Erweiterung und Android-App gemeinsam benutzt. Kein Build-Schritt dazwischen: WXT
+// bündelt die TypeScript-Quellen direkt, damit `define` (__FALLBACK__) und Tailwind
+// daran genauso greifen wie an eigenem Code.
+// Relativ zum Projektverzeichnis – WXT löst Alias-Pfade selbst auf; ein absoluter
+// Pfad über node:url bräuchte @types/node nur für diese eine Zeile.
+const shared = "../shared/src";
+
 // Zwei Builds aus einer Codebase:
 //   --mode full   GitHub, unpacked, mit lokalem Audio-Fallback (yt-dlp via Native Messaging)
 //   --mode store  Chrome Web Store, nur Untertitel, kein Fallback-Code im Bundle
@@ -13,6 +21,7 @@ const isFull = (mode: string) => mode !== "store";
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   srcDir: ".",
+  alias: { "@shared": shared },
   // Die gebauten Ordner liegen sichtbar im Projekt, nicht in einem versteckten
   // .output/ – wer die Erweiterung laden will, soll sie sehen.
   outDir: "..",
@@ -35,6 +44,8 @@ export default defineConfig({
     plugins: [tailwindcss()],
     define: {
       __FALLBACK__: JSON.stringify(isFull(env.mode)),
+      // Bauzeit für die Optionsseite: mehrere Stände tragen oft dieselbe Versionsnummer.
+      __BAUZEIT__: JSON.stringify(new Date().toISOString()),
     },
     build: {
       // Lesbare Bundles: der Tree-Shaking-Test greppt nach Bezeichnern, die ein
@@ -58,7 +69,7 @@ export default defineConfig({
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
     // Schema major.function.fix (status.md, 03.09.2026). 0.3.0 wäre der Funktionssprung gewesen (Vergleich-Preset, adaptive
     // Tabellen, Videodownload, Installer), 0.3.1 der Fix des Ladefehlers, 0.3.2 Download-Knopf im Kopf, 0.4.0 Fortschritt und „Im Ordner zeigen", 0.4.1 gemeinsamer Fortschritt Ton+Bild, 0.5.0 Ordnerdialog und Zielordner-Anzeige, 0.6.0 Mistral AI als zweiter Anbieter.
-    version: "0.9.2",
+    version: "0.12.1",
     // Bewusst ohne `sidePanel`: Vivaldi trägt jede Extension, die diese Permission
     // deklariert, ungefragt in seine Panel-Leiste ein und öffnet dort beim Installieren
     // ein leeres Panel (Vivaldi-Bug VB-123452, Stand 8.1 offen). Verhindern lässt sich
@@ -74,6 +85,8 @@ export default defineConfig({
       // Mistral direkt: EU-Endpunkt (Standard) und globaler Endpunkt.
       "https://api.eu.mistral.ai/*",
       "https://api.mistral.ai/*",
+      // Berechnete Dislikes, nur im full-Build (Ausnahme zu Regel 1, 29.09.2026).
+      ...(isFull(env.mode) ? ["https://returnyoutubedislikeapi.com/*"] : []),
     ],
     options_ui: {
       page: "options.html",

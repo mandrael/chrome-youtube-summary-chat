@@ -1,29 +1,12 @@
-import type { ChatMessage, HelperJob, ReasoningEffort, Transcript, Usage, DownloadErgebnis } from "./types";
+import type { HelperJob, StreamArgs, StreamHandle, Transcript, DownloadErgebnis } from "@shared/lib/types";
 import type { FallbackProgress } from "./fallback";
+
+export type { StreamArgs, StreamHandle };
 
 /**
  * Content-Script-Seite der Port-Verbindung zum Service Worker. Streaming geht nicht über
  * sendMessage, deshalb ein Port; abgebrochen wird durch Trennen des Ports.
  */
-
-export interface StreamHandle {
-  /** Bricht die laufende Generierung ab. */
-  stop: () => void;
-  done: Promise<void>;
-}
-
-export interface StreamArgs {
-  model: string;
-  supportsReasoning: boolean;
-  reasoning: ReasoningEffort;
-  system: string;
-  messages: ChatMessage[];
-  /** Internetrecherche über OpenRouters Web-Plugin. */
-  web?: boolean;
-  onDelta: (text: string) => void;
-  onUsage: (usage: Usage) => void;
-  onSources?: (quellen: Array<{ url: string; title?: string }>) => void;
-}
 
 export function startChat(args: StreamArgs): StreamHandle {
   const port = chrome.runtime.connect({ name: "chat" });
@@ -125,7 +108,20 @@ export function startFallback(
   });
 
   port.postMessage({ type: "start", videoId, job });
-  return { promise, cancel: () => port.disconnect() };
+  // Das eigene disconnect() löst hier kein onDisconnect aus – ohne eigenes reject bliebe
+  // die Sidebar nach „Abbrechen“ für immer auf „läuft“ stehen.
+  let abbrechen: (e: Error) => void = () => {};
+  promise.catch(() => {});
+  const abgebrochen = new Promise<never>((_, ab) => (abbrechen = ab));
+  return {
+    promise: Promise.race([promise, abgebrochen]),
+    cancel: () => {
+      if (settled) return;
+      settled = true;
+      port.disconnect();
+      abbrechen(new Error("Abgebrochen."));
+    },
+  };
 }
 
 /** Videodownload über den Service Worker. Nur im Build "full" aufgerufen. */

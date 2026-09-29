@@ -1,14 +1,19 @@
 import { defineBackground } from "wxt/utils/define-background";
-import { listModels, listSttModels, streamChat, testKey } from "@/lib/openrouter";
-import * as mistral from "@/lib/mistral";
+import { listModels, listSttModels, testKey } from "@shared/lib/openrouter";
+import * as mistral from "@shared/lib/mistral";
+import { chatStream } from "@shared/lib/chat";
 import { collapsedItem, getSettings, wideItem } from "@/lib/storage";
-import type { ChatMessage, ReasoningEffort } from "@/lib/types";
+import type { ChatMessage, ReasoningEffort, Usage } from "@shared/lib/types";
 
 /**
  * Alle Cloud-Aufrufe laufen hier. Kein eigenes Backend, kein Proxy – der Service Worker
  * spricht direkt mit openrouter.ai oder, wenn so eingestellt, mit api.mistral.ai, sonst
  * mit nichts. Welche der beiden Gegenstellen dran ist, entscheidet `settings.provider`;
  * die Sidebar schickt keinen Anbieter mit, sonst könnten beide auseinanderlaufen.
+ *
+ * Die Verzweigung selbst steht seit dem Workspace-Umbau in `@shared/lib/chat` – dieselbe
+ * eine Stelle, die auch die Android-App aufruft. Hier bleibt nur der Transport: Port,
+ * Wachhalter, Abbruch.
  */
 
 interface ChatPortRequest {
@@ -27,7 +32,7 @@ export default defineBackground(() => {
   // Einstellungen – ein Content-Script darf `openOptionsPage` nicht selbst aufrufen.
   chrome.action.onClicked.addListener((tab) => {
     void (async () => {
-      if (tab.url && /youtube\.com\/watch/.test(tab.url)) {
+      if (tab.url && /youtube\.com\/(watch|live\/)/.test(tab.url)) {
         const zu = await collapsedItem.getValue();
         // Über das Symbol kommt die Sidebar in YouTubes eigener Spaltenbreite; wer sie
         // breiter will, klappt in der Seite auf oder zieht am Griff.
@@ -93,6 +98,25 @@ export default defineBackground(() => {
             }
             const { pingHost } = await import("@/lib/fallback");
             sendResponse({ ok: true, data: await pingHost() });
+            break;
+          }
+          case "dislikes": {
+            // Einzige dritte Gegenstelle, nur im Build "full" (CLAUDE.md §1, 29.09.2026).
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const id = String(msg.videoId);
+            if (!/^[\w-]{11}$/.test(id)) throw new Error("Ungültige Video-ID");
+            // Nutzungsbedingungen (returnyoutubedislike.com/docs/usage-rights, 29.09.2026):
+            // 100 Abrufe je Minute, 10 000 je Tag; auf 429 hin zurückhalten.
+            const r = await fetch(`https://returnyoutubedislikeapi.com/votes?videoId=${id}`);
+            if (!r.ok) throw new Error(`Return YouTube Dislike: HTTP ${r.status}`);
+            const { likes, dislikes } = (await r.json()) as { likes?: number; dislikes?: number };
+            if (typeof dislikes !== "number" || typeof likes !== "number") {
+              throw new Error("Return YouTube Dislike: keine Zahl");
+            }
+            sendResponse({ ok: true, data: { likes, dislikes } });
             break;
           }
           case "videoFormats": {
@@ -164,50 +188,25 @@ function handleChatPort(port: chrome.runtime.Port) {
       try {
         const s = await getSettings();
         const onDelta = (text: string) => port.postMessage({ type: "delta", text });
-        const onUsage = (usage: unknown) => port.postMessage({ type: "usage", usage });
+        const onUsage = (usage: Usage) => port.postMessage({ type: "usage", usage });
 
-        if (s.provider === "mistral") {
-          if (!s.mistralApiKey) throw new Error("NO_KEY");
-          if (!s.mistralModel) throw new Error("NO_MODEL");
-          // Kein Reasoning-Regler, kein Web-Plugin, kein Provider-Routing: das sind
-          // OpenRouter-Parameter, Mistral bekommt sie gar nicht erst zu sehen. Die
-          // Sidebar sperrt den Web-Schalter; käme `web` trotzdem an, wäre ein stiller
-          // Fehlschlag schlimmer als ein lauter.
-          if (req.web) throw new Error("WEB_ONLY_OPENROUTER");
-          const p = mistral.preis(s.mistralModel, s.mistralRegion);
-          await mistral.streamChat({
-            apiKey: s.mistralApiKey,
-            region: s.mistralRegion,
-            model: s.mistralModel,
-            system: req.system,
-            messages: req.messages,
-            signal: controller.signal,
-            onDelta,
-            // Mistral liefert nur Token; der Betrag kommt aus der Preistabelle in
-            // lib/mistral.ts. Ohne Tabellenpreis bleibt cost leer, die UI zeigt nur Token.
-            onUsage: (u) =>
-              onUsage(
-                p
-                  ? { ...u, cost: u.prompt_tokens * p.ein + u.completion_tokens * p.aus }
-                  : u,
-              ),
-          });
-        } else {
-          if (!s.apiKey) throw new Error("NO_KEY");
-          await streamChat({
-            apiKey: s.apiKey,
+        await chatStream(
+          s,
+          {
             model: req.model,
-            reasoning: req.reasoning,
             supportsReasoning: req.supportsReasoning,
+            reasoning: req.reasoning,
             system: req.system,
             messages: req.messages,
             web: req.web,
-            signal: controller.signal,
+          },
+          {
             onDelta,
             onUsage,
             onSources: (quellen) => port.postMessage({ type: "sources", quellen }),
-          });
-        }
+          },
+          controller.signal,
+        );
         port.postMessage({ type: "done" });
       } catch (e) {
         if ((e as Error)?.name === "AbortError") return; // vom Nutzer beendet
@@ -268,7 +267,11 @@ function handleDownloadPort(port: chrome.runtime.Port) {
 /** Nur im Build "full" erreichbar – siehe __FALLBACK__ in wxt.config.ts. */
 function handleFallbackPort(port: chrome.runtime.Port) {
   let cancel: (() => void) | null = null;
-  port.onDisconnect.addListener(() => cancel?.());
+  let abgebrochen = false;
+  port.onDisconnect.addListener(() => {
+    abgebrochen = true;
+    cancel?.();
+  });
 
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as { type: string; videoId: string; job?: "subtitles" | "audio" };
@@ -278,6 +281,8 @@ function handleFallbackPort(port: chrome.runtime.Port) {
       try {
         const { runFallback } = await import("@/lib/fallback");
         const settings = await getSettings();
+        // Trennung während der beiden awaits: die bezahlte STT darf gar nicht erst starten.
+        if (abgebrochen) return;
 
         const job = runFallback(
           {

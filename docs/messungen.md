@@ -957,3 +957,195 @@ Empfehlung gelten für Reasoning minimal; mit high denken Haiku, Qwen Flash und
 GPT-5 Nano 50 bis 86 s, bevor Text kommt – länger als Chromes 30-s-Leerlaufgrenze für
 den Service Worker. Der Wachhalter in `handleChatPort` ist damit kein Vorsichtscode
 mehr, sondern notwendig.
+
+## Android-App – was gemessen ist und was nicht (18.09.2026)
+
+**Gemessen, in der Entwicklungsumgebung, an den entpackten Paketen und an der erzeugten
+Vorlage – nicht aus Doku abgeschrieben:**
+
+- Versionen am 17./18.09.2026: `@capacitor/core|cli|android` **8.5.2**,
+  `@capacitor/preferences` 8.0.1, `@capacitor/filesystem` 8.1.3,
+  `@capacitor/app-launcher` 8.0.1, `@capgo/capacitor-share-target` 8.0.53 (MPL-2.0,
+  peer `@capacitor/core >=8.0.0`). `@capacitor/cli` verlangt `node >=22`.
+- Aus dem von `cap add android` erzeugten Projekt: **minSdk 24, compileSdk 36,
+  targetSdk 36**, AGP **8.13.0**, Gradle-Wrapper **8.14.3**, `MainActivity` in Java,
+  `launchMode="singleTask"`, Permissions ab Werk nur `INTERNET`.
+- **pnpm-Workspace und Capacitor vertragen sich ohne Hoisting.** `cap add android` fand
+  alle vier Plugins über die pnpm-Symlinks (`@capacitor/app-launcher`,
+  `@capacitor/filesystem`, `@capacitor/preferences`, `@capgo/capacitor-share-target`).
+  Kein `shamefully-hoist`, kein `node-linker=hoisted`. Bedingung: die Plugins stehen als
+  direkte Abhängigkeit in `app/package.json`, und `cap` läuft aus `app/`.
+- **Edge-to-Edge steht in Capacitor 8 woanders.** Nicht `android.adjustMarginsForEdgeToEdge`
+  (das lehnen die Typen von 8.5.2 ab), sondern `plugins.SystemBars.insetsHandling`
+  (`"native" | "css" | "disable"`, Vorgabe `"css"`) plus
+  `initialViewportFitValueHint`. Abgelesen an `@capacitor/cli/dist/declarations.d.ts`.
+- Der Spike-Build: 26 Module, `dist` rund 100 kB, ohne Minifier (sonst wäre der Grep in
+  `verify-app-bundle.sh` blind).
+- **Die APK baut** (GitHub Actions, 18.09.2026, `ubuntu-latest`, Temurin 21): `cap sync`
+  plus `./gradlew assembleDebug` laufen ohne Eingriff durch, 2 Minuten 54. Das
+  eingecheckte `android/`-Gerüst ist also vollständig. Stufe 2 von
+  `verify-app-bundle.sh` – der Grep in die **entpackte APK** – ist damit ebenfalls
+  gelaufen und bestanden: kein Native Messaging, kein fremder Endpunkt, beide erlaubten
+  Gegenstellen vorhanden. Gemessen wurde nur der Bau, nicht das Verhalten: auf einem
+  Runner läuft die App nicht, und YouTube antwortet Runner-IPs ohnehin oft mit
+  `LOGIN_REQUIRED`.
+
+**Ungeprüft – steht und fällt mit der Messung am Gerät:**
+
+- Ob der signierte visionOS-Player-Call aus `CapacitorHttp` heraus JSON liefert. `yt-dlp`
+  schafft ihn aus einem reinen HTTP-Client, aus einer Extension-Seite kam HTML – die App
+  liegt dazwischen und ist nicht vorhersagbar. Das ist Messung A.
+- Ob `openrouter.ai` und `api.eu.mistral.ai` CORS für den Origin `https://localhost`
+  erlauben und ob `fetch` im System-WebView wirklich streamt (Messung B). Fällt Mistral
+  durch, ist „Antwort kommt am Stück" die ehrliche Anzeige – kein Proxy, kein stilles
+  Umschalten auf OpenRouter (§1, §3).
+- Ob YouTube `https://localhost` als Embedder annimmt oder mit Fehler 153 antwortet
+  (Messung C). `referrerpolicy` am iframe und das `<meta name="referrer">` sind gesetzt.
+- Ob `getCurrentTime()` während eines Werbeeinschubs die Werbezeit meldet (Messung C).
+- Ob die YouTube-App den Parameter `t=` aus einem `AppLauncher.openUrl` beachtet
+  (Messung E).
+- Ob Chromiums WebView-Ton als `USAGE_MEDIA` läuft – Voraussetzung dafür, dass der
+  spätere Ton-Weg den eigenen Player überhaupt mitschneiden kann.
+
+**Was dabei schon feststeht, ohne Gerät:** die Web Speech API gibt es im Android-WebView
+nicht, der Weg aus `audio-live.ts` (Tab-Ton + `webkitSpeechRecognition`) ist dort also
+keine Option. Und `setPlaybackRate` im eingebetteten Player nimmt nur Werte aus
+`getAvailablePlaybackRates()` – der 8×-Trick der Erweiterung fällt weg, mehr als 2× wird
+es nicht.
+
+## `playwright install` hängt beim Entpacken, nicht beim Laden (18.09.2026)
+
+Auf diesem Rechner (Apple M5, arm64, macOS 25.6) kommt `pnpm exec playwright install
+chromium` nie zurück. Gemessen, weil zwei Hintergrundläufe zwei Stunden standen:
+
+- **Netz ist es nicht.** `curl` holt dasselbe Archiv (130 MB) in gut zwei Minuten,
+  ein Bereichsabruf liefert 2 MB in 1,2 s. Die Fortschrittsanzeige des Installers
+  erreicht 100 %.
+- **Platte ist es auch nicht.** `unzip` entpackt genau dieses Archiv in **1,6 s** zu
+  303 MB.
+- **Der Installer bleibt danach stehen.** Im Zielordner liegen 38 Dateien (624 kB),
+  dann passiert nichts mehr – auch nicht nach neun Minuten, auch nicht mit
+  `--force`, auch nicht ohne Sandbox des Bash-Werkzeugs. Abgebrochen wird er nur
+  durch `timeout` (Exit 124).
+- **Folge, wenn man ihn laufen lässt und abbricht:** ein halb entpacktes
+  `Chromium.app` ohne `Chromium Framework`. Der Start stirbt dann mit `SIGABRT` und
+  einer `dlopen`-Meldung – das sieht nach kaputtem Browser aus, ist aber der
+  abgeschnittene Entpackvorgang.
+
+Weg drumherum: Archiv mit `curl` holen, mit `unzip` an seinen Platz legen, die
+Markierungen `INSTALLATION_COMPLETE` und `DEPENDENCIES_VALIDATED` daneben
+anlegen. Schritt für Schritt im Kopf von `extension/scripts/ladeprobe.mjs`.
+Danach lief die Ladeprobe für beide Builds durch: Extension geladen, Sidebar
+gemountet, 0 unerwartete Meldungen.
+
+**Die eigentliche Lehre ist aber nicht Playwright.** Beide Läufe standen zwei Stunden,
+weil sie ohne Zeitgrenze gestartet wurden und eine `until`-Warteschleife ohne Timeout
+auf den ersten wartete. Jeder lange Lauf gehört über `lauf.sh` mit `timeout`; ein
+Wartezustand ohne obere Schranke ist kein Wartezustand, sondern ein Hänger.
+
+## Code-Review des Android-Branches: drei Prüfer, derselbe Auftrag (21.09.2026)
+
+DeepSeek (`dsh`), Codex (`gpt-5.6-sol`, medium) und Kimi (`k3`) bekamen wortgleich
+denselben Auftrag (`_system/reviews/auftrag-codereview-android-branch-2026-09-21.md`):
+109 Dateien, rund 4.000 Zeilen Diff gegen `main`. Rohausgaben in
+`_system/reviews/laeufe-2026-09-21/`.
+
+| | DeepSeek | Codex medium | Kimi k3 |
+|---|---|---|---|
+| Laufzeit | 3 min 20 s | 9 min 13 s | 20 min 04 s |
+| Befunde gesamt | 7 | 6 | 8 |
+| davon am Code bestätigt | 5 ganz, 1 teils | 5 | 7 |
+| nur von diesem Prüfer, bestätigt | 2 | 4 | 4 |
+| schwersten Fehler gefunden | ja | **nein** | ja |
+
+**Der schwerste Fehler:** Das Teilen-Ziel der App las `text`/`subject`/`url`, das Plugin
+sendet `title`/`texts`/`files`. Jede geteilte Video-ID wäre „KEINE" gewesen – Messung D
+hätte am Gerät ein Artefakt gemessen. DeepSeek und Kimi fanden das, beide durch Lesen der
+Plugin-Quelle in `node_modules`; Codex las alle 109 Dateien des Diffs, aber keine
+Abhängigkeit, und fand es nicht.
+
+**Nur Kimi:** zwei Blindstellen in `check.sh`; Doppelklick auf den Player hängt; Reste der
+Capacitor-Vorlage (google-services im Gradle, FileProvider auf die Wurzel des externen
+Speichers); zwei veraltete Stellen in `CLAUDE.md`.
+**Nur Codex:** APK-Rechte wurden nie aus der APK gelesen (jetzt Stufe 2b mit `aapt2`);
+`check.sh` prüfte Gegenstellen per Verbots- statt Positivliste; `videoIdAusText`
+akzeptierte `notyoutube.com`; falscher Paketname im Instrumentationstest; fremdes
+`iframe_api`-Skript im selben Dokument wie die Schlüsselfelder (offen, Architekturfrage).
+**Nur DeepSeek:** Regex nimmt bei doppeltem `v=` das letzte; Teilstring-Treffer bei der
+`INTERNET`-Prüfung.
+
+Ein Widerspruch: DeepSeek meldete eine Cookie-Regression beim Abruf von `base.js`, Kimi
+belegte „identisches Verhalten". Beide haben recht – der Pfad ist in der Praxis relativ
+und damit same-origin; der Unterschied träte erst bei einem absoluten fremden Host auf.
+Abgesichert, weil es eine Zeile kostet.
+
+**Ein Fehlalarm, erst am 27.09.2026 erkannt.** Kimi meldete, der Kaltstart über das
+Teilen-Ziel liefere nie ein Ereignis, weil das Share-Plugin nur `onNewIntent` auswertet –
+belegt am Quelltext des Plugins. Das stimmt für das Plugin, aber nicht für die App:
+`BridgeActivity.load()` in `@capacitor/android` 8.5.2 ruft selbst
+`onNewIntent(getIntent())`, der Start-Intent kommt also an. Die am 21.09. eingebaute
+Weiterleitung in `MainActivity` lieferte das Ereignis beim Kaltstart deshalb **doppelt**
+(Capacitor hält Ereignisse ohne Zuhörer als Liste fest) und ist wieder entfernt. Die
+Lehre für den Prüfervergleich: ein Befund, der an einer Abhängigkeit belegt ist, muss
+auch an der Schicht darüber geprüft werden – das hat weder Kimi noch die Bewertung getan.
+
+## Kommentare über youtubei/v1/next (26.09.2026)
+
+Gemessen an `dQw4w9WgXcQ`, `9bZkp7q19f0`, `jNQXAC9IVRw`, `aqz-KE-bpKQ`, ohne Anmeldung
+aus Node und angemeldet-los aus der gebauten Erweiterung (headless Chromium):
+
+- Starttoken im `itemSectionRenderer` mit `sectionIdentifier: comment-item-section`
+  der Watch-Seite; zwanzig Kommentare je Abruf. Der Text steht in
+  `frameworkUpdates.entityBatchUpdate.mutations[].payload.commentEntityPayload`, der
+  Baum trägt nur `commentKey`/`toolbarStateKey`.
+- Formatierung als Läufe mit `startIndex`/`length` in UTF-16-Einheiten (😭 = 2):
+  `styleRuns` (fett = `weightLabel: FONT_WEIGHT_MEDIUM`, `italic: true`),
+  `commandRuns` (Zeitmarken als `watchEndpoint`, Erwähnungen, Links),
+  `attachmentRuns` (Emojis als Bild; bei Unicode-Emojis ist `label` das Zeichen selbst,
+  bei Kanal-Emojis ein Name wie `:yt-smile:`). Durchgestrichen nicht beobachtet.
+- **„Top-Kommentare“ endet früh:** `aqz-KE-bpKQ` lieferte über Top 1128
+  Hauptkommentare, über „Neueste“ 3775. Mit Antworten 5175 – genau so viele wie
+  `yt-dlp --write-comments` (5175, YouTube zeigt „5.180“). 626 Abrufe, 123 s.
+- Antworten haben einen eigenen Token unter `commentRepliesRenderer.subThreads`,
+  „Mehr Antworten ansehen“ einen weiteren; `replyLevel` 2 kommt vor.
+
+## Welche YouTube-Adressen die Sidebar bekommen (27.09.2026)
+
+Gebaute Erweiterung, headless Chromium, nicht angemeldet. Transkript = Zeilen im
+Transkript-Tab nach 12 s.
+
+| Adresse | Sidebar | Transkript |
+|---|---|---|
+| `/watch?v=`, mit `&t=`, mit `&list=` | ja | ja |
+| `youtu.be/…`, `/v/…`, `attribution_link`, `m.youtube.com` | ja (YouTube leitet auf `/watch` um) | ja |
+| `/live/<id>` (Aufzeichnung) | **bis 0.9.2 nein**, jetzt ja | ja |
+| laufender Livestream (`jfKfPfyJRdk`) | ja | „keine Untertitel“ |
+| `/shorts/`, `/embed/`, `youtube-nocookie.com`, `music.youtube.com` | nein, gewollt | – |
+
+## Dislikes aus Aufrufen und Likes schätzen (29.09.2026)
+
+Daten: YouTube-Dislike-Archiv Ende 2021 (archive.org, ClickHouse-Spiegel
+`clickhouse-public-datasets.s3.amazonaws.com/youtube/original/files/`), zwei Teildateien
+vom 27.11.2021. Filter: ≥ 1000 Aufrufe, ≥ 50 Stimmen, ≥ 1 Like. Gelernt an 46 849
+Videos, geprüft an 41 888 anderen. Skripte: `docs/tests/dislike-modell/`.
+
+Dislike-Anteil (Median) je Like-Rate: 0,1 % → 19,8 %, 0,32 % → 9,6 %, 1 % → 5,1 %,
+3,2 % → 2,6 %, 10 % → 1,4 %, 25 % → 0,5 %.
+
+| Variante | Anteil-Fehler Median | Dislikes auf Faktor 1,5 | auf Faktor 2 |
+|---|---|---|---|
+| fester Anteil für alle (Basis) | 2,26 pp | 32 % | 51 % |
+| Stufentabelle (0,1 in log10) | 1,88 pp | 38 % | 59 % |
+| Logit-Gerade, kleinste Quadrate über alle | 1,77 pp | 36 % | 57 % |
+| dieselbe + log10(Aufrufe) | 1,79 pp | 35 % | 57 % |
+| **Logit-Gerade durch die Mediane (gewählt)** | 1,88 pp | 38 % | 59 % |
+
+Gewählt: `logit = −5,6911 − 1,3943 · log10(Likes/Aufrufe)`. Die Kleinste-Quadrate-Gerade
+liegt bei hohen Like-Raten zu tief (10 % → 0,84 % statt 1,4 %), weil Videos ohne jeden
+Dislike den Logit nach unten ziehen. Aufrufe als zweite Grösse bringen nichts.
+Grenze: Daten von 2021; ob sich das Like-Verhalten seither verschoben hat, ist ungemessen.
+
+Auf der Seite, ungerundet: Likes aus `aria-label` des Like-Knopfs („bisher 110.047
+positive Bewertungen“ / „along with 110,047 other people“), Aufrufe aus der Infozeile
+vor dem „•“ („23.400.861 Aufrufe • 10.11.2014“). Gemessen an `aqz-KE-bpKQ`, de und en.
+Ergebnis dort: Schätzung ≈ 9538 (92 % positiv), Return YouTube Dislike 18.609 (86 %).

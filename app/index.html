@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      Ohne Referer antwortet YouTubes eingebetteter Player seit 2025 mit Fehler 153.
+      Ein WebView schickt von sich aus keinen; diese Richtlinie sorgt dafuer, dass der
+      Origin (https://localhost) als Referer rausgeht. Ob YouTube ihn als Embedder
+      akzeptiert, ist die Messung C – ungeprueft.
+    -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>YT Summary Chat – Spike</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --rand: 16px;
+      }
+      body {
+        margin: 0;
+        padding: calc(env(safe-area-inset-top) + 12px) var(--rand)
+          calc(env(safe-area-inset-bottom) + 12px);
+        font: 15px/1.45 system-ui, sans-serif;
+      }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      p.hinweis { margin: 0 0 12px; opacity: 0.7; font-size: 13px; }
+      fieldset { border: 1px solid currentColor; border-radius: 8px; margin: 0 0 12px; padding: 8px 10px; }
+      legend { font-weight: 600; font-size: 13px; }
+      input { width: 100%; box-sizing: border-box; padding: 8px; margin: 4px 0; font: inherit; }
+      button { padding: 10px 12px; margin: 3px 3px 3px 0; font: inherit; border-radius: 8px; }
+      #player { width: 100%; aspect-ratio: 16/9; border: 0; background: #8882; }
+      pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; background: #8881; padding: 8px; border-radius: 8px; min-height: 40vh; }
+    </style>
+  </head>
+  <body>
+    <h1>Spike-Messung</h1>
+    <p class="hinweis">
+      Kein Produkt, sondern der Beweis: traegt der Transkript-Weg auf Android, streamen
+      beide Anbieter aus dem WebView, spielt der eingebettete Player, kommt ein
+      geteilter Link an. Jede Messung startet nur auf Klick.
+    </p>
+
+    <fieldset>
+      <legend>Eingaben</legend>
+      <input id="vid" placeholder="Video-ID" />
+      <input id="orKey" type="password" placeholder="OpenRouter-Key (bleibt auf dem Geraet)" />
+      <input id="miKey" type="password" placeholder="Mistral-Key (bleibt auf dem Geraet)" />
+      <button id="save">Eingaben merken</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Messungen</legend>
+      <button id="a">A Transkript</button>
+      <button id="b1">B1 OpenRouter</button>
+      <button id="b2">B2 Mistral</button>
+      <button id="c">C Player</button>
+      <button id="cSeek">C +30 s</button>
+      <button id="e">E YouTube-App ab 1:30</button>
+      <button id="f">F Speicher</button>
+      <button id="clear">Log leeren</button>
+    </fieldset>
+
+    <!--
+      Container, nicht das iframe selbst: YT.Player ersetzt das uebergebene Element
+      durch ein eigenes iframe und wuerde Attribute daran verlieren. Die Referrer-
+      Richtlinie haengt deshalb am Dokument (meta oben) – das ist ohnehin die Stelle,
+      die fuer den ausgehenden Referer zaehlt.
+    -->
+    <div id="player"></div>
+
+    <pre id="log">bereit.</pre>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

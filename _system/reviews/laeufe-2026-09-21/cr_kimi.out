@@ -1,0 +1,89 @@
+• Jetzt die App-Konfiguration und Skripte:
+
+• Jetzt führe ich die Prüfungen aus.
+
+• Alle Prüfungen laufen grün. Jetzt lese ich die KI-Clients und prüfe die App-Plugins:
+
+• Jetzt der Nachstellen-Teil: Blindleck in `check.sh` und die `videoIdAusText`-Regex mit echten Eingaben.
+
+• Bestätigt: das Skript ist grün, obwohl `window.` und `document.` im Code stehen. Gegenprobe am echten Bestand:
+
+• Noch die restlichen Aufrufer und background.ts im Ganzen:
+
+• Das ist ein echter Treffer – die Feldnamen prüfe ich gegen die Plugin-Typen:
+
+• Zwei Treffer beim Teilen-Ziel. Jetzt noch das Fehlerverhalten von `CapacitorHttp` gegen die `Http`-Naht prüfen:
+
+• Letzte Gegenprobe: Regel 6 manuell (unabhängig vom blinden Fleck des Skripts) und Schlüssel-Logs in der App:
+
+• Eine Probe noch für den Store-Build, dann der Bericht:
+
+• # Code-Review: Android-Branch `claude/youtube-transcription-android-app-1ts44f` (HEAD `cd1340f`)
+
+  ## CRITICAL
+
+  **1. Messung D kann nie gelingen: die App liest Felder, die das Share-Plugin gar nicht sendet.**
+  `app/src/main.ts:288-289`:
+
+  ```ts
+  const e = ereignis as { text?: string; subject?: string; url?: string };
+  const roh = [e.url, e.text, e.subject].filter(Boolean).join(" ");
+  ```
+
+  Das Plugin `@capgo/capacitor-share-target` sendet laut eigenen Typen (`dist/esm/definitions.d.ts`, `ShareReceivedEvent`) und laut nativer Implementierung (`CapacitorShareTargetPlugin.java:43-91`) das Ereignis `{ title, texts: string[], files }` – kein `text`, kein `subject`, kein `url`. Der Cast verbiegt den Typ, `tsc` bleibt stumm.
+
+  Fehlerszenario: YouTube-App → Teilen → Plugin feuert `{ title: "", texts: ["https://youtu.be/aqz-KE-bpKQ"], files: [] }` → App liest dreimal `undefined` → `roh` ist `""` → `videoIdAusText("")` → Log zeigt „D geteilt: `""`" und „erkannte Video-ID: KEINE" – **bei jeder** Teilung. Der Praktiker liest das als „Teilen kommt nicht an" und trifft eine Architekturentscheidung auf einem Messartefakt.
+  Vorschlag: `[(e.texts ?? []).join(" "), e.title].filter(Boolean).join(" ")` lesen und den Cast durch `ShareReceivedEvent` aus dem Plugin ersetzen.
+
+  ## MAJOR
+
+  **2. Kaltstart über das Teilen-Ziel liefert nie ein Ereignis – weder Messung D „kalt" noch der adb-Test aus der README können je etwas zeigen.**
+  Das Plugin überschreibt nur `handleOnNewIntent` (`CapacitorShareTargetPlugin.java:28-31`); den Launch-Intent aus `onCreate` wertet nichts aus (`load()`/`handleOnCreate` fehlen). Der Retained-Event-Mechanismus (`notifyListeners(…, true)`, Zeile 94) hilft nur dem Warmstart mit spät registriertem JS-Listener. Szenario: App läuft nicht → Nutzer teilt → Activity startet mit dem SEND-Intent als Launch-Intent → `onNewIntent` feuert nie → kein `shareReceived`, kein Log-Eintrag. Genau das ist der dokumentierte Testfall (`app/README.md:48, 52-58` und der `am start`-Befund) und die Behauptung im Manifest-Kommentar (`AndroidManifest.xml:29-32` deckt nur den Warmstart). Der Kalt/Warm-Unterschied ist im Log nicht von einem echten Fehlschlag unterscheidbar.
+  Vorschlag: In `MainActivity` (oder per Plugin-Ergänzung) den Launch-Intent in `onCreate` an denselben Handler geben, oder die Einschränkung in README/Messraster als bekannt markieren.
+
+  **3. `allowBackup="true"` lässt die API-Schlüssel ins Google-Drive-Backup wandern – die UI behauptet das Gegenteil.**
+  `app/android/app/src/main/AndroidManifest.xml:5` setzt `android:allowBackup="true"`, ohne `fullBackupContent`/`dataExtractionRules`. `@capacitor/preferences` legt die Schlüssel (`spike.orKey`, `spike.miKey`, `app/src/main.ts:50-62`) in SharedPreferences ab; Auto Backup (ab API 23 Vorgabe, targetSdk 36) nimmt `shared_prefs` standardmäßig mit. Szenario: Nutzer trägt seinen OpenRouter-Schlüssel ein, Gerät sichert nachts → der Schlüssel liegt im Google-Konto. Die Platzhalter „bleibt auf dem Gerät" (`app/index.html:46-47`) und der Kommentar in `app/src/main.ts:27` sind damit falsch, und Regel 5 (kein Backend, nichts verlässt das Gerät außer den zwei Gegenstellen) ist faktisch gebrochen.
+  Vorschlag: `android:allowBackup="false"` (Spike braucht kein Backup) oder eine `data_extraction_rules`-Datei, die `shared_prefs` ausschließt.
+
+  ## MINOR
+
+  **4. `shared/scripts/check.sh` hat zwei nachgestellte Blindlecker – es kann grün sein, während `shared/` Browser-Code enthält.**
+  a) `ohne_kommentare` (Zeile 19-21) nutzt `sed -E 's://.*::'` – das schneidet ab dem **ersten** `//` der Zeile, also mitten in einer URL. Alles rechts davon ist für Test 1 und Test 3 unsichtbar. Nachgestellt in `/tmp/review`:
+
+  ```
+  $ cat src/lib/hintertuer.ts
+  export const u = "https://x.y"; export const leck = () => window.fetch(u);
+  const b = "https://openrouter.ai"; export const dom = document.title + b;
+  $ bash scripts/check.sh
+  == 1. … ==  ok – keiner von: chrome\.|document\.|window\.|from "wxt|__FALLBACK__
+  ERGEBNIS: bestanden        EXIT: 0
+  ```
+
+  b) Das Muster `from "wxt` (Zeile 24) verlangt doppelte Anführungszeichen; `import { storage } from 'wxt/utils/storage'` läuft durch (ebenfalls nachgestellt: `ERGEBNIS: bestanden`, EXIT 0). Beides ist aktuell latent – manueller Grep über `shared/src` ist sauber. Ein Satz Vorschlag: Kommentare nur entfernen, wenn sie außerhalb von Strings stehen (oder pragmatisch: zusätzlich den Rohtext gegen `chrome\.|document\.|window\.|__FALLBACK__` greppen und Treffer manuell sichten).
+
+  **5. `verify-app-bundle.sh` prüft die APK-Permissions nie wirklich.**
+  Stufe 1b (Zeilen 67-89) liest das **Quell**-Manifest; Stufe 2 (Zeilen 99-103) entpackt nur `assets/public/*` – das gemergte Manifest der APK (binäres `AndroidManifest.xml`) wird in keiner Stufe gelesen. Eine Permission, die ein Plugin per Manifest-Merger einbringt, liefe beidseitig grün. Aktuell latent: ich habe die Manifeste aller vier Plugins (`@capacitor/android`, `app-launcher`, `filesystem`, `preferences`; das capgo-Plugin hat keins) gelesen – alle leer. Vorschlag: in Stufe 2 `aapt dump permissions` (oder `apkanalyzer manifest print`) auf die APK laufen lassen.
+
+  **6. `ladeYtApi` verschluckt den zweiten Klick still.**
+  `app/src/main.ts:227-236`: Zwei Klicks auf „C Player", bevor `iframe_api` geladen ist → der zweite Aufruf überschreibt `window.onYouTubeIframeAPIReady` → das Promise des ersten kehrt nie zurück, keine Fehlermeldung („C Player – iframe …" bleibt die letzte Zeile). Zusätzlich landen zwei Script-Tags im DOM. Vorschlag: ein modulweites `ladePromise` memoisisieren.
+
+  **7. CLAUDE.md widerspricht dem Bestand an zwei Stellen.**
+  a) Der Verzeichnisbaum nennt unter `extension/lib/` weiter „openrouter · mistral · transcript · … korrektur · prompts" – die liegen seit diesem Branch in `shared/src/lib/` (`extension/lib/` enthält sie nicht mehr, `ls` belegt). b) „Die Anbieter-Verzweigung … beide Plattformen rufen sie auf" – die App ruft `chatStream` gerade nicht auf; `app/src/main.ts:7-8` spricht beide Clients direkt an (in `shared/src/lib/chat.ts:14-16` korrekt begründet, in CLAUDE.md übermalt). Vorschlag: Baum aktualisieren, §6 um den Halbsatz „die App als Messgerät noch nicht" ergänzen.
+
+  **8. Template-Reste mit (latenter) Wirkung.**
+  a) `app/android/build.gradle:11` zieht `com.google.gms:google-services:4.4.4` als Buildscript-Classpath und `app/android/app/build.gradle:49-55` würde das Plugin anwenden, sobald eine `google-services.json` auftaucht – CLAUDE.md behauptet „keine Analytics-Abhängigkeit im Gradle (kein Firebase, kein Crashlytics)"; deklariert ist sie, nur inaktiv. Vorschlag: beide Blöcke streichen. b) `app/android/app/src/main/res/xml/file_paths.xml` teilt per `external-path path="."` die Wurzel des externen Speichers über den FileProvider – derzeit nutzt ihn nichts; beim ersten `FileProvider.getUriForFile` wäre die Freigabe zu weit. Vorschlag: auf `cache-path` beschränken oder die Datei samt Provider entfernen.
+
+  ## Kein Befund, aber geprüft und belegt
+
+  - **Workspace-Umbau ohne Verhaltensänderung:** `transcript.ts` ist bis auf die `Http`-Naht und eine bessere Fehlermeldung bei HTML-statt-JSON Zeile für Zeile der alte Stand (`git show origin/main:extension/lib/transcript.ts | diff - shared/src/lib/transcript.ts`: nur Naht, keine Logikänderung; `credentials: "include"` für Watch-Seite, Player-POST und Cues unverändert; `base.js`-Abruf same-origin → identisches Cookie-Verhalten). `settings.ts`, `chat.ts`, `background.ts`, `storage.ts` ebenso: gleiche Fehlerstrings, gleiche Schlüsselnamen, gleiche Sortierung.
+  - **Geladen, nicht nur gegrept:** `node extension/scripts/ladeprobe.mjs ../build-full` und `… ../build-store` (beide Builds von heute, nach dem letzten Quell-Stand): „Extension geladen: ja, Sidebar gemountet: ja, 0 unerwartete Meldungen", je zweimal.
+  - **Alle Prüfungen grün:** `pnpm -r run compile` (3/3), `node extension/scripts/selfcheck.ts` (25/25), `bash shared/scripts/check.sh` (bestanden), `bash extension/scripts/verify-store-bundle.sh` (bestanden), `pnpm --filter @ytsc/app run build` + `verify-app-bundle.sh` Stufe 1 (bestanden; Stufe 2 lokal nicht gelaufen, kein SDK hier – CI-Beleg steht in `docs/messungen.md`).
+  - **`videoIdAusText`** mit zehn realen Eingaben durchgespielt (m.youtube, music.youtube, `feature=shared` vor `v=`, live, embed, shorts, Playlist) – alle erwartungsgemäß.
+  - **CapacitorHttp-Fehlerabbildung:** `CapacitorHttp.java:67-69` löst bei HTTP-Fehlerstatus auf (reject nur bei Exception) – die `ok`-Rechnung in `app/src/http-capacitor.ts:27` greift also tatsächlich.
+  - **Schlüssel** werden nicht geloggt (nur „kein Key eingetragen"); die App hat keine `innerHTML`-Stelle (`logEl.textContent`).
+  - Regel 6 manuell verifiziert (der Grep, nicht nur das Skript): kein `chrome.`/`document.`/`window.`/`wxt/`/`__FALLBACK__` im Code von `shared/`.
+
+  **Hinweis zur Arbeitsweise:** für die Bundle-Prüfung habe ich `pnpm --filter @ytsc/app run build` ausgeführt; das hat `app/dist/` (gitignoriertes Build-Artefakt, vorher vorhanden) neu geschrieben. Alles andere Nachstellen lief unter `/tmp/review`.
+
+  Gelesen: rund 40 Dateien (davon komplett: `shared/src/lib/{chat,settings,transcript,translate-cues,openrouter,mistral}.ts`, `app/src/{main,http-capacitor}.ts`, Manifest/Gradle/Config der App, beide Plugin-Quellen für Share-Target und `CapacitorHttp.java`, alle fünf Prüfskripte, Workflow, `background.ts`, `app/README.md`, `docs/{messungen,uebergabe-android-2026-09-18}.md`; der Rest als Diff gegen `origin/main`). Ausgeführt: `git diff/log/show/ls-files`, `pnpm -r run compile`, `selfcheck.ts`, `check.sh`, `verify-store-bundle.sh`, App-Build + `verify-app-bundle.sh` Stufe 1, `ladeprobe.mjs` (full + store), zwei Blindleck-Reproduktionen von `check.sh` unter `/tmp`, `videoIdAusText`-Probelauf mit zehn Eingaben, diverse Greps in Quelle und `node_modules`.
+

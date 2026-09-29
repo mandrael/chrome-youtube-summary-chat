@@ -21,3 +21,11 @@ native-host/at.gasperl.youtube_summary_chat.json
 
 __pycache__/
 *.pyc
+
+# Gebautes Web-Bundle der App (wird von cap sync nach android/ kopiert).
+app/dist/
+
+# Rohlogs der Review-Läufe: gross, ohne Befundwert – die .out-Dateien sind versioniert
+_system/reviews/laeufe-*/*.err
+_system/reviews/laeufe-*/*.log
+_system/reviews/laeufe-*/commit-msg.txt

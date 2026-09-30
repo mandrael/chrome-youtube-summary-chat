@@ -2,6 +2,7 @@ import { storage } from "wxt/utils/storage";
 import {
   convKeyName,
   DEFAULT_SETTINGS,
+  mitVorgaben,
   sortiereUnterhaltungen,
   trKeyName,
   zumSpeichern,
@@ -23,7 +24,7 @@ export const settingsItem = storage.defineItem<Settings>("local:settings", {
 export async function getSettings(): Promise<Settings> {
   // Fehlende Felder mit Defaults auffüllen, damit ein alter gespeicherter Stand nach
   // einem Update keine undefined-Werte in die UI trägt.
-  return { ...DEFAULT_SETTINGS, ...(await settingsItem.getValue()) };
+  return mitVorgaben(await settingsItem.getValue());
 }
 
 export async function setSettings(patch: Partial<Settings>): Promise<Settings> {

@@ -178,6 +178,20 @@ immer dieselbe Extension-ID: **`abblpkhijcggklokijkhfbkgeljmimpm`**. Ohne den w�
 die ID aus dem Installationspfad ableiten, und die Native-Messaging-Registrierung wäre
 nach jedem Verschieben des Ordners ungültig.
 
+### Aktualisieren
+
+Der `full`-Build aktualisiert sich über den Helfer: Einmal am Tag fragt er das neueste
+[GitHub-Release](https://github.com/mandrael/chrome-youtube-summary-chat/releases/latest)
+ab. Ist es neuer, zeigen Sidebar und Optionsseite „Neue Version … Aktualisieren“. Der
+Klick lädt `…-full.zip`, prüft die SHA-256-Summe, die GitHub dazu nennt, tauscht den
+Ordner `erweiterung/` und die Helfer-Dateien und lädt die Erweiterung neu. Das geht nur
+im entpackten Release-Paket (`erweiterung/` neben `native-host/`); im Repository wird
+`build-full` nie überschrieben. Die Erweiterung selbst spricht GitHub nicht an.
+
+Der Store-Build aktualisiert sich über den Chrome Web Store, einen Update-Weg über den
+Helfer gibt es dort nicht (`verify-store-bundle.sh` Test 2g). Pakete für Tester baut
+`scripts/release.sh`, mit `--veroeffentlichen` auch das GitHub-Release.
+
 ### API-Key eintragen
 
 Einen Key auf [openrouter.ai/keys](https://openrouter.ai/keys) anlegen, in den
@@ -515,6 +529,15 @@ automatische Downloads.
 ## Was nicht geprüft ist
 
 Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nicht verifiziert:
+
+- **Update über den Helfer (0.13.0):** Der Tausch ist im Selbsttest des Helfers
+  geprüft (nachgebautes Paket über `file://`, falsche Prüfsumme bricht ohne Änderung
+  ab). Der ganze Weg gegen ein echtes GitHub-Release mit Neuladen in Chrome noch nicht,
+  und unter Windows nie.
+
+- **Mitlaufende Modellnamen (0.13.0):** `~openai/gpt-luna-latest` und
+  `~google/gemini-flash-latest` stehen in OpenRouters Modellliste; eine Chat-Anfrage
+  damit ist noch nicht gelaufen (`extension/scripts/modellmessung.ts`).
 
 - **Kommentarstimmung (0.12.0):** Abruf der 100 Top-Kommentare und die Anfrage ans
   Modell sind im Browser geprüft, eine echte Antwort nicht – im Testprofil liegt kein

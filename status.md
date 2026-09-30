@@ -2,12 +2,22 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
-**Modellwahl neu messen (30.09.):** `node extension/scripts/modellmessung.ts` mit
-`OPENROUTER_API_KEY` aus der Umgebung (Michael startet es, der Schlüssel bleibt bei ihm).
-Kandidaten: gpt-6-luna (0,10/0,50 $/M, halb so teuer wie 5.6-luna), OpenRouter-Aliase
-`~openai/gpt-luna-latest` und `~google/gemini-flash-latest`, gemini-3.5-flash-lite
-(neueste Lite, kein Alias vorhanden), gemini-3.8-flash. Offen: Aliase statt fester
-Versionen, und Updates über GitHub (Repo ist privat).
+**0.13.0 (30.09.), Michael entschied:** Standard ist OpenRouters mitlaufender Name
+`~openai/gpt-luna-latest` (heute gpt-6-luna, 0,10/0,50 $/M), dahinter
+`google/gemini-3.5-flash-lite` fest (kein Alias vorhanden) und `~google/gemini-flash-latest`.
+Ein gespeichertes `openai/gpt-5.6-luna` gilt als alter Standard und folgt dem neuen; das
+Standardmodell wird nicht mehr mitgespeichert. Kein eigener „als Standard setzen“-Knopf –
+jede Wahl bleibt ohnehin stehen. **Messung steht aus:** `node extension/scripts/modellmessung.ts`
+mit dem OpenRouter-Schlüssel aus der Umgebung, startet Michael (Schlüssel bleibt bei ihm).
+
+**Update der full-Version über den Helfer (0.13.0):** Helfer fragt `releases/latest` von
+GitHub (höchstens einmal am Tag), Klick lädt `…-full.zip`, prüft SHA-256, tauscht
+`erweiterung/` und Helfer-Dateien, Erweiterung lädt neu. Store-Build: Web Store (Konto
+bei Michael, 5 $). **Offen:** Lizenz (bisher MIT) bestätigen → Repo öffentlich → erstes
+Release mit `scripts/release.sh --veroeffentlichen` → Ende-zu-Ende-Test in einem
+Chrome mit eigenem Profil (dort eigene Host-Registrierung, Michaels bleibt unberührt).
+Historie vor dem Öffentlichmachen geprüft: keine Schlüsselmuster, keine Gmail-Adresse,
+nur `michael@gasperl.at` als Autor.
 
 **Tester-Pakete:** `scripts/release.sh` baut und prüft alles und legt die Zips (full,
 store) und die Debug-APK nach `releases/` (nur lokal, in `.gitignore`).

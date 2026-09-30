@@ -149,6 +149,28 @@ export default defineBackground(() => {
             sendResponse({ ok: true, data: null });
             break;
           }
+          case "updateCheck": {
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const { updatePruefen } = await import("@/lib/fallback");
+            sendResponse({ ok: true, data: await updatePruefen(!!msg.jetzt) });
+            break;
+          }
+          case "updateInstall": {
+            if (!__FALLBACK__) {
+              sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
+              break;
+            }
+            const { updateInstallieren } = await import("@/lib/fallback");
+            const version = await updateInstallieren();
+            sendResponse({ ok: true, data: version });
+            // Neu laden liest die getauschten Dateien von der Platte; erst nach der
+            // Antwort, sonst erfährt die Seite nichts vom Erfolg.
+            setTimeout(() => chrome.runtime.reload(), 500);
+            break;
+          }
           default:
             sendResponse({ ok: false, error: `Unbekannte Anfrage: ${msg?.type}` });
         }

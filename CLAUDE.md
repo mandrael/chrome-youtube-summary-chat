@@ -64,7 +64,10 @@ Hinweis auf eigene, gemeinfreie und lizenzfreie Nutzung. Einordnung mit Quellen:
 
 **5. Keine Telemetrie, kein Backend, kein Proxy.** Host-Permissions bleiben bei
 `youtube.com`, `openrouter.ai`, `api.eu.mistral.ai` und `api.mistral.ai`; im
-`full`-Build zusätzlich `returnyoutubedislikeapi.com` (Ausnahme in §1). In der App
+`full`-Build zusätzlich `returnyoutubedislikeapi.com` (Ausnahme in §1). Updates der
+`full`-Version holt der **Helfer**, nicht die Erweiterung: `api.github.com` und das
+Release-Paket, Prüfung höchstens einmal am Tag, Laden nur auf Klick (Michael,
+30.09.2026). In der App
 bleiben die Android-Permissions bei `INTERNET`; keine Analytics-Abhängigkeit im Gradle
 (kein Firebase, kein Crashlytics).
 

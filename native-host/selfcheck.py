@@ -176,4 +176,57 @@ def _modell():
 
 check("vier Modelldateien vorhanden", _modell)
 
+print("Update aus dem Release")
+
+
+def _update():
+    # Ein nachgebautes Release-Paket, geladen ueber file:// statt GitHub.
+    import hashlib
+    import tempfile
+    import zipfile
+    import yt_summary_host as h
+
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        paket = t / "paket"
+        (paket / "erweiterung").mkdir(parents=True)
+        (paket / "native-host").mkdir()
+        (paket / "erweiterung" / "manifest.json").write_text('{"version": "0.1.0"}')
+        (paket / "erweiterung" / "alt.js").write_text("weg")
+        (paket / "native-host" / "run-host.sh").write_text("bleibt")
+        zip_pfad = t / "neu-full.zip"
+        with zipfile.ZipFile(zip_pfad, "w") as z:
+            z.writestr("p-0.2.0-full/erweiterung/manifest.json", '{"version": "0.2.0"}')
+            z.writestr("p-0.2.0-full/native-host/yt_summary_host.py", "# neu")
+            z.writestr("p-0.2.0-full/LIESMICH.txt", "neu")
+        rel = {"version": "0.2.0", "notes": "", "seite": "", "url": zip_pfad.as_uri(),
+               "size": zip_pfad.stat().st_size,
+               "digest": "sha256:" + hashlib.sha256(zip_pfad.read_bytes()).hexdigest()}
+        alt = (h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release)
+        h.HIER, h.PAKET, h.ERWEITERUNG = paket / "native-host", paket, paket / "erweiterung"
+        h.neuestes_release = lambda: rel
+        try:
+            falsch = dict(rel, digest="sha256:" + "0" * 64)
+            h.neuestes_release = lambda: falsch
+            try:
+                h.update_installieren({"version": "0.1.0"})
+                raise AssertionError("falsche Pruefsumme nicht bemerkt")
+            except h.HostError:
+                pass
+            assert (paket / "erweiterung" / "alt.js").exists(), "bei Fehler veraendert"
+            h.neuestes_release = lambda: rel
+            assert h.update_installieren({"version": "0.2.0"}).get("unveraendert")
+            assert h.update_installieren({"version": "0.1.0"})["version"] == "0.2.0"
+            assert json.loads((paket / "erweiterung" / "manifest.json").read_text())["version"] == "0.2.0"
+            assert not (paket / "erweiterung" / "alt.js").exists(), "alte Datei blieb"
+            assert (paket / "native-host" / "yt_summary_host.py").read_text() == "# neu"
+            assert (paket / "native-host" / "run-host.sh").read_text() == "bleibt"
+            assert (paket / "LIESMICH.txt").read_text() == "neu"
+            assert not list(paket.glob(".erweiterung-*")), "Reste des Tauschs"
+        finally:
+            h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release = alt
+
+
+check("tauscht Erweiterung und Helfer, bricht bei falscher Pruefsumme ab", _update)
+
 print(f"\n{checks} Pruefungen bestanden.")

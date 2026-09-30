@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { ask } from "@/lib/chat-client";
 import { ModellWahl } from "./ModellWahl";
+import { UpdateHinweis } from "@/components/UpdateHinweis";
+import { makeT, resolveUiLang } from "@shared/lib/i18n";
 import { preis as mistralPreis, PREISSTAND } from "@shared/lib/mistral";
 import {
   empfohleneModelle,
@@ -222,6 +224,9 @@ export function Options() {
           {new Date(__BAUZEIT__).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" })}
         </span>
       </h1>
+      {__FALLBACK__ && (
+        <UpdateHinweis t={makeT(resolveUiLang(s.uiLang))} className="mb-4 rounded-md border border-border p-3" />
+      )}
       <p className="mb-6 text-sm text-muted-foreground">
         Modellaufrufe gehen direkt vom Browser an den gewählten Anbieter. Kein eigenes
         Backend, kein Proxy, keine Telemetrie.

@@ -169,6 +169,12 @@ const de = {
   downloadFolderAdjust: "Downloadordner anpassen",
   downloadChoosing: "Ordnerdialog ist offen …",
   downloadReveal: "Im Ordner zeigen",
+  updateAvailable: "Neue Version",
+  updateInstall: "Aktualisieren",
+  updateBusy: "Wird aktualisiert …",
+  updateDone: "Aktualisiert. Seite neu laden (F5).",
+  updateLater: "Später",
+  updateNotes: "Was ist neu",
   close: "Schliessen",
 } as const;
 
@@ -329,6 +335,12 @@ const en: Record<Keys, string> = {
   downloadFolderAdjust: "Change download folder",
   downloadChoosing: "Folder dialog is open …",
   downloadReveal: "Show in folder",
+  updateAvailable: "New version",
+  updateInstall: "Update",
+  updateBusy: "Updating …",
+  updateDone: "Updated. Reload the page (F5).",
+  updateLater: "Later",
+  updateNotes: "What's new",
   close: "Close",
 };
 

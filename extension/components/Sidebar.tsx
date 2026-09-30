@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/input";
 import { Markdown } from "@/components/Markdown";
 import { TranscriptView } from "@/components/TranscriptView";
 import { HistoryView } from "@/components/HistoryView";
+import { UpdateHinweis } from "@/components/UpdateHinweis";
 import { ask, startChat, startDownload, startFallback } from "@/lib/chat-client";
 import { makeT, resolveUiLang, type T } from "@shared/lib/i18n";
 import {
@@ -1136,6 +1137,8 @@ export function Sidebar({
             : undefined
         }
       />
+
+      {__FALLBACK__ && <UpdateHinweis t={t} className="border-b border-border px-3 py-1.5" />}
 
       {(kommentare || kommentarMeldung) && (
         <div className="flex items-center gap-2 border-b border-border px-3 py-1 text-xs text-muted-foreground">

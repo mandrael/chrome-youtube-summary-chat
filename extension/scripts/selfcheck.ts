@@ -204,6 +204,7 @@ check("Modell-Slug braucht ein Provider-Präfix", () => {
   assert.ok(isValidSlug("google/gemini-3.5-flash-lite"));
   assert.ok(isValidSlug("google/gemini-3.5-flash-lite:batch"));
   assert.ok(!isValidSlug("gemini-3.5-flash-lite"));
+  assert.ok(isValidSlug("~openai/gpt-luna-latest"));
   assert.ok(!isValidSlug(""));
 });
 

@@ -19,6 +19,7 @@ Protokoll: 4-Byte-Laengenpraefix (little endian) plus JSON, auf stdin/stdout.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -32,6 +33,7 @@ import threading
 import urllib.error
 import urllib.request
 import wave
+import zipfile
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -908,6 +910,124 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
     send({"type": "result", **result})
 
 
+# --------------------------------------------------------------------------
+# Update aus dem neuesten GitHub-Release (nur auf Klick, Michael 30.09.2026)
+# --------------------------------------------------------------------------
+
+RELEASE_API = "https://api.github.com/repos/mandrael/chrome-youtube-summary-chat/releases/latest"
+HIER = Path(__file__).resolve().parent
+# Release-Paket: <paket>/erweiterung (in Chrome geladen) neben <paket>/native-host.
+# Im Repository liegt daneben build-full – das wird nie ueberschrieben.
+PAKET = HIER.parent
+ERWEITERUNG = PAKET / "erweiterung"
+
+
+def version_tupel(v: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in re.findall(r"\d+", v)[:3])
+
+
+def neuestes_release() -> dict[str, Any]:
+    req = urllib.request.Request(
+        RELEASE_API, headers={"Accept": "application/vnd.github+json", "User-Agent": TITLE}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            raise HostError("Auf GitHub gibt es noch kein Release.") from e
+        raise HostError(f"GitHub HTTP {e.code}") from e
+    except urllib.error.URLError as e:
+        raise HostError(f"GitHub nicht erreichbar: {e.reason}") from e
+    paket = next((a for a in data.get("assets", []) if a.get("name", "").endswith("-full.zip")), None)
+    if not paket:
+        raise HostError("Das neueste Release enthält kein full-Paket.")
+    return {
+        "version": str(data.get("tag_name", "")).lstrip("v"),
+        "notes": (data.get("body") or "")[:2000],
+        "seite": data.get("html_url", ""),
+        "url": paket["browser_download_url"],
+        "digest": paket.get("digest") or "",
+        "size": int(paket.get("size") or 0),
+    }
+
+
+def update_pruefen(msg: dict[str, Any]) -> dict[str, Any]:
+    r = neuestes_release()
+    return {
+        "type": "update",
+        "version": r["version"],
+        "neuer": version_tupel(r["version"]) > version_tupel(str(msg.get("version", "0"))),
+        "notes": r["notes"],
+        "seite": r["seite"],
+        "installierbar": (ERWEITERUNG / "manifest.json").is_file(),
+    }
+
+
+def update_installieren(msg: dict[str, Any]) -> dict[str, Any]:
+    if not (ERWEITERUNG / "manifest.json").is_file():
+        raise HostError(
+            "Dieser Helfer gehört zu keinem Release-Paket (daneben fehlt der Ordner "
+            "„erweiterung“). Ein Entwicklerstand wird über git aktualisiert."
+        )
+    r = neuestes_release()
+    if version_tupel(r["version"]) <= version_tupel(str(msg.get("version", "0"))):
+        return {"type": "update", "ok": True, "version": r["version"], "unveraendert": True}
+    if not 0 < r["size"] < 100_000_000:
+        raise HostError(f"Unerwartete Paketgröße: {r['size']} Byte.")
+
+    with tempfile.TemporaryDirectory() as tmp_name:
+        tmp = Path(tmp_name)
+        zip_pfad = tmp / "paket.zip"
+        req = urllib.request.Request(r["url"], headers={"User-Agent": TITLE})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp, open(zip_pfad, "wb") as f:
+                shutil.copyfileobj(resp, f)
+        except urllib.error.URLError as e:
+            raise HostError(f"Download von GitHub fehlgeschlagen: {e}") from e
+        # GitHub nennt je Datei die SHA-256-Summe; fehlt sie, bleibt HTTPS als Schutz.
+        algo, _, soll = r["digest"].partition(":")
+        if algo == "sha256" and hashlib.sha256(zip_pfad.read_bytes()).hexdigest() != soll:
+            raise HostError("Prüfsumme des Pakets stimmt nicht – abgebrochen, nichts geändert.")
+        # extractall entfernt absolute Pfade und „..“ aus den Namen.
+        with zipfile.ZipFile(zip_pfad) as z:
+            z.extractall(tmp / "neu")
+        wurzeln = [p for p in (tmp / "neu").iterdir() if p.is_dir()]
+        if len(wurzeln) != 1:
+            raise HostError("Paket hat nicht den erwarteten Aufbau – nichts geändert.")
+        neu = wurzeln[0]
+        try:
+            manifest = json.loads((neu / "erweiterung" / "manifest.json").read_text("utf-8"))
+        except (OSError, ValueError) as e:
+            raise HostError("Paket ohne lesbares manifest.json – nichts geändert.") from e
+        if manifest.get("version") != r["version"] or not (neu / "native-host" / "yt_summary_host.py").is_file():
+            raise HostError("Paket passt nicht zum Release – nichts geändert.")
+
+        # Erst vollständig neben das Ziel kopieren, dann per Umbenennen tauschen: ein
+        # Abbruch vorher lässt die alte Fassung unberührt.
+        bereit = PAKET / ".erweiterung-neu"
+        alt = PAKET / ".erweiterung-alt"
+        shutil.rmtree(bereit, ignore_errors=True)
+        shutil.rmtree(alt, ignore_errors=True)
+        shutil.copytree(neu / "erweiterung", bereit)
+        ERWEITERUNG.rename(alt)
+        try:
+            bereit.rename(ERWEITERUNG)
+        except OSError:
+            alt.rename(ERWEITERUNG)
+            raise
+        shutil.rmtree(alt, ignore_errors=True)
+        # Der Helfer selbst: die laufende Fassung hat ihre Datei schon gelesen, die
+        # neue gilt ab dem nächsten Aufruf. run-host.sh und das Host-Manifest bleiben.
+        for f in (neu / "native-host").iterdir():
+            if f.is_file():
+                shutil.copy2(f, HIER / f.name)
+        for f in neu.iterdir():
+            if f.is_file():
+                shutil.copy2(f, PAKET / f.name)
+    return {"type": "update", "ok": True, "version": r["version"]}
+
+
 def main() -> None:
     while True:
         try:
@@ -922,6 +1042,10 @@ def main() -> None:
             kind = msg.get("type")
             if kind == "ping":
                 send({"version": VERSION, "tools": tool_status()})
+            elif kind == "updateCheck":
+                send(update_pruefen(msg))
+            elif kind == "updateInstall":
+                send(update_installieren(msg))
             elif kind == "chooseFolder":
                 send(choose_folder())
             elif kind == "transcribe":

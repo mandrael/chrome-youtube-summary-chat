@@ -165,6 +165,26 @@ else
 fi
 
 echo
+echo "== 2g. Update über den Helfer: nicht im Store-Bundle, im full-Build schon =="
+# Der Store aktualisiert selbst; der Tausch der Dateien über den Helfer (30.09.2026)
+# gehört nur zum full-Paket. Ohne Gegenprobe bestünde der Test auch, wenn es den
+# Weg gar nicht gäbe. Die Nachrichtennamen „updateCheck“ und „updateInstall“ bleiben
+# als leere case-Hülle und als UI-Text stehen (wie „hostStatus“) – geprüft werden
+# deshalb die Namen, die nur im Code selbst vorkommen.
+UPD='updatePruefen|updateInstallieren|updateStand|function UpdateHinweis'
+UHITS=$(grep -rInoE "$UPD" "$OUT" --include='*.js' 2>/dev/null || true)
+if [ -n "$UHITS" ]; then
+  echo "  FEHLGESCHLAGEN – Update-Weg im Store-Bundle:"
+  echo "$UHITS" | cut -c1-160
+  FAIL=1
+elif ! grep -rqE "updateInstallieren" ../build-full --include='*.js'; then
+  echo "  FEHLGESCHLAGEN – Gegenprobe: auch im full-Build kein updateInstallieren"
+  FAIL=1
+else
+  echo "  ok – keiner von: $UPD (im full-Build vorhanden)"
+fi
+
+echo
 echo "== 2c. Der erlaubte Weg MUSS drin sein =="
 # Ein Test, der nur Verbotenes sucht, wuerde auch bestehen, wenn das Store-Bundle gar
 # nichts mehr kann. Die Spracherkennung aus dem laufenden Ton ist dort der einzige Weg

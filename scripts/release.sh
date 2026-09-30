@@ -5,12 +5,26 @@
 #   youtube-summary-chat-app-<versionName>-debug.apk Android-App (Debug-Signatur)
 # Ältere Stände in releases/ werden ersetzt – dort liegt immer nur das neueste.
 # Vor dem Packen laufen dieselben Beweise wie vor jedem Commit (CLAUDE.md, Prüfungen).
+#
+# Mit --veroeffentlichen zusätzlich ein GitHub-Release v<version> mit allen drei
+# Dateien. Daraus holt der Helfer das Update der full-Version (native-host,
+# update_installieren). Nur auf ausdrücklichen Auftrag: das ist eine Veröffentlichung.
 set -euo pipefail
+veroeffentlichen=0
+[ "${1:-}" = "--veroeffentlichen" ] && veroeffentlichen=1
 cd "$(dirname "$0")/.."
 wurzel="$PWD"
 
 version=$(node -p "require('./extension/package.json').version")
 app_version=$(sed -n 's/.*versionName "\(.*\)".*/\1/p' app/android/app/build.gradle)
+
+if [ $veroeffentlichen = 1 ]; then
+  # Das Release muss genau dem Stand auf GitHub entsprechen.
+  [ -z "$(git status --porcelain)" ] || { echo "Arbeitsverzeichnis nicht sauber."; exit 1; }
+  git fetch -q origin
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse @{u})" ] || { echo "Stand ist nicht gepusht."; exit 1; }
+  ! gh release view "v$version" >/dev/null 2>&1 || { echo "Release v$version gibt es schon – Version erhöhen."; exit 1; }
+fi
 
 echo "== Erweiterung $version bauen und prüfen =="
 pnpm -r run compile
@@ -55,8 +69,20 @@ YouTube Summary Chat $version (full)
    Der Installer richtet auch Python-Umgebung und Sprachmodell ein (rund 670 MB).
    Danach Chrome einmal ganz beenden und neu starten.
 4. Den API-Schlüssel (OpenRouter oder Mistral) auf der Optionsseite eintragen.
+5. Updates: Gibt es eine neue Version, zeigen Seitenleiste und Optionsseite
+   "Neue Version … Aktualisieren". Ein Klick lädt sie über den Helfer von GitHub,
+   ersetzt die Dateien in diesem Ordner und lädt die Erweiterung neu.
 EOF
 (cd "$paket/.." && zip -qr -X "$wurzel/releases/chrome-youtube-summary-chat-$version-full.zip" "$(basename "$paket")")
 (cd build-store && zip -qr -X "$wurzel/releases/chrome-youtube-summary-chat-$version-store.zip" .)
 cp "$apk" "releases/youtube-summary-chat-app-$app_version-debug.apk"
 ls -l releases
+
+if [ $veroeffentlichen = 1 ]; then
+  echo "== Veröffentlichen v$version =="
+  vorher=$(git describe --tags --abbrev=0 2>/dev/null || true)
+  notizen="$(mktemp)"
+  git log --no-merges --format='- %s' ${vorher:+"$vorher"..}HEAD | grep -v '^- status.md' > "$notizen" || true
+  gh release create "v$version" releases/* --target "$(git rev-parse HEAD)" \
+    --title "$version" --notes-file "$notizen"
+fi

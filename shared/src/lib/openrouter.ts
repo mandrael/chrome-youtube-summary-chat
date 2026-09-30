@@ -25,7 +25,8 @@ function headers(apiKey: string): Record<string, string> {
 
 /** Ein Modell-Slug ohne Provider-Präfix ist bei OpenRouter nicht auflösbar. */
 export function isValidSlug(slug: string): boolean {
-  return /^[a-z0-9._-]+\/[a-z0-9._:-]+$/i.test(slug.trim());
+  // „~" vorn: OpenRouters mitlaufende Namen wie „~openai/gpt-luna-latest".
+  return /^~?[a-z0-9._-]+\/[a-z0-9._:-]+$/i.test(slug.trim());
 }
 
 const MIN_CONTEXT = 128_000;
@@ -52,11 +53,16 @@ export const ONE_M_CONTEXT = 1_000_000;
  *
  * Ein Eintrag, den OpenRouter nicht mehr führt, verschwindet von selbst – gerendert
  * wird nur, was auch in der geladenen Liste steht.
+ *
+ * Seit 30.09.2026 stehen oben OpenRouters mitlaufende Namen („~…-latest“): sie zeigen
+ * immer auf das neueste Modell einer Reihe, damit die Auswahl ohne neue Version aktuell
+ * bleibt. Preis und Tempo können sich dabei ändern; die Marken gelten für die Fassung
+ * zum Messzeitpunkt. Für Flash Lite gibt es keinen solchen Namen, daher fest.
  */
 export const EMPFEHLUNG: [id: string, marken: string[]][] = [
-  ["openai/gpt-5.6-luna", ["Standard", "schnell"]],
-  ["google/gemini-3.8-flash", ["schnell"]],
+  ["~openai/gpt-luna-latest", ["Standard", "schnell"]],
   ["google/gemini-3.5-flash-lite", ["schnell"]],
+  ["~google/gemini-flash-latest", ["schnell"]],
   ["z-ai/glm-5.3-flash", ["günstig", "schnell"]],
   ["nvidia/nemotron-3-nano-30b-a3b", ["günstig", "schnell"]],
   ["openai/gpt-5-nano", ["günstig", "schnell"]],
@@ -109,7 +115,14 @@ export function isLiteModel(id: string): boolean {
  * Rückfallliste, wenn /models nicht erreichbar ist. Ohne Preise – geraten wird hier
  * nichts, lieber eine Lücke in der Anzeige als eine falsche Zahl.
  */
+// Mitlaufende Namen, damit auch die Rückfallliste nicht veraltet (Stand 30.09.2026).
 export const FALLBACK_MODELS: ModelInfo[] = [
+  {
+    id: "~openai/gpt-luna-latest",
+    name: "GPT Luna Latest",
+    contextLength: 1_050_000,
+    supportsReasoning: true,
+  },
   {
     id: "google/gemini-3.5-flash-lite",
     name: "Gemini 3.5 Flash Lite",
@@ -117,21 +130,15 @@ export const FALLBACK_MODELS: ModelInfo[] = [
     supportsReasoning: true,
   },
   {
-    id: "google/gemini-3.5-flash",
-    name: "Gemini 3.5 Flash",
+    id: "~google/gemini-flash-latest",
+    name: "Gemini Flash Latest",
     contextLength: 1_048_576,
     supportsReasoning: true,
   },
   {
-    id: "anthropic/claude-sonnet-4.5",
-    name: "Claude Sonnet 4.5",
-    contextLength: 200_000,
-    supportsReasoning: true,
-  },
-  {
-    id: "openai/gpt-5-mini",
-    name: "GPT-5 mini",
-    contextLength: 400_000,
+    id: "~anthropic/claude-sonnet-latest",
+    name: "Claude Sonnet Latest",
+    contextLength: 1_000_000,
     supportsReasoning: true,
   },
 ];

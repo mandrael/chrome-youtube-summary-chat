@@ -12,8 +12,17 @@ import type { Conversation, Settings } from "./types";
  */
 
 // Beste Mischung aus Preis und Antwortqualität für lange Transkripte; siehe
-// EMPFEHLUNG in openrouter.ts.
-export const DEFAULT_MODEL = "openai/gpt-5.6-luna";
+// EMPFEHLUNG in openrouter.ts. Ein mitlaufender Name von OpenRouter: er zeigt immer auf
+// das neueste Modell der Luna-Reihe, neue Fassungen kommen ohne neue Version
+// (Michael, 30.09.2026).
+export const DEFAULT_MODEL = "~openai/gpt-luna-latest";
+
+/**
+ * Frühere Standardmodelle. Wer eines davon gespeichert hat, hat es nicht gewählt,
+ * sondern nur behalten – bis 0.12.1 wurde das Modell bei jeder Einstellungsänderung
+ * mitgeschrieben. Es gilt deshalb als „Standard“ und folgt dem neuen.
+ */
+const ALTE_STANDARDMODELLE = ["openai/gpt-5.6-luna"];
 
 export const DEFAULT_SETTINGS: Settings = {
   provider: "openrouter",
@@ -65,9 +74,18 @@ export const trKeyName = (videoId: string, lang: string, target: string) =>
  * ältere Fassung trug.
  */
 export function zumSpeichern(next: Settings): Settings {
-  if (next.systemPrompt !== DEFAULT_SYSTEM_PROMPT) return next;
-  const { systemPrompt: _weg, ...ohnePrompt } = next;
-  return ohnePrompt as Settings;
+  const aus = { ...next } as Partial<Settings>;
+  if (aus.systemPrompt === DEFAULT_SYSTEM_PROMPT) delete aus.systemPrompt;
+  // Dasselbe für das Modell: sonst erreicht ein späterer Wechsel des Standards niemanden.
+  if (aus.model === DEFAULT_MODEL) delete aus.model;
+  return aus as Settings;
+}
+
+/** Gespeicherter Stand plus Vorgaben; ein altes Standardmodell folgt dem neuen. */
+export function mitVorgaben(gespeichert: Partial<Settings> | null | undefined): Settings {
+  const s = { ...DEFAULT_SETTINGS, ...gespeichert };
+  if (ALTE_STANDARDMODELLE.includes(s.model)) s.model = DEFAULT_MODEL;
+  return s;
 }
 
 /** Unterhaltungen, neueste zuerst; kaputte Einträge fallen raus. */

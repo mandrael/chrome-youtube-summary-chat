@@ -84,8 +84,11 @@ async function lauf(model: string, frage: string): Promise<Ergebnis> {
     return e;
   }
   let puffer = "";
-  for await (const stueck of res.body.pipeThrough(new TextDecoderStream())) {
-    puffer += stueck;
+  const leser = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  for (;;) {
+    const { done, value } = await leser.read();
+    if (done) break;
+    puffer += value;
     let nl: number;
     while ((nl = puffer.indexOf("\n")) !== -1) {
       const zeile = puffer.slice(0, nl).trim();
@@ -123,12 +126,14 @@ for (const model of KANDIDATEN) {
   const r: Record<string, Ergebnis> = {};
   for (const l of LAEUFE) {
     process.stdout.write(`${model} ${l.name} … `);
+    let e: Ergebnis;
     try {
-      r[l.name] = await lauf(model, l.frage);
+      e = await lauf(model, l.frage);
     } catch (err) {
-      r[l.name] = { status: 0, gesamt: 0, text: "", fehler: String(err) };
+      e = { status: 0, gesamt: 0, text: "", fehler: String(err) };
     }
-    console.log(r[l.name].fehler ? `Fehler ${r[l.name].status}` : s(r[l.name].ersterToken));
+    r[l.name] = e;
+    console.log(e.fehler ? `Fehler ${e.status}` : s(e.ersterToken));
   }
   const k = r.kurz!, g = r.lang!;
   zeilen.push(

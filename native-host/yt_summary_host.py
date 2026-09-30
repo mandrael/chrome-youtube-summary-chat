@@ -1018,7 +1018,7 @@ def update_installieren(msg: dict[str, Any]) -> dict[str, Any]:
                 if len(daten) > MAX_PAKET:
                     raise HostError("Paket größer als erlaubt – abgebrochen, nichts geändert.")
                 f.write(daten)
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, OSError) as e:  # auch Zeitüberschreitung beim Lesen
             raise HostError(f"Download von GitHub fehlgeschlagen: {e}") from e
         if hashlib.sha256(zip_pfad.read_bytes()).hexdigest() != soll:
             raise HostError("Prüfsumme des Pakets stimmt nicht – abgebrochen, nichts geändert.")
@@ -1059,7 +1059,10 @@ def update_installieren(msg: dict[str, Any]) -> dict[str, Any]:
             ERWEITERUNG.rename(alt)
         except OSError as e:
             shutil.rmtree(bereit, ignore_errors=True)
-            raise HostError(f"Ordner „erweiterung“ ist gesperrt ({e}) – nichts geändert.") from e
+            raise HostError(
+                f"Ordner „erweiterung“ ist gesperrt ({e}). Der Helfer ist schon neu, die "
+                "Erweiterung noch alt – Chrome schliessen und erneut aktualisieren."
+            ) from e
         try:
             bereit.rename(ERWEITERUNG)
         except OSError:

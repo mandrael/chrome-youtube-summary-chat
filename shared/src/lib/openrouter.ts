@@ -58,21 +58,31 @@ export const ONE_M_CONTEXT = 1_000_000;
  * immer auf das neueste Modell einer Reihe, damit die Auswahl ohne neue Version aktuell
  * bleibt. Preis und Tempo können sich dabei ändern; die Marken gelten für die Fassung
  * zum Messzeitpunkt. Für Flash Lite gibt es keinen solchen Namen, daher fest.
+ *
+ * 30.09.2026, nachgeführt an OpenRouters Liste: die „schlau“-Reihe auf die Nachfolger
+ * (Claude Sonnet 5.5 und Opus 5.5, GPT-6.1 Sol – alle drei ungemessen, Preis wie der
+ * Vorgänger oder darunter), DeepSeek auf den mitlaufenden Namen (zeigt auf V4.1 Flash,
+ * Eingabe 0,02 $/M, Tempo ungemessen). Der Standard „~openai/gpt-luna-latest“ zeigt
+ * bereits auf GPT-6 Luna (0,10/0,50 $ je Mio., halb so viel wie 5.6 Luna). Bei Gemini gibt
+ * es nichts Neues: Flash steht bei 3.8, Flash Lite bei 3.5, Pro bei 3.1 (Vorschau).
+ * Sonnet und Opus stehen fest statt mitlaufend, weil der Name „~…-latest“ bei Sonnet nicht
+ * erkennen lässt, auf welche Fassung er zeigt.
  */
 export const EMPFEHLUNG: [id: string, marken: string[]][] = [
   ["~openai/gpt-luna-latest", ["Standard", "schnell"]],
   ["google/gemini-3.5-flash-lite", ["schnell"]],
   ["~google/gemini-flash-latest", ["schnell"]],
-  ["z-ai/glm-5.3-flash", ["günstig", "schnell"]],
+  // Seit dem 05.09. von ≈ 0,07 auf 0,15 $/M gestiegen – damit nicht mehr „günstig“.
+  ["z-ai/glm-5.3-flash", ["schnell"]],
   ["nvidia/nemotron-3-nano-30b-a3b", ["günstig", "schnell"]],
   ["openai/gpt-5-nano", ["günstig", "schnell"]],
   ["qwen/qwen3.7-flash", ["günstig"]],
-  ["deepseek/deepseek-v4-flash", ["günstig"]],
+  ["~deepseek/deepseek-flash-latest", ["günstig"]],
   ["anthropic/claude-haiku-4.5", ["schnell"]],
   ["z-ai/glm-5.3", ["schlau"]],
-  ["openai/gpt-5.6-sol", ["schlau"]],
-  ["anthropic/claude-sonnet-5", ["schlau"]],
-  ["anthropic/claude-opus-5", ["schlau"]],
+  ["openai/gpt-6.1-sol", ["schlau"]],
+  ["anthropic/claude-sonnet-5.5", ["schlau"]],
+  ["anthropic/claude-opus-5.5", ["schlau"]],
 ];
 
 /** Die Empfehlung, soweit die geladene Liste sie führt – in ihrer Reihenfolge. */

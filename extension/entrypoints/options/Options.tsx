@@ -3,6 +3,7 @@ import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { availability as localAvailability, baseLang, downloadModel, isSupported } from "@/lib/translate-local";
 import { Check, Copy, Loader2, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQuittung } from "@/lib/quittung";
 import { Input, Textarea } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -1083,7 +1084,7 @@ function HostStatus({ host }: { host: { ok: boolean; detail: string } | null }) 
 }
 
 function CopyLine({ label, cmd }: { label: string; cmd: string }) {
-  const [done, setDone] = React.useState(false);
+  const [done, doneZeigen] = useQuittung();
   return (
     <div className="mb-1 flex items-center gap-2">
       <span className="w-40 shrink-0 text-xs text-muted-foreground">{label}</span>
@@ -1094,8 +1095,7 @@ function CopyLine({ label, cmd }: { label: string; cmd: string }) {
         title="Kopieren"
         onClick={() => {
           void navigator.clipboard.writeText(cmd);
-          setDone(true);
-          setTimeout(() => setDone(false), 1200);
+          doneZeigen();
         }}
       >
         {done ? <Check /> : <Copy />}

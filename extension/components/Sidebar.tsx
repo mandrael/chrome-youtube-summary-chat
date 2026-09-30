@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  Check,
   Copy,
   Download,
   Loader2,
@@ -53,6 +54,7 @@ import {
 import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
 import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
+import { useQuittung } from "@/lib/quittung";
 import { transcriptToText } from "@shared/lib/timestamps";
 import { kommentareAlsHtml, kommentareAlsText, ladeKommentare } from "@shared/lib/kommentare";
 import { translateCuesViaOpenRouter } from "@shared/lib/translate-cues";
@@ -963,6 +965,9 @@ export function Sidebar({
     );
   }
 
+  const [chatKopiert, chatKopiertZeigen] = useQuittung();
+  const [chatGespeichert, chatGespeichertZeigen] = useQuittung();
+
   const [kommentare, setKommentare] = React.useState<{ geladen: number; stopp: () => void } | null>(null);
   const kommentarAbbruch = React.useRef<AbortController | null>(null);
   const [kommentarMeldung, setKommentarMeldung] = React.useState("");
@@ -1416,11 +1421,27 @@ export function Sidebar({
               />
             {messages.length > 0 && (
               <div className="flex items-center gap-1">
-                <Button size="iconSm" variant="ghost" title={t("copy")} onClick={() => void kopiereMitFormat(chatMarkdown(), chatHtml())}>
-                  <Copy />
+                <Button
+                  size="iconSm"
+                  variant="ghost"
+                  title={chatKopiert ? t("copied") : t("copy")}
+                  onClick={() => {
+                    void kopiereMitFormat(chatMarkdown(), chatHtml());
+                    chatKopiertZeigen();
+                  }}
+                >
+                  {chatKopiert ? <Check /> : <Copy />}
                 </Button>
-                <Button size="iconSm" variant="ghost" title={t("exportMd")} onClick={() => download(`chat-${videoId}.md`, chatMarkdown())}>
-                  <Download />
+                <Button
+                  size="iconSm"
+                  variant="ghost"
+                  title={t("exportMd")}
+                  onClick={() => {
+                    download(`chat-${videoId}.md`, chatMarkdown());
+                    chatGespeichertZeigen();
+                  }}
+                >
+                  {chatGespeichert ? <Check /> : <Download />}
                 </Button>
                 <Button
                   size="iconSm"
@@ -1812,7 +1833,8 @@ function MessageBubble({
   onDownload: () => void;
   onWebSearch?: () => void;
 }) {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, kopiertZeigen] = useQuittung();
+  const [gespeichert, gespeichertZeigen] = useQuittung();
   const inhalt = React.useRef<HTMLDivElement>(null);
 
   if (message.role === "user") {
@@ -1840,25 +1862,28 @@ function MessageBubble({
             <Button
               size="iconSm"
               variant="ghost"
-              className="opacity-0 group-hover:opacity-100"
+              // Das Häkchen bleibt sichtbar, auch wenn die Maus die Antwort schon verlassen hat.
+              className={cn("opacity-0 group-hover:opacity-100", copied && "opacity-100")}
               title={copied ? t("copied") : t("copy")}
               onClick={() => {
                 const md = inhalt.current?.querySelector(".md-body");
                 void kopiereMitFormat(message.content, md ? elementZuHtml(md) : "");
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1200);
+                kopiertZeigen();
               }}
             >
-              <Copy />
+              {copied ? <Check /> : <Copy />}
             </Button>
             <Button
               size="iconSm"
               variant="ghost"
-              className="opacity-0 group-hover:opacity-100"
+              className={cn("opacity-0 group-hover:opacity-100", gespeichert && "opacity-100")}
               title={t("exportMd")}
-              onClick={onDownload}
+              onClick={() => {
+                onDownload();
+                gespeichertZeigen();
+              }}
             >
-              <Download />
+              {gespeichert ? <Check /> : <Download />}
             </Button>
             {onWebSearch && (
               <Button
@@ -1951,6 +1976,7 @@ function kurzName(m: ModelInfo | undefined, id: string): string {
 function DownloadMenue({ t, punkte }: { t: T; punkte: Array<{ text: string; los?: () => void }> }) {
   const [offen, setOffen] = React.useState(false);
   const huelle = React.useRef<HTMLDivElement>(null);
+  const [gewaehlt, gewaehltZeigen] = useQuittung();
 
   React.useEffect(() => {
     if (!offen) return;
@@ -1977,7 +2003,7 @@ function DownloadMenue({ t, punkte }: { t: T; punkte: Array<{ text: string; los?
         aria-expanded={offen}
         onClick={() => setOffen((v) => !v)}
       >
-        <Download />
+        {gewaehlt ? <Check /> : <Download />}
       </Button>
       {offen && (
         <div
@@ -1994,6 +2020,7 @@ function DownloadMenue({ t, punkte }: { t: T; punkte: Array<{ text: string; los?
               onClick={() => {
                 setOffen(false);
                 p.los?.();
+                gewaehltZeigen();
               }}
             >
               {p.text}

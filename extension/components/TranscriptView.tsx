@@ -4,6 +4,7 @@ import {
   AudioLines,
   BookOpenText,
   Captions,
+  Check,
   Copy,
   Download,
   Languages,
@@ -23,6 +24,7 @@ import { ZIELSPRACHEN, langcode, langname } from "@shared/lib/tracks";
 import type { T } from "@shared/lib/i18n";
 import type { CaptionTrack, Transcript, TranscriptTranslation } from "@shared/lib/types";
 import { cn } from "@/lib/utils";
+import { useQuittung } from "@/lib/quittung";
 
 /**
  * Der Transkript-Tab.
@@ -88,6 +90,8 @@ export function TranscriptView({
   busy?: string | null;
 }) {
   const [suche, setSuche] = React.useState("");
+  const [kopiert, kopiertZeigen] = useQuittung();
+  const [gespeichert, gespeichertZeigen] = useQuittung();
 
   const cues = transcript?.cues ?? [];
   const absaetze = React.useMemo(() => bildeAbsaetze(cues), [cues]);
@@ -306,17 +310,23 @@ export function TranscriptView({
             title={
               mode === "cues" ? t("copyCues") : mode === "text" ? t("copyParas") : t("copyRead")
             }
-            onClick={() => void navigator.clipboard.writeText(sichtbarerText())}
+            onClick={() => {
+              void navigator.clipboard.writeText(sichtbarerText());
+              kopiertZeigen();
+            }}
           >
-            <Copy />
+            {kopiert ? <Check /> : <Copy />}
           </Button>
           <Button
             size="iconSm"
             variant="ghost"
             title={t("exportMd")}
-            onClick={() => onDownload(`transkript-${videoId}.md`, sichtbarerText())}
+            onClick={() => {
+              onDownload(`transkript-${videoId}.md`, sichtbarerText());
+              gespeichertZeigen();
+            }}
           >
-            <Download />
+            {gespeichert ? <Check /> : <Download />}
           </Button>
         </div>
 

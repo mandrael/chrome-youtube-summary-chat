@@ -1303,6 +1303,9 @@ export function Sidebar({
               <MessageBubble
                 key={i}
                 message={m}
+                // Beide Sprachen: der Verlauf behält die Beschriftung, unter der die
+                // Frage gestellt wurde, auch wenn die Oberfläche inzwischen umgestellt ist.
+                lernfragen={LERNFRAGEN.has(messages[i - 1]?.label ?? "")}
                 t={t}
                 showCost={settings?.showCost ?? false}
                 kostenGeschaetzt={mistralAktiv}
@@ -1816,6 +1819,8 @@ function DownloadDialog({
   );
 }
 
+const LERNFRAGEN = new Set([makeT("de")("presetQuiz"), makeT("en")("presetQuiz")]);
+
 function MessageBubble({
   message,
   t,
@@ -1824,8 +1829,11 @@ function MessageBubble({
   onSeek,
   onDownload,
   onWebSearch,
+  lernfragen,
 }: {
   message: ChatMessage;
+  /** Antwort auf den Schnellbefehl „Lernfragen": die Antworten sind aufzudecken. */
+  lernfragen?: boolean;
   t: T;
   showCost: boolean;
   /** Bei Mistral stammt der Betrag aus der Preisliste, nicht von der API. */
@@ -1854,7 +1862,9 @@ function MessageBubble({
       {message.error ? (
         <p className="text-sm text-destructive whitespace-pre-wrap">{message.content}</p>
       ) : (
-        <Markdown onSeek={onSeek}>{message.content}</Markdown>
+        <Markdown onSeek={onSeek} aufdecken={lernfragen}>
+          {message.content}
+        </Markdown>
       )}
 
       <div className="mt-1 flex items-center gap-2">

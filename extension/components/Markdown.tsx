@@ -124,6 +124,40 @@ export interface MarkdownProps {
   /** Setzt die Wiedergabeposition. Fehlt sie, werden Zeitstempel nur als Text gezeigt. */
   onSeek?: (seconds: number) => void;
   className?: string;
+  /**
+   * Lernfragen: jeder Zitatblock ist eine Antwort und bleibt verdeckt, bis man ihn
+   * anklickt – sonst liest man sie mit, bevor man selbst nachgedacht hat.
+   */
+  aufdecken?: boolean;
+}
+
+/** Eine verdeckte Antwort. Verdeckt nimmt sie keine Klicks an – auch keine Zeitstempel. */
+function AufdeckAntwort({ children }: { children: React.ReactNode }) {
+  const [offen, setOffen] = React.useState(false);
+  if (offen) return <blockquote>{children}</blockquote>;
+  return (
+    <blockquote
+      role="button"
+      tabIndex={0}
+      title="Antwort zeigen"
+      aria-label="Antwort zeigen"
+      onClick={() => setOffen(true)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOffen(true);
+        }
+      }}
+      className="relative cursor-pointer"
+    >
+      <div aria-hidden className="pointer-events-none select-none blur-sm">
+        {children}
+      </div>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-muted-foreground">
+        Antwort zeigen
+      </span>
+    </blockquote>
+  );
 }
 
 /**
@@ -208,7 +242,7 @@ function zerlegeTabelle(children: React.ReactNode): {
   return { kopf, zeilen };
 }
 
-export function Markdown({ children, onSeek, className }: MarkdownProps) {
+export function Markdown({ children, onSeek, className, aufdecken }: MarkdownProps) {
   return (
     <div className={cn("md-body", className)}>
       <ReactMarkdown
@@ -216,6 +250,7 @@ export function Markdown({ children, onSeek, className }: MarkdownProps) {
         rehypePlugins={[rehypeTimestamps, rehypeHighlight]}
         components={{
           table: ({ node: _n, children: c }) => <TabelleAdaptiv>{c}</TabelleAdaptiv>,
+          ...(aufdecken ? { blockquote: ({ children: c }: { children?: React.ReactNode }) => <AufdeckAntwort>{c}</AufdeckAntwort> } : {}),
           // Kein <img> aus Modellantworten: ein Bild lädt ohne Klick, und über eine
           // Prompt-Injection im Transkript könnte seine URL den Chat an einen fremden
           // Server tragen (Regel 5). Stehen bleibt der Alt-Text.

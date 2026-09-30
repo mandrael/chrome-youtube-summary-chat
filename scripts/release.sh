@@ -28,6 +28,8 @@ fi
 
 echo "== Erweiterung $version bauen und prüfen =="
 pnpm -r run compile
+# Die App-Prüfung misst app/dist; in einem frischen Checkout fehlt es sonst.
+pnpm --filter @ytsc/app run build
 pnpm -r run check
 (cd extension && pnpm run build && pnpm run build:store && ./scripts/verify-store-bundle.sh)
 

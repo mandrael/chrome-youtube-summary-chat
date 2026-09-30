@@ -3,6 +3,7 @@ import { ChevronDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ModelInfo } from "@shared/lib/types";
+import { filtereModelle, nachAnbieter } from "@/lib/modell-gruppen";
 
 /**
  * Auswahlfeld mit Suche für die knapp 300 Modelle.
@@ -41,37 +42,9 @@ export function ModellWahl({
   const huelle = React.useRef<HTMLDivElement>(null);
   const feld = React.useRef<HTMLInputElement>(null);
 
-  const gefiltert = React.useMemo(() => {
-    const q = suche.trim().toLowerCase();
-    if (!q) return models;
-    return models.filter(
-      (m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
-    );
-  }, [models, suche]);
-
-  /*
-   * Unter der Empfehlung die vollständige Liste nach Anbietern. Der Anbieter steht im
-   * Namen vor dem Doppelpunkt, dem einzigen Feld, aus dem er sich ohne gepflegte Liste
-   * ergibt. Anbieter mit ein oder zwei Modellen zerhacken die Liste in Grüppchen und
-   * wandern zusammen nach „Weitere" ans Ende.
-   */
-  const gruppen = React.useMemo(() => {
-    const nachAnbieter = new Map<string, ModelInfo[]>();
-    for (const m of gefiltert) {
-      const anbieter = m.name.includes(":") ? m.name.split(":")[0]!.trim() : "Weitere";
-      const bisher = nachAnbieter.get(anbieter);
-      if (bisher) bisher.push(m);
-      else nachAnbieter.set(anbieter, [m]);
-    }
-    const gross: [string, ModelInfo[]][] = [];
-    const klein: ModelInfo[] = [];
-    for (const [anbieter, liste] of nachAnbieter) {
-      if (anbieter !== "Weitere" && liste.length >= 3) gross.push([anbieter, liste]);
-      else klein.push(...liste);
-    }
-    if (klein.length) gross.push(["Weitere", klein]);
-    return gross;
-  }, [gefiltert]);
+  const gefiltert = React.useMemo(() => filtereModelle(models, suche), [models, suche]);
+  // Unter der Empfehlung die vollständige Liste nach Anbietern (lib/modell-gruppen.ts).
+  const gruppen = React.useMemo(() => nachAnbieter(gefiltert), [gefiltert]);
 
   const sucht = suche.trim().length > 0;
   // Reihenfolge der Tastaturnavigation – dieselbe, in der gerendert wird.

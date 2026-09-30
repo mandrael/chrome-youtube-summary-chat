@@ -1,7 +1,7 @@
 import * as React from "react";
 import {
   ChevronDown,
-  ChevronRight,
+  Search,
   ChevronUp,
   Check,
   Copy,
@@ -55,6 +55,7 @@ import { setzeSpaltenbreite, SPALTE_MAX, SPALTE_MIN } from "@/lib/spalte";
 import { ZIELSPRACHEN } from "@shared/lib/tracks";
 import { elementZuHtml, kopiereMitFormat } from "@/lib/clipboard";
 import { useQuittung } from "@/lib/quittung";
+import { filtereModelle, nachAnbieter } from "@/lib/modell-gruppen";
 import { transcriptToText } from "@shared/lib/timestamps";
 import { kommentareAlsHtml, kommentareAlsText, ladeKommentare } from "@shared/lib/kommentare";
 import { translateCuesViaOpenRouter } from "@shared/lib/translate-cues";
@@ -2048,8 +2049,20 @@ function ModellMenue({
   onPick: (id: string) => void;
 }) {
   const [offen, setOffen] = React.useState(false);
+  // Aufgeklappt zeigt das Menü alle Modelle wie die Optionsseite – vorher führte
+  // „Alle Modelle" dorthin, und was man dort wählte, liess sich im Chat nicht wieder
+  // auswählen (Michael, 30.09.2026).
+  const [alle, setAlle] = React.useState(false);
+  const [suche, setSuche] = React.useState("");
   const huelle = React.useRef<HTMLDivElement>(null);
   const ausloeser = React.useRef<HTMLButtonElement>(null);
+
+  React.useEffect(() => {
+    if (!offen) {
+      setAlle(false);
+      setSuche("");
+    }
+  }, [offen]);
 
   // Beginnt ein Stream, während das Menü offen ist, schliesst es – sonst liesse sich
   // das Modell mitten in der laufenden Antwort umstellen.
@@ -2083,6 +2096,42 @@ function ModellMenue({
   const oeffneOptionen = () => void chrome.runtime.sendMessage({ type: "openOptions" });
   const aktiv = models.find((m) => m.id === activeModel);
   const empfohlen = empfohleneModelle(models);
+  const sucht = suche.trim().length > 0;
+  const gruppen = alle ? nachAnbieter(filtereModelle(models, suche)) : [];
+
+  const zeile = (m: ModelInfo, marken: string[] = []) => {
+    const preis = preisProAnfrage(m);
+    return (
+      <li key={m.id} role="option" aria-selected={m.id === activeModel}>
+        <button
+          type="button"
+          className={cn(
+            "flex w-full flex-col items-start px-2.5 py-1.5 text-left hover:bg-secondary",
+            m.id === activeModel && "bg-primary/10",
+          )}
+          onClick={() => {
+            onPick(m.id);
+            schliessen();
+          }}
+        >
+          <span className="flex items-center gap-1.5 text-sm">
+            {kurzName(m, m.id)}
+            {m.contextLength >= ONE_M_CONTEXT && (
+              <span className="rounded border border-border px-1 text-[10px] text-muted-foreground">1M</span>
+            )}
+          </span>
+          <span className="text-[11px] text-muted-foreground">
+            {[...marken, ...(preis != null ? [`≈ ${formatPreis(preis)} je Anfrage`] : [])].join(" · ")}
+          </span>
+        </button>
+      </li>
+    );
+  };
+  const titel = (text: string) => (
+    <li key={`titel-${text}`} role="presentation" className="px-2.5 pb-0.5 pt-2 text-[11px] font-medium text-muted-foreground">
+      {text}
+    </li>
+  );
 
   return (
     <div ref={huelle} className="relative min-w-0">
@@ -2105,45 +2154,36 @@ function ModellMenue({
           id="yt-summary-modellmenue"
           className="absolute bottom-full left-0 z-50 mb-1 w-72 overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-md"
         >
-          <ul role="listbox" aria-label={t("modelPick")} className="max-h-80 overflow-y-auto py-1">
-            {empfohlen.map(([m, marken]) => {
-              const preis = preisProAnfrage(m);
-              return (
-                <li key={m.id} role="option" aria-selected={m.id === activeModel}>
-                  <button
-                    type="button"
-                    className={cn(
-                      "flex w-full flex-col items-start px-2.5 py-1.5 text-left hover:bg-secondary",
-                      m.id === activeModel && "bg-primary/10",
-                    )}
-                    onClick={() => {
-                      onPick(m.id);
-                      schliessen();
-                    }}
-                  >
-                    <span className="flex items-center gap-1.5 text-sm">
-                      {kurzName(m, m.id)}
-                      {m.contextLength >= ONE_M_CONTEXT && (
-                        <span className="rounded border border-border px-1 text-[10px] text-muted-foreground">1M</span>
-                      )}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {marken.join(" · ")}
-                      {preis != null && ` · ≈ ${formatPreis(preis)} je Anfrage`}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+          {alle && (
+            <div className="flex items-center gap-1.5 border-b border-border px-2.5 py-1.5">
+              <Search className="size-3.5 shrink-0 opacity-60" />
+              <input
+                autoFocus
+                value={suche}
+                onChange={(e) => setSuche(e.target.value)}
+                placeholder={t("modelSearch")}
+                className="h-6 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+          )}
+          <ul role="listbox" aria-label={t("modelPick")} className="max-h-96 overflow-y-auto py-1">
+            {!sucht && alle && titel(t("modelsRecommended"))}
+            {!sucht && empfohlen.map(([m, marken]) => zeile(m, marken))}
+            {gruppen.flatMap(([anbieter, liste]) => [titel(anbieter), ...liste.map((m) => zeile(m))])}
+            {alle && sucht && gruppen.length === 0 && (
+              <li className="px-2.5 py-2 text-xs text-muted-foreground">{t("modelNoMatch")}</li>
+            )}
           </ul>
-          <button
-            type="button"
-            className="flex w-full items-center justify-between border-t border-border px-2.5 py-1.5 text-sm hover:bg-secondary"
-            onClick={oeffneOptionen}
-          >
-            {t("allModels")}
-            <ChevronRight className="size-4" />
-          </button>
+          {!alle && (
+            <button
+              type="button"
+              className="flex w-full items-center justify-between border-t border-border px-2.5 py-1.5 text-sm hover:bg-secondary"
+              onClick={() => setAlle(true)}
+            >
+              {t("allModels")}
+              <ChevronDown className="size-4" />
+            </button>
+          )}
         </div>
       )}
     </div>

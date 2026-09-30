@@ -79,8 +79,9 @@ Wem die Schrift zu klein ist, stellt dort die **Schriftgrösse der Oberfläche**
 
 **Modell wechseln im Chat:** Unter dem Eingabefeld steht klein das aktive Modell. Ein
 Klick öffnet die empfohlene Auswahl mit Marken (schnell, günstig, schlau), Kontextgrösse
-und dem ungefähren Preis je Anfrage; „Alle Modelle …“ führt in die Einstellungen. Die
-Empfehlung ist gemessen, nicht geraten: jedes Modell hat am 05.09.2026 mit dem
+und dem ungefähren Preis je Anfrage; „Alle Modelle“ klappt im selben Menü auf (Suchfeld,
+oben die Empfehlung, darunter alle Modelle nach Anbietern, wie in den Einstellungen,
+seit 0.14.0). Die Empfehlung ist gemessen, nicht geraten: jedes Modell hat am 05.09.2026 mit dem
 Anfragekörper der Erweiterung und einem Prompt von rund 65.000 Token geantwortet,
 „schnell“ heisst erstes Token nach höchstens 7 s. Bei Mistral AI führt der Knopf in die
 Einstellungen, weil die Modellliste dort geladen wird.
@@ -110,7 +111,8 @@ Aneignen und Weiterverfolgen:
 - **Begriffe** – Fachbegriffe, Methoden und Verfahren mit der Erklärung, die der Sprecher
   selbst gibt; erklärt er einen Begriff nicht, steht das da, statt Wissen zu ergänzen.
 - **Lernfragen** – acht bis zwölf Fragen zum Stoff, jede mit der Antwort aus dem Video
-  und der Zeitmarke, an der sie steht.
+  und der Zeitmarke, an der sie steht. Die Antworten sind verdeckt, bis man sie anklickt
+  (seit 0.14.1); Kopieren und Speichern nehmen sie offen mit.
 
 Passt ein Knopf nicht zum Video, sagt seine Antwort das in einem Satz – ausgeblendet wird
 keiner, denn das liesse sich nur raten.
@@ -534,6 +536,15 @@ Ehrlichkeit vor Vollständigkeitsmeldung – diese Punkte sind gebaut, aber nich
   geprüft (nachgebautes Paket über `file://`, falsche Prüfsumme bricht ohne Änderung
   ab). Der ganze Weg gegen ein echtes GitHub-Release mit Neuladen in Chrome noch nicht,
   und unter Windows nie.
+
+- **Häkchen-Rückmeldung (0.13.1):** nach Kopieren und Speichern zeigt der Knopf 1,5 s ein
+  Häkchen. Im Browser angesehen ist nur der Kopierknopf der Optionsseite; die Knöpfe in
+  der Sidebar (Chat-Leiste, Antwort, Transkript, Download-Menü) sind nur gebaut und
+  typgeprüft, weil die Testseite dort ohne Video keine Antwort zeigt.
+
+- **Empfehlung auf Claude 5.5, GPT-6.1 Sol, DeepSeek V4.1 Flash (0.13.2):** gegen OpenRouters
+  Liste vom 30.09. geprüft (alle 13 Einträge da), aber nicht gemessen – die „schnell“- und
+  „günstig“-Marken stammen noch von 05.09.
 
 - **Mitlaufende Modellnamen (0.13.0):** `~openai/gpt-luna-latest` und
   `~google/gemini-flash-latest` stehen in OpenRouters Modellliste; eine Chat-Anfrage

@@ -7,7 +7,7 @@
 `google/gemini-3.5-flash-lite` fest (kein Alias vorhanden) und `~google/gemini-flash-latest`.
 Ein gespeichertes `openai/gpt-5.6-luna` gilt als alter Standard und folgt dem neuen; das
 Standardmodell wird nicht mehr mitgespeichert. Kein eigener „als Standard setzen“-Knopf –
-jede Wahl bleibt ohnehin stehen. **Messung steht aus:** `node extension/scripts/modellmessung.ts`
+jede Wahl bleibt ohnehin stehen. **Messung steht aus** (Michael startete sie am 30.09. zweimal im Terminal, `read -s` wartete beide Male auf den Schlüssel; in `docs/tests/` liegt kein Ergebnis): `node extension/scripts/modellmessung.ts`
 mit dem OpenRouter-Schlüssel aus der Umgebung, startet Michael (Schlüssel bleibt bei ihm).
 
 **Update der full-Version über den Helfer (0.13.0):** Helfer fragt `releases/latest` von
@@ -80,6 +80,40 @@ store) und die Debug-APK nach `releases/` (nur lokal, in `.gitignore`).
 9. Versionsnummern 0.9.0 bis 0.9.2 sind nach der geschärften Regel eigentlich 0.8.2 bis
    0.8.4 (Kachel- und Promptarbeit ist „fix"). Bleibt stehen; ein Rewrite kostet mehr als
    der Schönheitsfehler.
+
+## Nachtrag 30.09.2026 (abends) – 0.13.1 bis 0.14.1: Häkchen, Modellliste, Chat-Modellmenü, Lernfragen
+
+Vier kleine Nutzerwünsche, je ein Commit, alle Prüfungen grün (29 Selbsttests, beide Builds
+mit `verify-store-bundle.sh`, beide Ladeproben). Zehn Commits liegen auf `main` ohne Push.
+
+- **0.13.1 (`ee66ac8`): Häkchen statt Symbol** nach Kopieren und Speichern, 1,5 s
+  (`extension/lib/quittung.ts`, Hook `useQuittung`), dazu `active:scale-90` an jedem Knopf.
+  Gesehen in Chromium: nur der Kopierknopf der Optionsseite (Copy → Check → Copy, Text
+  in der Zwischenablage). Sidebar-Knöpfe nur gebaut.
+- **0.13.2 (`02720a3`): Empfehlung nachgeführt** an OpenRouters Live-Liste: Sonnet 5 → 5.5,
+  Opus 5 → 5.5 (4/20 statt 5/25 $/M), GPT-5.6 Sol → GPT-6.1 Sol, DeepSeek auf
+  `~deepseek/deepseek-flash-latest` (V4.1 Flash, 0,02 $/M). GLM 5.3 Flash verlor „günstig“
+  (Eingabe seit 05.09. von ≈ 0,07 auf 0,15 $/M). Gemini: nichts Neues (Flash 3.8,
+  Flash Lite 3.5, Pro 3.1 Vorschau). GPT-6 Luna kostet 0,10/0,50 statt 0,20/1,20 $/M
+  (halb so viel); der Standard `~openai/gpt-luna-latest` zeigt schon darauf. **Keines der
+  neuen Modelle ist gemessen.**
+- **0.14.0 (`c90e9c7`): „Alle Modelle“ im Chat-Menü.** Führte vorher in die Einstellungen;
+  was man dort wählte, liess sich im Chat nicht wieder auswählen. Jetzt klappt das Menü
+  auf (Suchfeld, Empfehlung, Anbieter-Gruppen); Suche und Gruppierung in
+  `extension/lib/modell-gruppen.ts`, von Optionsseite und Chat geteilt. Gemessen: 13
+  Einträge zu, 319 aufgeklappt, Suche „sonnet 5.5“ → 1 Treffer, Klick stellt um.
+- **0.14.1 (`5c3af19`): Lernfragen-Antworten verdeckt.** Zitatblöcke in der Antwort auf den
+  Schnellbefehl „Lernfragen“/„Self-check“ sind unscharf mit „Antwort zeigen“, Klick oder
+  Enter deckt auf (`AufdeckAntwort` in `Markdown.tsx`; erkannt an der Beschriftung der
+  Frage davor). Zitate in anderen Antworten bleiben offen. Der Text „Antwort zeigen“ ist
+  nicht übersetzt (steht immer deutsch), Kopieren/Speichern nehmen die Antworten offen mit.
+- **Verworfen (Michael, 30.09.): Einstellung für die Lernfragen-Darstellung.** Zuerst als
+  To-Do gewünscht (Aufdecken Standard, Zitatdarstellung optional), dann zurückgenommen:
+  das Verdecken per Unschärfe verschiebt nichts im Layout und hat keinen Nachteil, ein
+  Schalter wäre überflüssig. Nicht wieder anbieten.
+- **Die Modellmessung läuft weiter nicht** (siehe oben): Schlüssel ins Terminal einfügen
+  (Eingabe bleibt unsichtbar), Enter; Ergebnis landet in `docs/tests/modellmessung-<Datum>.md`.
+  Danach entscheiden, ob gpt-6-luna Standard bleibt und welche Marken stimmen.
 
 ## Nachtrag 27.09.2026 – Gesamtreview des Android-Branches samt 0.10.0
 

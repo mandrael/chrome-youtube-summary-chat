@@ -30,7 +30,8 @@ Provider-Routing.
 **Einzige Ausnahme (Michael, 29.09.2026): `returnyoutubedislikeapi.com`** für die
 Dislikes am Dislike-Knopf – nur im `full`-Build, nur die Video-ID geht hin, abschaltbar
 (`showDislikes`, Standard an). Dazu Balken unter Vorschaubildern (`showThumbRatings`,
-Standard **aus** – dann gehen die IDs aller sichtbaren Vorschläge hin). Kein KI-Anbieter. Ist der Dienst nicht erreichbar, und im
+Standard **aus** – dann gehen die IDs aller sichtbaren Vorschläge hin). Kein KI-Anbieter.
+Ebenso ausgenommen: **GitHub für Updates** der `full`-Version, nur über den Helfer (§5). Ist der Dienst nicht erreichbar, und im
 Store-Build immer, schätzt `shared/src/lib/bewertung.ts` aus Aufrufen und Likes der
 Seite – ohne Abruf. Im Store-Build fehlt der Dienst samt Permission;
 `verify-store-bundle.sh` Test 2f beweist beides.

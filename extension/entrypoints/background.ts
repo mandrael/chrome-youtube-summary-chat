@@ -44,6 +44,8 @@ export default defineBackground(() => {
     })();
   });
 
+  let updateLaeuft = false;
+
   chrome.runtime.onConnect.addListener((port) => {
     if (port.name === "chat") return handleChatPort(port);
     if (port.name === "fallback" && __FALLBACK__) return handleFallbackPort(port);
@@ -163,8 +165,17 @@ export default defineBackground(() => {
               sendResponse({ ok: false, error: "In diesem Build nicht enthalten." });
               break;
             }
-            const { updateInstallieren } = await import("@/lib/fallback");
-            const version = await updateInstallieren();
+            // Ein Service Worker für alle Tabs: zwei Klicks in zwei Tabs dürften sonst
+            // zwei Helfer gleichzeitig dieselben Ordner tauschen lassen.
+            if (updateLaeuft) throw new Error("Das Update läuft bereits.");
+            updateLaeuft = true;
+            let version: string;
+            try {
+              const { updateInstallieren } = await import("@/lib/fallback");
+              version = await updateInstallieren();
+            } finally {
+              updateLaeuft = false;
+            }
             sendResponse({ ok: true, data: version });
             // Neu laden liest die getauschten Dateien von der Platte; erst nach der
             // Antwort, sonst erfährt die Seite nichts vom Erfolg.

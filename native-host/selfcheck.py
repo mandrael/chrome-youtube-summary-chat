@@ -202,8 +202,16 @@ def _update():
         rel = {"version": "0.2.0", "notes": "", "seite": "", "url": zip_pfad.as_uri(),
                "size": zip_pfad.stat().st_size,
                "digest": "sha256:" + hashlib.sha256(zip_pfad.read_bytes()).hexdigest()}
-        alt = (h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release)
+        (paket / "native-host" / "install-macos.sh").write_text("alt")
+        os.chmod(paket / "native-host" / "install-macos.sh", 0o755)
+        with zipfile.ZipFile(zip_pfad, "a") as z:
+            z.writestr("p-0.2.0-full/native-host/install-macos.sh", "neu")
+            z.writestr("p-0.2.0-full/native-host/run-host.sh", "fremd")
+        rel["size"] = zip_pfad.stat().st_size
+        rel["digest"] = "sha256:" + hashlib.sha256(zip_pfad.read_bytes()).hexdigest()
+        alt = (h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release, h.pruefe_quelle)
         h.HIER, h.PAKET, h.ERWEITERUNG = paket / "native-host", paket, paket / "erweiterung"
+        h.pruefe_quelle = lambda url: None  # file:// statt GitHub
         h.neuestes_release = lambda: rel
         try:
             falsch = dict(rel, digest="sha256:" + "0" * 64)
@@ -215,18 +223,36 @@ def _update():
                 pass
             assert (paket / "erweiterung" / "alt.js").exists(), "bei Fehler veraendert"
             h.neuestes_release = lambda: rel
+            ohne = dict(rel, digest="")
+            h.neuestes_release = lambda: ohne
+            try:
+                h.update_installieren({"version": "0.1.0"})
+                raise AssertionError("fehlende Pruefsumme nicht bemerkt")
+            except h.HostError:
+                pass
+            h.neuestes_release = lambda: rel
             assert h.update_installieren({"version": "0.2.0"}).get("unveraendert")
             assert h.update_installieren({"version": "0.1.0"})["version"] == "0.2.0"
             assert json.loads((paket / "erweiterung" / "manifest.json").read_text())["version"] == "0.2.0"
             assert not (paket / "erweiterung" / "alt.js").exists(), "alte Datei blieb"
             assert (paket / "native-host" / "yt_summary_host.py").read_text() == "# neu"
             assert (paket / "native-host" / "run-host.sh").read_text() == "bleibt"
+            assert os.access(paket / "native-host" / "install-macos.sh", os.X_OK), "Exec-Bit verloren"
+            assert (paket / "native-host" / "install-macos.sh").read_text() == "neu"
             assert (paket / "LIESMICH.txt").read_text() == "neu"
             assert not list(paket.glob(".erweiterung-*")), "Reste des Tauschs"
         finally:
-            h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release = alt
+            h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release, h.pruefe_quelle = alt
+        for boese in ("https://evil.example/p-full.zip", "file:///tmp/p-full.zip",
+                      "http://github.com/p-full.zip"):
+            try:
+                h.pruefe_quelle(boese)
+                raise AssertionError(f"Adresse nicht abgelehnt: {boese}")
+            except h.HostError:
+                pass
+        h.pruefe_quelle("https://github.com/mandrael/chrome-youtube-summary-chat/releases/download/v1/p-full.zip")
 
 
-check("tauscht Erweiterung und Helfer, bricht bei falscher Pruefsumme ab", _update)
+check("tauscht Erweiterung und Helfer; falsche oder fehlende Summe, fremde Adresse brechen ab", _update)
 
 print(f"\n{checks} Pruefungen bestanden.")

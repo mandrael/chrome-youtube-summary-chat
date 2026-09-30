@@ -31,6 +31,7 @@ import sys
 import tempfile
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 import wave
 import zipfile
@@ -922,6 +923,30 @@ PAKET = HIER.parent
 ERWEITERUNG = PAKET / "erweiterung"
 
 
+MAX_PAKET = 100_000_000
+# Release-Dateien liegen auf github.com und werden von dort auf GitHubs Speicher
+# weitergeleitet. Andere Ziele, auch nach einer Weiterleitung, werden abgelehnt.
+ERLAUBTE_HOSTS = {"github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com"}
+# Vom Installer erzeugt, maschinenspezifisch: nie aus einem Paket überschreiben.
+NIE_ERSETZEN = {"run-host.sh", "run-host.bat", "at.gasperl.youtube_summary_chat.json"}
+
+
+def pruefe_quelle(url: str) -> None:
+    teile = urllib.parse.urlsplit(url)
+    if teile.scheme != "https" or teile.hostname not in ERLAUBTE_HOSTS:
+        raise HostError(f"Unerwartete Download-Adresse: {teile.scheme}://{teile.hostname} – abgebrochen.")
+
+
+def ersetze_datei(quelle: Path, ziel: Path) -> None:
+    """Schreibt daneben und tauscht atomar – ein Abbruch hinterlässt nie eine halbe Datei.
+    Die Rechte der alten Datei bleiben (das Zip trägt keine), Skripte bleiben ausführbar."""
+    modus = ziel.stat().st_mode & 0o777 if ziel.exists() else (0o755 if quelle.suffix == ".sh" else 0o644)
+    zwischen = ziel.with_name(ziel.name + ".neu")
+    shutil.copyfile(quelle, zwischen)
+    os.chmod(zwischen, modus)
+    os.replace(zwischen, ziel)
+
+
 def version_tupel(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in re.findall(r"\d+", v)[:3])
 
@@ -973,8 +998,14 @@ def update_installieren(msg: dict[str, Any]) -> dict[str, Any]:
     r = neuestes_release()
     if version_tupel(r["version"]) <= version_tupel(str(msg.get("version", "0"))):
         return {"type": "update", "ok": True, "version": r["version"], "unveraendert": True}
-    if not 0 < r["size"] < 100_000_000:
+    if not 0 < r["size"] < MAX_PAKET:
         raise HostError(f"Unerwartete Paketgröße: {r['size']} Byte.")
+    # Ohne Summe kein Tausch. Sie kommt aus derselben API-Antwort wie die Adresse und
+    # schützt vor kaputter Übertragung, nicht vor einem übernommenen GitHub-Konto.
+    algo, _, soll = r["digest"].partition(":")
+    if algo != "sha256" or not re.fullmatch(r"[0-9a-f]{64}", soll):
+        raise HostError("GitHub nennt für das Paket keine SHA-256-Summe – abgebrochen, nichts geändert.")
+    pruefe_quelle(r["url"])
 
     with tempfile.TemporaryDirectory() as tmp_name:
         tmp = Path(tmp_name)
@@ -982,15 +1013,19 @@ def update_installieren(msg: dict[str, Any]) -> dict[str, Any]:
         req = urllib.request.Request(r["url"], headers={"User-Agent": TITLE})
         try:
             with urllib.request.urlopen(req, timeout=120) as resp, open(zip_pfad, "wb") as f:
-                shutil.copyfileobj(resp, f)
+                pruefe_quelle(resp.geturl())
+                daten = resp.read(MAX_PAKET + 1)
+                if len(daten) > MAX_PAKET:
+                    raise HostError("Paket größer als erlaubt – abgebrochen, nichts geändert.")
+                f.write(daten)
         except urllib.error.URLError as e:
             raise HostError(f"Download von GitHub fehlgeschlagen: {e}") from e
-        # GitHub nennt je Datei die SHA-256-Summe; fehlt sie, bleibt HTTPS als Schutz.
-        algo, _, soll = r["digest"].partition(":")
-        if algo == "sha256" and hashlib.sha256(zip_pfad.read_bytes()).hexdigest() != soll:
+        if hashlib.sha256(zip_pfad.read_bytes()).hexdigest() != soll:
             raise HostError("Prüfsumme des Pakets stimmt nicht – abgebrochen, nichts geändert.")
         # extractall entfernt absolute Pfade und „..“ aus den Namen.
         with zipfile.ZipFile(zip_pfad) as z:
+            if sum(i.file_size for i in z.infolist()) > 5 * MAX_PAKET:
+                raise HostError("Paket entpackt unerwartet groß – abgebrochen, nichts geändert.")
             z.extractall(tmp / "neu")
         wurzeln = [p for p in (tmp / "neu").iterdir() if p.is_dir()]
         if len(wurzeln) != 1:
@@ -1003,28 +1038,34 @@ def update_installieren(msg: dict[str, Any]) -> dict[str, Any]:
         if manifest.get("version") != r["version"] or not (neu / "native-host" / "yt_summary_host.py").is_file():
             raise HostError("Paket passt nicht zum Release – nichts geändert.")
 
-        # Erst vollständig neben das Ziel kopieren, dann per Umbenennen tauschen: ein
-        # Abbruch vorher lässt die alte Fassung unberührt.
+        # Zuerst der Helfer, Datei für Datei atomar: bricht danach etwas ab, läuft die
+        # alte Erweiterung mit dem neuen Helfer, und ein zweiter Klick holt den Rest.
+        # Die laufende Fassung hat ihre Datei schon gelesen, die neue gilt ab dem
+        # nächsten Aufruf.
+        for f in (neu / "native-host").iterdir():
+            if f.is_file() and f.name not in NIE_ERSETZEN:
+                ersetze_datei(f, HIER / f.name)
+        if (neu / "LIESMICH.txt").is_file():
+            ersetze_datei(neu / "LIESMICH.txt", PAKET / "LIESMICH.txt")
+
+        # Dann die Erweiterung: vollständig neben das Ziel kopieren, per Umbenennen
+        # tauschen. Ein Abbruch vorher lässt die alte Fassung unberührt.
         bereit = PAKET / ".erweiterung-neu"
         alt = PAKET / ".erweiterung-alt"
         shutil.rmtree(bereit, ignore_errors=True)
         shutil.rmtree(alt, ignore_errors=True)
         shutil.copytree(neu / "erweiterung", bereit)
-        ERWEITERUNG.rename(alt)
+        try:
+            ERWEITERUNG.rename(alt)
+        except OSError as e:
+            shutil.rmtree(bereit, ignore_errors=True)
+            raise HostError(f"Ordner „erweiterung“ ist gesperrt ({e}) – nichts geändert.") from e
         try:
             bereit.rename(ERWEITERUNG)
         except OSError:
             alt.rename(ERWEITERUNG)
             raise
         shutil.rmtree(alt, ignore_errors=True)
-        # Der Helfer selbst: die laufende Fassung hat ihre Datei schon gelesen, die
-        # neue gilt ab dem nächsten Aufruf. run-host.sh und das Host-Manifest bleiben.
-        for f in (neu / "native-host").iterdir():
-            if f.is_file():
-                shutil.copy2(f, HIER / f.name)
-        for f in neu.iterdir():
-            if f.is_file():
-                shutil.copy2(f, PAKET / f.name)
     return {"type": "update", "ok": True, "version": r["version"]}
 
 

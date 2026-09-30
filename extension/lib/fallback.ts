@@ -66,6 +66,9 @@ export interface UpdateInfo {
 
 const UPDATE_STAND = "updateStand";
 const UPDATE_ABSTAND_MS = 24 * 3600_000;
+// Ohne Helfer oder ohne Netz nicht bei jedem Öffnen der Sidebar erneut fragen.
+const UPDATE_FEHLER = "updateFehler";
+const UPDATE_PAUSE_MS = 3600_000;
 
 /**
  * Fragt über den Helfer das neueste GitHub-Release ab – höchstens einmal am Tag, mit
@@ -79,13 +82,21 @@ export async function updatePruefen(jetzt = false): Promise<UpdateInfo> {
   if (!jetzt && gemerkt && gemerkt.von === version && Date.now() - gemerkt.zeit < UPDATE_ABSTAND_MS) {
     return gemerkt.info;
   }
+  const fehlschlag = (await chrome.storage.local.get(UPDATE_FEHLER))[UPDATE_FEHLER] as number | undefined;
+  if (!jetzt && fehlschlag && Date.now() - fehlschlag < UPDATE_PAUSE_MS) {
+    throw new Error("Update-Prüfung pausiert nach Fehlschlag");
+  }
   let res: (UpdateInfo & { type?: string; message?: string }) | undefined;
   try {
     res = await chrome.runtime.sendNativeMessage(HOST_NAME, { type: "updateCheck", version });
   } catch (e) {
+    await chrome.storage.local.set({ [UPDATE_FEHLER]: Date.now() });
     throw new Error(hostFehler((e as Error)?.message));
   }
-  if (!res || res.type === "error") throw new Error(res?.message || "Update-Prüfung fehlgeschlagen");
+  if (!res || res.type === "error") {
+    await chrome.storage.local.set({ [UPDATE_FEHLER]: Date.now() });
+    throw new Error(res?.message || "Update-Prüfung fehlgeschlagen");
+  }
   const info: UpdateInfo = {
     version: res.version,
     neuer: res.neuer,

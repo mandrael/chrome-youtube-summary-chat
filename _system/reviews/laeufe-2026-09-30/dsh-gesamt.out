@@ -1,0 +1,114 @@
+# Gesamtreview `chrome-youtube-summary-chat` @ `0e3feb3`
+
+Gelesen wurden Quelltext, Diff (`git show 0e3feb3`) und die Prüfskripte. Die drei Prüfskripte habe ich gegen die vorhandenen `build-full`/`build-store`/`app/dist` laufen lassen (nicht neu gebaut, um nichts zu schreiben). **CRITICAL habe ich keinen belegbaren gefunden** – XSS-Pfade sind durch `react-markdown` ohne `rehype-raw` und `esc()` in `kommentare.ts` dicht, Kommandoinjektion ist durch `VIDEO_ID`-Filter und argv-Listen nicht gegeben, der Update-Weg erzwingt SHA-256 und Host-Positivliste. Die folgenden Befunde sind echte Fehler bzw. fehlende Belege.
+
+---
+
+## MAJOR
+
+### 1. `split()` verschluckt den Rest der Tonspur still
+**`native-host/yt_summary_host.py:352-370`**
+
+Die Schleife bricht beim ersten fehlgeschlagenen ffmpeg-Teil ab und gibt die **bisherigen** Teile zurück (`return parts or [(path, 0.0)]`). Gelingt Teil 0–3 und scheitert Teil 4 (Platte voll, Decoder-Fehler an der Schnittstelle), enthält `parts` nur die ersten 2400 s. `transcribe_openrouter` transkribiert dann nur diese, `handle_transcribe:907` prüft lediglich `not result["segments"] and not result["text"]` – es gibt Segmente, also kommt ein **unvollständiges Transkript als vollständig** in die Sidebar. Das verstößt gegen CLAUDE.md §3.
+
+**Szenario:** 40-min-Video über `openrouter-whisper-turbo`; ffmpeg scheitert bei `part004`. Ergebnis: Transkript endet bei 40:00 Minuten, ohne Fehlermeldung.
+**Fix:** Nach der Schleife prüfen, ob `index * seconds < total` noch offen ist, und dann `HostError` werfen (kein Partial-Ergebnis still zurückgeben).
+
+### 2. `release.sh` lässt zwei der vorgeschriebenen Prüfungen weg
+**`scripts/release.sh:29-44`**, Kommentar Zeile 7: „Vor dem Packen laufen dieselben Beweise wie vor jedem Commit (CLAUDE.md, Prüfungen).“
+
+Tatsächlich fehlen:
+- `cd native-host && python3 selfcheck.py` – prüft u. a. den Update-Tausch, den Video-ID-Filter und den Nachrichtenrahmen (CLAUDE.md, Prüfungen, Punkt 3).
+- `extension/scripts/ladeprobe.mjs` – der fünfte Beweis (Headless-Laden), der laut CLAUDE.md einen kaputten Content-Script-Render fängt.
+
+Ein Release kann also mit rotem Helfer-Selbsttest oder einem beim Laden werfenden Bundle veröffentlicht werden.
+**Fix:** Beide Aufrufe vor dem Packen ergänzen (Ladeprobe mit installiertem Chromium).
+
+### 3. Fallback-/Download-Port ohne Keepalive – Service Worker kann mitten im Lauf sterben
+**`extension/entrypoints/background.ts:263-298` (Download) und `301-350` (Fallback)**; zum Vergleich `handleChatPort:218`, wo der Wachhalter genau deshalb steht („Der Aufruf alle 20 s setzt den Zähler zurück“).
+
+Der Helfer schweigt in genau diesen Läufen minutenlang: `download_audio` sendet **ein** `progress("download", "Tonspur wird geladen …")` und blockiert dann in `run()` bis yt-dlp fertig ist (`yt_summary_host.py:294-310`); `transcribe_primeline` lädt 670 MB Modell und dekodiert ohne weitere Meldung. Über den Port fließt in dieser Zeit nichts. Chromes eigene Zusage „connectNative hält den SW offen“ wird in der Praxis bestritten, sobald parallel ein `connect()`-Port offen ist ([Issue #2688](https://github.com/GoogleChrome/developer.chrome.com/issues/2688)) – und genau diese Kombination liegt hier vor (Content-Script→SW plus SW→Native-Host). Folge: Nach ~5–6 Min. stirbt der Worker, der Native-Port bricht ab, der Nutzer sieht „Verbindung zum Hintergrundprozess verloren“, obwohl yt-dlp gerade arbeitet bzw. die Transkription bezahlt ist.
+
+**Fix:** Denselben 20-s-Wachhalter wie in `handleChatPort` auch in `handleFallbackPort` und `handleDownloadPort` setzen.
+
+### 4. Verlorene Einstellungen durch Read-Modify-Write-Race beim automatischen Speichern
+**`extension/entrypoints/options/Options.tsx:143-146`** (`patch` ruft bei jedem Tastendruck `setSettings(p)`), **`extension/lib/storage.ts:30-34`**.
+
+`setSettings` liest zuerst den gespeicherten Stand und schreibt dann `{...gelesen, ...patch}` – zwei überlappende Aufrufe können sich überschreiben. Die Auth-Key-Eingabe feuert pro Zeichen, Schalter feuern ebenfalls sofort.
+
+**Szenario:** Nutzer schaltet `showCost` ein (Patch A) und tippt im selben Moment den API-Key (Patch B). Liest B vor A's Schreiben und schreibt B nach A, steht `showCost` wieder auf dem alten Wert. Ebenso kann eine frisch gewählte `model`-Änderung verloren gehen.
+**Fix:** Schreibvorgänge serialisieren (Promise-Kette) oder nur den geänderten Schlüssel per `storage.setItem` schreiben.
+
+---
+
+## MINOR
+
+### 5. RYD-Abruf im Sekundentakt bei Videos mit 0 Likes
+**`extension/lib/dislikes.ts:80-94`** – `if (r.likes > 0) speicher.set(...)`: Bei `likes === 0` entsteht kein Cache-Eintrag, also ist `s` im nächsten Takt (`ctx.setInterval(takt, 1000)` in `:215`) wieder `undefined`, und es wird erneut ein `dislikes`-Request abgesetzt – 60/Minute, solange das Video offen ist (RYD-Limit 100/Minute).
+
+**Fix:** Auch bei 0 Likes cachen (`speicher.set(v, {likes:0, ...})`) oder `gesperrtBis` setzen.
+
+### 6. Übersetzungs-Nachlauf kann außerhalb des Cue-Bereichs schreiben
+**`shared/src/lib/translate-cues.ts:55-63`** – der erste Zweig prüft `letzte >= von && letzte < bis`, der Fortsetzungszweig (`else if`) hängt aber nur an `letzte >= 0` an. Gibt das Modell `#999` (außerhalb des Blocks) gefolgt von einem Zeilenumbruch aus, ruft die Fortsetzung `o.onCue(999, …)`. In `Sidebar.tsx` wird dann `texts[999]` gesetzt und `done = 1000`; beim Laden scheitert die Prüfung `tr.texts.length === transcript.cues.length` (`Sidebar.tsx:282`), und die gesamte gespeicherte Übersetzung wird verworfen.
+
+**Fix:** Im Fortsetzungszweig ebenfalls `von <= letzte && letzte < bis` verlangen.
+
+### 7. Abbruch hinterlässt Temp- und `.part`-Dateien
+**`native-host/yt_summary_host.py:172-176`** (`kinder_beenden` → `os._exit(1)`) und `884-911` (`TemporaryDirectory`).
+
+`os._exit(1)` überspringt den `with tempfile.TemporaryDirectory()`-Aufräumer; beim Abbruch bleiben die bis dahin geladenen Audio-/WAV-Dateien (bis ~11 MB) liegen. `download_video` schreibt ohne `--no-part` direkt in den Zielordner, ein Abbruch hinterlässt dort `.part`- und eventuell halb gemergte `.mp4`-Dateien.
+
+**Fix:** Vor `os._exit` einen registrierten Cleanup ausführen bzw. den Abbruchpfad `run()`/`Popen` beenden lassen und `.part`-Reste entfernen.
+
+### 8. Quell-URLs aus Modellantworten ohne Schema-Prüfung
+**`extension/components/Sidebar.tsx:1928-1938`** – `message.sources` (aus OpenRouters `url_citation`-Annotations) geht ungeprüft in `href`. Der Rest der Codebasis prüft an der Stelle bereits (`kommentare.ts:287-288` macht `^https?://`), hier nicht.
+
+**Fix:** Vor dem Rendern `^https?://` prüfen und sonst Text statt Link zeigen.
+
+### 9. `startDownload.cancel()` löst das Promise nie ein
+**`extension/lib/chat-client.ts:163`** – `cancel: () => port.disconnect()` ohne eigenes `reject`; `startFallback` (`:113-124`) hat genau dafür den `abgebrochen`-Race. Aktuell fängt die Sidebar das manuell ab (`Sidebar.tsx:794-798`), aber der Rückgabevertrag ist inkonsistent: Ein Aufrufer, der `await job.promise` nutzt, hängt nach dem Abbrechen für immer.
+
+**Fix:** `startDownload` auf das Muster von `startFallback` umstellen.
+
+### 10. Abbrechen wird als Fehler angezeigt
+**`extension/components/Sidebar.tsx:738-741`** (`runLive`) und **`:776-779`** (`runFallbackJob`) – `cancel()` lässt das Promise mit `"Abgebrochen."` ablehnen, der `catch` setzt `loadState("error")`. Nach bewusstem Stopp steht die rote Fehlermeldung statt des vorherigen „Keine Untertitel“-Zustands.
+
+**Fix:** Abbruch erkennen (`AbortError`/`"Abgebrochen."`) und in den Ausgangszustand zurückfallen.
+
+### 11. `verify-store-bundle.sh` Test 2b meldet „ok“, wenn die Datei fehlt
+**`extension/scripts/verify-store-bundle.sh:80-88`** – beide `grep`-Aufrufe auf `content-scripts/content.js` schlagen bei fehlender/umbenannter Datei fehl, der `else`-Zweig meldet dann „ok – runFallbackJob kommt gar nicht vor“. Nur Test 4 prüft dieselbe Datei explizit.
+
+**Fix:** Vor dem Grep `[ -f "$OUT/content-scripts/content.js" ] || FAIL=1` einbauen.
+
+### 12. Helfer-Selbsttest umgeht die Allowlist im Update-Pfad
+**`native-host/selfcheck.py:214`** – `h.pruefe_quelle = lambda url: None` ersetzt die Prüfung für den Installationslauf. Der Test prüft `pruefe_quelle` nur isoliert (`:246-253`); würde der Aufruf in `update_installieren` entfernt, bliebe der Test grün, und ein Update könnte von einem beliebigen Host geladen werden.
+
+**Fix:** Statt `lambda: None` einen Stub verwenden, der die übergebene URL protokolliert und für eine Fremd-URL `HostError` wirft.
+
+### 13. Release-Version aus zwei Quellen, ohne Abgleich
+**`scripts/release.sh:18`** liest die Version aus `extension/package.json` (Zip-/Tag-Name), **`extension/wxt.config.ts:72`** setzt die Version im ausgelieferten `manifest.json`. Kein Skript vergleicht beide.
+
+**Szenario:** Vergisst man einen der beiden Bumps, trägt das Paket `manifest.version = 0.14.1`, das Release-Tag heißt aber `v0.15.0`. `update_installieren` (`yt_summary_host.py:1038`) lehnt dann ab: „Paket passt nicht zum Release“ – die im README dokumentierte Update-Fähigkeit ist still kaputt.
+**Fix:** In `release.sh` Gleichheit erzwingen (z. B. `node -p` gegen den in `wxt.config.ts` gelesenen Wert).
+
+### 14. Endpunkt-Prüfung sieht nur `http(s)://host`
+**`shared/scripts/check.sh:43,46`** – extrahiert `https?://[A-Za-z0-9.-]+`. Ein dritter Endpunkt als `wss://…`, protokollrelativ (`//evil.example/…`) oder zusammengesetzt (`` "https://" + host ``) wird nicht erkannt, §1 wäre dann nicht belegt. Die Positivliste plus Gegenprobe fängt nur den heutigen Stand.
+
+**Fix:** Zusätzlich `wss?://` und `//host` erfassen oder `fetch(`/`WebSocket(`-Ziele aus zusammengesetzten Teilen verbieten.
+
+### 15. „Jetzt prüfen“ ist toter Pfad
+**`extension/lib/fallback.ts:77,82,86`** (Parameter `jetzt`), **`extension/entrypoints/background.ts:160`** (`updatePruefen(!!msg.jetzt)`), **`extension/components/UpdateHinweis.tsx:20`** – kein Aufrufer setzt `jetzt`. Nach einem Fehlschlag (z. B. Helfer noch nicht installiert) bleibt der Hinweis bis zu einer Stunde unterdrückt (`UPDATE_PAUSE_MS`), ohne dass der Nutzer erneut prüfen kann – auch nicht, nachdem er den Helfer installiert hat.
+
+**Fix:** Einen „Erneut prüfen“-Weg mit `{jetzt: true}` verdrahten.
+
+---
+
+## Was ich nicht prüfen konnte
+
+- **Windows:** `native-host/install-windows.ps1` inkl. `Set-Content -Encoding UTF8` (BOM im Host-Manifest), `taskkill`, `run-host.bat`, Pfade mit Leerzeichen – kein Windows-Rechner. Die BOM-Frage ist konkret offen: Chrome parst das Manifest-JSON, ein UTF-8-BOM kann es unlesbar machen.
+- **Service-Worker-/Native-Port-Lebensdauer zur Laufzeit:** Befund 3 stützt sich auf Code-Symmetrie und das Chrome-Issue; ein Lauf über >6 Minuten war hier nicht möglich.
+- **Echte Gegenstellen:** Kein OpenRouter-, Mistral- oder RYD-Schlüssel, kein echtes GitHub-Release – Update gegen GitHub, Mistral-Stream, Kommentarstimmung und Rückfallliste sind nur statisch bzw. im Selbsttest geprüft.
+- **Ladeprobe:** `ladeprobe.mjs` nicht ausgeführt (Playwright/Chromium-Setup wäre ein Schreibvorgang).
+- **App Stufe 2:** `verify-app-bundle.sh` ohne `--apk` gelaufen; die Rechteprüfung der entpackten APK (aapt2) und der Capacitor-Kopieschritt sind damit ungeprüft.
+- **Builds:** `build-full`/`build-store`/`app/dist` lagen vor; ich habe sie nicht aus `0e3feb3` neu gebaut, die „ok“-Ausgaben der Skripte beziehen sich also auf die vorhandenen Artefakte.
+- **Android auf Gerät** sowie `_system/keys/`, `.env` und personenbezogene Daten wurden auftragsgemäß nicht gelesen.

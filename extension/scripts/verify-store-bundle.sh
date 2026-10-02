@@ -107,7 +107,10 @@ else
   echo "  ok – runFallbackJob kommt gar nicht vor"
 fi
 
-if grep -qE 'port\.name === "fallback" && false' "$OUT/background.js"; then
+if [ ! -f "$OUT/background.js" ]; then
+  echo "  FEHLGESCHLAGEN – $OUT/background.js fehlt, Test 2b misst nichts"
+  FAIL=1
+elif grep -qE 'port\.name === "fallback" && false' "$OUT/background.js"; then
   echo "  ok – der Fallback-Port im Service Worker ist als tot markiert"
 elif grep -qE 'handleFallbackPort' "$OUT/background.js"; then
   echo "  FEHLGESCHLAGEN – handleFallbackPort steht noch im Service Worker"

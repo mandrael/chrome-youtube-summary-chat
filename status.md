@@ -24,6 +24,13 @@ Shadow-Root `style` + Container-`div`, gemessen; `:scope > div` greift dort nich
 verloren; `chrome.storage.local`-Limit ohne Meldung; Transkript-Panel ohne Zeitgrenze;
 Einstellungs-Rennen zwischen Optionsseite und Sidebar; WAV wird bei sehr langen
 Videos ganz in den Speicher gelesen; Update-Signatur (Summe stammt von GitHub selbst).
+Aus der Nachprüfung (dsh und Codex gpt-6.1-sol xhigh, 03.10., `_system/reviews/laeufe-2026-10-03/`)
+behoben: Wachhalter lief nach eigenem Trennen weiter (MAJOR), Optionsseite umging die
+Tagesgrenze der Update-Prüfung, Stopp vor dem ersten Token galt als leere Antwort, 408
+sperrte Vorschau-Balken dauerhaft, alte Dislike-Zahl blieb bei 0 Likes stehen, Test 2b
+ohne `background.js`, Selbsttest belegt beide Quellenprüfungen. Offen (MINOR):
+`.part`-Reste beim abgebrochenen Videodownload; Ladeprobe klappt die Sidebar nicht auf;
+`check.sh` erkennt `//host`, `wss://` und zusammengesetzte URLs nicht.
 **Abgelehnt:** veralteter Videotitel nach SPA-Wechsel (nur vermutet, nicht belegt).
 `release.sh` braucht seit 0.14.2 den installierten Helfer (selfcheck.py prüft venv) –
 in einem frischen Checkout ohne Installer bricht es ab.

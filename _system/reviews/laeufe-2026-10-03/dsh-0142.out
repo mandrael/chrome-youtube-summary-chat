@@ -1,0 +1,66 @@
+# Review 0.14.2 — Commit `c1e31b8`
+
+Geprüft am Primärartefakt: Diff, die genannten Dateien, ausgeführt wurden `extension/scripts/verify-store-bundle.sh` (gegen die vorhandenen 0.14.2-Builds), `extension/scripts/selfcheck.ts` und `shared/scripts/check.sh`. Es wurden keine Dateien geändert/erzeugt/gelöscht, keine Subagenten gestartet, keine Zugangsdaten/`.env`/`_system/keys/` gelesen.
+
+## Befunde
+
+### 1. MAJOR — Wachhalter wird nach normalem Ende nie gestoppt, der Service Worker bleibt dauerhaft wach
+`extension/entrypoints/background.ts:267-270` (Definition), Aufrufe `:283` und `:323`; Gegenprobe `:251` in `handleChatPort`.
+
+`wachHalten()` legt ein 20-s-Intervall an und räumt es **ausschließlich** in `port.onDisconnect` auf. `handleDownloadPort` (`:304-310`) und `handleFallbackPort` (`:364-370`) beenden den Lauf aber selbst mit `port.disconnect()` im `finally` — und genau dafür räumt der bestehende `handleChatPort` sein Intervall zusätzlich explizit im `finally` auf (`clearInterval(wach);` in `:251`). Die eigene Trennung löst kein `onDisconnect` aus, so steht es auch im Projekt selbst (`extension/lib/chat-client.ts:67-70`: „`onDisconnect` feuert laut Chrome-Doku nur am anderen Ende. Wer selbst trennt, bekommt kein Ereignis“).
+
+**Fehlerszenario:** Jeder abgeschlossene Video-/Audio-Fallback-Lauf hinterlässt einen laufenden 20-s-Timer auf `chrome.runtime.getPlatformInfo()`. Nach N Läufen feuern N Timer, der Worker wird nie mehr idle und beendet sich nicht. Das ist das Gegenteil des Ziels der Korrektur (Worker nur während des Laufs wach halten) und ein Ressourcenleck.
+**Fix:** `wachHalten` soll eine Stopp-Funktion zurückgeben (oder das Intervall sichtbar machen) und in beiden `finally`-Blöcken wie in `handleChatPort` explizit `clearInterval` aufrufen.
+
+### 2. MAJOR — Optionsseite erzwingt die Update-Prüfung bei jedem Öffnen (Regelverstoß CLAUDE.md §5)
+`extension/entrypoints/options/Options.tsx:229` (`<UpdateHinweis … jetzt …/>`), `extension/components/UpdateHinweis.tsx:20-23`, `extension/lib/fallback.ts:77-88`.
+
+Der neue Prop wird fest auf `true` gesetzt; der Effekt ruft damit immer `updateCheck` mit `jetzt:true`. In `updatePruefen` werden beide `!jetzt`-Sperren übersprungen (`:82` Tagesgrenze `UPDATE_ABSTAND_MS`, `:86` Fehlerpause `UPDATE_PAUSE_MS`), und der Helfer hat selbst keine Drossel (`native-host/yt_summary_host.py:1012-1013` ruft direkt `neuestes_release()`/GitHub auf). Der Kommentar in `UpdateHinweis.tsx:8-11` behauptet weiterhin „Geprüft wird höchstens einmal am Tag“ — das gilt für die Optionsseite nicht mehr.
+
+**Fehlerszenario:** Der Nutzer öffnet die Einstellungen zehnmal an einem Tag; jedes Öffnen geht über den Helfer an `api.github.com` und umgeht die 24-h-Grenze. CLAUDE.md §5 verlangt „Prüfung höchstens einmal am Tag“.
+**Fix:** `jetzt` nur an eine ausdrückliche „Erneut prüfen“-Schaltfläche hängen (bzw. nur nach einem Fehlschlag erzwingen), nicht an das Mounten der Optionsseite; oder den Kommentar und die Tagesgrenze entsprechend anpassen, wenn die Regel geändert werden soll.
+
+### 3. MINOR — Leere Antwort nach Nutzer-Abbruch wird als Modellfehler angezeigt
+`extension/components/Sidebar.tsx:459-466` zusammen mit `extension/lib/chat-client.ts:58-73` (`stop()` → `beenden()` → `done` wird aufgelöst).
+
+`handle.stop()` löst `await handle.done` auf. Danach prüft der neue Block nur „letzte Assistenten-Nachricht leer“ und schreibt `emptyAnswer` mit `error: true`. Ein bewusster Abbruch vor dem ersten Token ist damit ununterscheidbar von einer echten leeren Modellantwort.
+
+**Fehlerszenario:** Frage senden, sofort auf Stopp klicken → die Sidebar zeigt rot „Das Modell hat keine Antwort geliefert. Bitte erneut senden oder ein anderes Modell wählen.“ Das widerspricht der mit diesem Commit verfolgten Linie „Abbruch ist kein Fehler“ (siehe `runLive`/`runFallbackJob`).
+**Fix:** Abbruch separat merken (z. B. `abgebrochenRef` in `frageSenden`, gesetzt im Stop-Handler) und den Leer-Check in diesem Fall überspringen.
+
+### 4. MINOR — Abbruch lässt weiterhin `.part`-/halb gemergte Dateien im Zielordner liegen
+`native-host/yt_summary_host.py:182-189` (`kinder_beenden` löscht nur `_ARBEIT`), Downloadpfad `:697-708` (kein `--no-part`, kein Aufräumen im Zielordner).
+
+Befund 7 des Gesamtreviews nannte ausdrücklich Temp- **und** `.part`-Reste. Der Commit schließt nur die Lücke beim `TemporaryDirectory` (`_ARBEIT`), der Download schreibt aber weiter direkt in den Nutzerordner; bei Abbruch bleibt `<name>.<ext>.part` (und ein eventuell halb gemergtes `.mp4`) liegen.
+
+**Fehlerszenario:** Nutzer startet einen Videodownload, bricht ab → im Downloadordner bleibt eine `.part`-Datei, die kein Aufräumpfad entfernt.
+**Fix:** Vor dem Download die zu erwartende Zieldatei bestimmen und in `kinder_beenden` (oder einem eigenen Cleanup) die `.part`-Reste löschen; alternativ yt-dlp mit `--paths` in einen Temp-Ordner laden und erst nach Erfolg verschieben.
+
+### 5. MINOR — `release.sh` bricht in einem frischen Checkout ab (in `status.md` bereits eingeräumt)
+`scripts/release.sh:41-42`; Ursache `native-host/selfcheck.py:200-224` (`_venv`/`_modell` verlangen installierten Helfer samt venv und Modelldateien) und `ladeprobe.mjs` (Playwright/Chromium).
+
+Der Commit fügt dem Release-Skript zwei Prüfungen hinzu, die ohne lokale Helfer-Installation bzw. ohne Playwright-Browser deterministisch scheitern. `status.md:28-29` dokumentiert das. Kein Widerspruch zu „keine stillen Fehlschläge“, aber der dokumentierte Release-Weg ist damit nicht mehr aus einem frischen Checkout ausführbar.
+**Fix:** Vorher explizit auf Voraussetzungen prüfen und mit klarer Meldung abbrechen (oder `--ohne-helfer` durchreichen), statt in den Assertions des Selbsttests zu landen.
+
+## Stichproben ohne Befund (zur Abdeckung der Auftragsliste)
+
+- `extension/lib/storage.ts:34-44`: Schreibkette serialisiert korrekt; ein abgelehnter Lauf wird für die Kette geschluckt, der Aufrufer sieht die Ablehnung weiterhin.
+- `extension/lib/dislikes.ts:63,88`: 0-Likes werden gecacht, `anzeige` fällt dann bewusst auf die Schätzung zurück; der Sekundentakt fragt nicht mehr neu.
+- `extension/lib/vorschau-balken.ts:107-118`: 4xx außer 429 setzt `werte` auf `null` (kein Dauer-Hänger in der Schlange); 429/5xx/Netz bleiben Retry. Fehlertext `HTTP \d{3}` passt zu `background.ts:116`.
+- `shared/src/lib/openrouter.ts:385-391`: Decoder wird am Ende geleert, letzte Zeile ohne `\n` verarbeitet; `mistral.ts:247-255` hatte diese Behandlung schon.
+- `native-host/yt_summary_host.py` `kind`-Prüfung: `formats|reveal|download|transcript` deckt alle heutigen Aufrufe ab (`extension/lib/fallback.ts:46,143,200`; `runFallback` schickt kein `kind` → Default `transcript`).
+- `ohne_doppelten_text` vs. `toTranscript`: Alle Routen liefern den Schlüssel `segments`; `toTranscript` (`fallback.ts:305`) rekonstruiert den Text aus den Segmenten, wenn `text` fehlt — kein Verlust.
+- `split()` (`:364-387`) wirft jetzt bei jedem fehlgeschlagenen Teil; die Kurzvideo-Rückgabe `total <= seconds` bleibt erhalten, `parts` kann nicht leer werden.
+- `%`-Maskierung (`:691-693`) und yt-dlp-Optionen (`--socket-timeout`, `--encoding` sind in installiertem yt-dlp vorhanden).
+- `verify-store-bundle.sh`: Gegenproben 2d/2e/2f/2g und Test 2b wie behauptet; gegen die vorhandenen 0.14.2-Builds ergab der Lauf „ERGEBNIS: bestanden“.
+- `release.sh:36-39`: Versionsabgleich greift; beide gebauten Manifeste tragen 0.14.2.
+- `korrektur.ts:66`, `translate-cues.ts:60`, `kommentare.ts:153-161`: die neuen Selbsttest-Fälle laufen durch (`node extension/scripts/selfcheck.ts` → 29 bestanden), `shared/scripts/check.sh` bleibt grün (keine §6-Verletzung).
+
+## Was ich nicht prüfen konnte
+
+- **Laufzeit der Ladeprobe:** `ladeprobe.mjs` nicht ausgeführt (Playwright/Chromium, legt temporäre Dateien an). Die neue Filterung (`erwartet` nur noch `net::ERR_*`, `pageerror` immer Befund) und die Messung `kinder` gegen den Shadow-Root sind damit nur statisch belegt.
+- **Service-Worker-/Native-Port-Lebensdauer über Minuten:** Befund 1 stützt sich auf die Code-Asymmetrie und die im Projekt dokumentierte `onDisconnect`-Semantik, nicht auf einen echten Lauf.
+- **`native-host/selfcheck.py`:** nicht ausgeführt (erzeugt Temp-Ordner/Zips; verlangt installierten Helfer). Die neuen Tests `_unbekannte_kind`, `_split_fehler`, `_kein_doppelter_text` und der `pruefe_quelle`-Stub wurden nur gelesen.
+- **Windows:** `install-windows.ps1` inkl. `PYTHONUTF8`/`OutputEncoding`, `taskkill`, `.part`-Verhalten — kein Windows-Rechner.
+- **Echte Gegenstellen:** kein OpenRouter-/Mistral-/RYD-/GitHub-Release; Mistral-STT-Blockade, Update-Prüfung und Fehlerklassen nur statisch geprüft.
+- **`pnpm -r run compile`:** nicht ausgeführt, um keine Build-/Cache-Dateien anzulegen; die Typänderungen (`liveGesperrt`, `setSettings`, `kind`) wurden manuell gelesen und sind in sich konsistent.

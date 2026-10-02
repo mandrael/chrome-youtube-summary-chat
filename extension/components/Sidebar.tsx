@@ -455,9 +455,13 @@ export function Sidebar({
             return copy;
           }),
       });
-      stopRef.current = handle.stop;
+      let gestoppt = false;
+      stopRef.current = () => {
+        gestoppt = true;
+        handle.stop();
+      };
       await handle.done;
-      setMessages((m) => {
+      if (!gestoppt) setMessages((m) => {
         const last = m.at(-1);
         if (last?.role !== "assistant" || last.content) return m;
         const copy = [...m];

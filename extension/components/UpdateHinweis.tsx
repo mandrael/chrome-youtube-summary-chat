@@ -11,15 +11,14 @@ import type { T } from "@shared/lib/i18n";
  * geladen erst auf Klick. Ohne Helfer oder ohne Netz bleibt die Zeile weg – die
  * Prüfung hat niemand verlangt, also meldet sie auch keinen Fehler.
  */
-export function UpdateHinweis({ t, className, jetzt }: { t: T; className?: string; jetzt?: boolean }) {
+export function UpdateHinweis({ t, className }: { t: T; className?: string }) {
   const [info, setInfo] = React.useState<UpdateInfo | null>(null);
   const [lage, setLage] = React.useState<"frei" | "laeuft" | "fertig" | "spaeter">("frei");
   const [fehler, setFehler] = React.useState("");
 
   React.useEffect(() => {
-    // jetzt: die Optionsseite fragt ohne Tagesgrenze – wer sie öffnet, will den Stand.
-    ask<UpdateInfo>("updateCheck", { jetzt: !!jetzt }).then(setInfo).catch(() => {});
-  }, [jetzt]);
+    ask<UpdateInfo>("updateCheck").then(setInfo).catch(() => {});
+  }, []);
 
   if (!info?.neuer || !info.installierbar || lage === "spaeter") return null;
 

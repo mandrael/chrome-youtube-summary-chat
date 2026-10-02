@@ -75,6 +75,7 @@ export function starteDislikes(ctx: ContentScriptContext) {
           })()
         : null;
     if (anzeige && v === videoIdFromUrl(location.href)) setze(anzeige);
+    else if (!anzeige && s) entferne();
   }
 
   async function holeRyd(v: string) {

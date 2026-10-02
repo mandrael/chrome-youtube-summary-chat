@@ -264,9 +264,13 @@ function handleChatPort(port: chrome.runtime.Port) {
  * handleChatPort. Der Helfer schweigt beim Laden der Tonspur oder des Modells
  * minutenlang, und ohne Ereignis beendet Chrome den Worker samt Native-Port.
  */
-function wachHalten(port: chrome.runtime.Port) {
+function wachHalten(port: chrome.runtime.Port): () => void {
   const wach = setInterval(() => void chrome.runtime.getPlatformInfo(), 20_000);
-  port.onDisconnect.addListener(() => clearInterval(wach));
+  const stopp = () => clearInterval(wach);
+  // onDisconnect feuert nur, wenn die andere Seite trennt – trennt der Worker selbst,
+  // muss der Aufrufer stopp() rufen (wie handleChatPort im finally).
+  port.onDisconnect.addListener(stopp);
+  return stopp;
 }
 
 /** Nur echte Video-IDs gehen an den Helfer; er prüft selbst noch einmal. */
@@ -280,7 +284,7 @@ function handleDownloadPort(port: chrome.runtime.Port) {
     abgebrochen = true;
     cancel?.();
   });
-  wachHalten(port);
+  const wachStopp = wachHalten(port);
 
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as { type: string; videoId: string; height: number; target?: string };
@@ -302,6 +306,7 @@ function handleDownloadPort(port: chrome.runtime.Port) {
       } catch (e) {
         port.postMessage({ type: "error", message: String((e as Error)?.message ?? e) });
       } finally {
+        wachStopp();
         try {
           port.disconnect();
         } catch {
@@ -320,7 +325,7 @@ function handleFallbackPort(port: chrome.runtime.Port) {
     abgebrochen = true;
     cancel?.();
   });
-  wachHalten(port);
+  const wachStopp = wachHalten(port);
 
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as { type: string; videoId: string; job?: "subtitles" | "audio" };
@@ -362,6 +367,7 @@ function handleFallbackPort(port: chrome.runtime.Port) {
           message: String((e as Error)?.message ?? e),
         });
       } finally {
+        wachStopp();
         try {
           port.disconnect();
         } catch {

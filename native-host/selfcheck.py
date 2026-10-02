@@ -286,7 +286,10 @@ def _update():
                 pass
             h.neuestes_release = lambda: rel
             assert h.update_installieren({"version": "0.2.0"}).get("unveraendert")
+            geprueft.clear()
             assert h.update_installieren({"version": "0.1.0"})["version"] == "0.2.0"
+            # Ausgangsadresse und Adresse nach Weiterleitung: fehlt eine Pruefung, fehlt ein Eintrag.
+            assert len(geprueft) == 2, geprueft
             assert json.loads((paket / "erweiterung" / "manifest.json").read_text())["version"] == "0.2.0"
             assert not (paket / "erweiterung" / "alt.js").exists(), "alte Datei blieb"
             assert (paket / "native-host" / "yt_summary_host.py").read_text() == "# neu"

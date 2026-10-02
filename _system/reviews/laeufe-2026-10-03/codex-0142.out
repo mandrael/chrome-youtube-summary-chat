@@ -1,0 +1,41 @@
+1. **MAJOR — [extension/entrypoints/background.ts:269](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/entrypoints/background.ts:269>)**  
+   Nach erfolgreichem oder fehlgeschlagenem Fallback/Download trennt der Worker den Port selbst. Sein eigenes `onDisconnect` feuert dabei nicht; der neue 20-Sekunden-Wachhalter bleibt aktiv. Jeder abgeschlossene Auftrag hinterlässt einen weiteren Timer und hält den Worker dauerhaft wach. Im Port-Stub reproduziert.  
+   **Fix:** Aufräumfunktion aus `wachHalten()` zurückgeben und in beiden Handlern zusätzlich im `finally` aufrufen.
+
+2. **MINOR — [extension/components/Sidebar.tsx:459](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/components/Sidebar.tsx:459>)**  
+   Klick auf „Stopp“ vor dem ersten Token erfüllt `handle.done`. Anschließend setzt die neue Leerantwort-Prüfung `emptyAnswer` und `error: true`: Der bewusste Nutzerabbruch erscheint als Modellfehler und wird so gespeichert. Reproduziert.  
+   **Fix:** Nutzerabbruch vom regulären Stream-Ende unterscheiden; Leerantwort nur beim regulären Ende melden.
+
+3. **MINOR — [extension/components/UpdateHinweis.tsx:21](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/components/UpdateHinweis.tsx:21>)**  
+   Die Optionsseite übergibt immer `jetzt`. Zweimaliges Öffnen erzeugt deshalb zwei Helfer-/GitHub-Abfragen trotz frisch erfolgreicher Prüfung. Das umgeht die Tagesgrenze aus CLAUDE.md §5; mit Speicher-Stub reproduziert.  
+   **Fix:** Den erfolgreichen Tagescache auch hier beachten; nur die Wiederholung nach einem Fehlschlag freigeben.
+
+4. **MINOR — [extension/lib/vorschau-balken.ts:112](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/lib/vorschau-balken.ts:112>)**  
+   Ein einmaliges HTTP 408 wird wie „Video unbekannt“ dauerhaft als `null` gespeichert. Selbst nach Ende der Störung erfolgt für diese ID bis zum Seitenreload kein weiterer Abruf. Im Vergleich mit 429/503 reproduziert.  
+   **Fix:** Nur tatsächlich endgültige Fehler wie 404/410 dauerhaft merken; 408 mit Pause erneut versuchen.
+
+5. **MINOR — [extension/lib/dislikes.ts:77](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/lib/dislikes.ts:77>)**  
+   Wird ein vorhandener Cache-Eintrag durch `likes: 0` ersetzt und erlauben die Seitendaten keine Schätzung, wird `anzeige` zu `null`. Eine zuvor eingefügte Zahl samt Balken bleibt trotzdem unverändert stehen. Reproduziert.  
+   **Fix:** Bei `anzeige === null` die bestehende Anzeige für das aktuelle Video entfernen.
+
+6. **MINOR — [native-host/yt_summary_host.py:186](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/native-host/yt_summary_host.py:186>)**  
+   Der Videodownload setzt `_ARBEIT` nicht und schreibt weiterhin direkt in den Zielordner. Beim Abbruch bereinigt der neue Cleanup deshalb keine `.part`-Dateien oder bereits geladenen Einzelspuren. Dieser Teil des ursprünglichen Befunds 7 bleibt offen.  
+   **Fix:** Downloads in einem eigenen Arbeitsordner durchführen und erst fertige Ergebnisse ins Ziel verschieben.
+
+7. **MINOR — [extension/scripts/ladeprobe.mjs:86](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/scripts/ladeprobe.mjs:86>)**  
+   Die Prüfung verlangt lediglich Kinder im React-Container und öffnet die standardmäßig eingeklappte Sidebar nicht. Der eingeklappte Titelknopf erfüllt den Nachweis. Ein Renderfehler in `NoCaptions`, nachdem der Stub-Abruf scheitert, bleibt dadurch ungeprüft.  
+   **Fix:** Die Sidebar aufklappen, den erwarteten Ladezustand abwarten und dessen gerenderte Elemente prüfen.
+
+8. **MINOR — [extension/scripts/verify-store-bundle.sh:110](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/extension/scripts/verify-store-bundle.sh:110>)**  
+   Fehlt `build-store/background.js`, scheitern beide Greps; anschließend meldet das Skript „kein Fallback-Port“ und insgesamt Erfolg. Mit ausschließlich im Prozess simulierter fehlender Datei reproduziert. Die neue Existenzprüfung schützt nur `content.js`.  
+   **Fix:** Auch `background.js` vor der Prüfung zwingend auf Existenz prüfen.
+
+9. **MINOR — [native-host/selfcheck.py:300](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/native-host/selfcheck.py:300>)**  
+   Die neue Assertion verlangt nur irgendeinen URL-Prüfaufruf. Entfernt man einzeln die Prüfung der Ausgangsadresse oder der Weiterleitungsadresse in `update_installieren`, bleibt sie grün. Beide Mutationen wurden im Arbeitsspeicher durchgespielt.  
+   **Fix:** Beide Prüfaufrufe je Installationslauf nachweisen und fremde Ausgangs- sowie Weiterleitungsadressen im Integrationspfad testen.
+
+10. **MINOR — [shared/scripts/check.sh:46](</Users/mandrael/NK Institute Dropbox/Michael Gasperl/Claude/chrome-youtube-summary-chat/shared/scripts/check.sh:46>)**  
+    Der ursprüngliche Befund 14 bleibt unverändert: `fetch("//evil.example/x")`, `wss://evil.example` und zusammengesetzte URLs liefern keine Treffer. Die Ausgabe „nur Hosts der Positivliste“ belegt CLAUDE.md §1 für solche Abrufziele weiterhin nicht.  
+    **Fix:** Diese URL-Formen ebenfalls prüfen; zusammengesetzte Abrufziele gesondert validieren.
+
+Nicht geprüft: Neubauten, echte Browser-/Player-Läufe, mehrminütige Worker-Lebensdauer, Windows, Android und echte Gegenstellen. `release.sh`, die Ladeprobe und der vollständige Helfer-Selbsttest wurden wegen ihrer Schreibvorgänge nicht ausgeführt. Die Bundle-Prüfung lief gegen vorhandene Artefakte; ihr Here-Document wurde ausschließlich im Arbeitsspeicher durch gleichwertiges `python3 -c` ersetzt.

@@ -151,11 +151,14 @@ export async function ladeKommentare(videoId: string, o: LadeOptionen = {}): Pro
 
   /** Liest eine Liste ab `token` samt aller Folgeseiten und Antworten. */
   async function liste(token: string | undefined, ziel: Kommentar[]): Promise<void> {
+    // Liefert YouTube denselben Fortsetzungstoken erneut, liefe die Schleife sonst ewig.
+    const gesehen = new Set<string>();
     while (token) {
-      if (o.signal?.aborted) {
+      if (o.signal?.aborted || gesehen.has(token)) {
         lage.unvollstaendig = true;
         return;
       }
+      gesehen.add(token);
       const antwort = await holen(token);
       token = undefined;
       const entitaeten = new Map<string, Json>();

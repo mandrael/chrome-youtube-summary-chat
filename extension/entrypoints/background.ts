@@ -259,6 +259,19 @@ function handleChatPort(port: chrome.runtime.Port) {
   });
 }
 
+/**
+ * Hält den Service Worker wach, solange ein Helfer-Lauf offen ist – wie in
+ * handleChatPort. Der Helfer schweigt beim Laden der Tonspur oder des Modells
+ * minutenlang, und ohne Ereignis beendet Chrome den Worker samt Native-Port.
+ */
+function wachHalten(port: chrome.runtime.Port) {
+  const wach = setInterval(() => void chrome.runtime.getPlatformInfo(), 20_000);
+  port.onDisconnect.addListener(() => clearInterval(wach));
+}
+
+/** Nur echte Video-IDs gehen an den Helfer; er prüft selbst noch einmal. */
+const VIDEO_ID = /^[\w-]{11}$/;
+
 /** Videodownload, nur im Build "full" – siehe §4a in CLAUDE.md. Startet nur auf Klick. */
 function handleDownloadPort(port: chrome.runtime.Port) {
   let cancel: (() => void) | null = null;
@@ -267,6 +280,7 @@ function handleDownloadPort(port: chrome.runtime.Port) {
     abgebrochen = true;
     cancel?.();
   });
+  wachHalten(port);
 
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as { type: string; videoId: string; height: number; target?: string };
@@ -274,6 +288,7 @@ function handleDownloadPort(port: chrome.runtime.Port) {
 
     void (async () => {
       try {
+        if (!VIDEO_ID.test(String(req.videoId))) throw new Error("Ungültige Video-ID");
         const { videoLaden } = await import("@/lib/fallback");
         const { downloadTarget } = await getSettings();
         // Trennung während der beiden awaits: dann darf der Host gar nicht erst starten.
@@ -305,6 +320,7 @@ function handleFallbackPort(port: chrome.runtime.Port) {
     abgebrochen = true;
     cancel?.();
   });
+  wachHalten(port);
 
   port.onMessage.addListener((raw: unknown) => {
     const req = raw as { type: string; videoId: string; job?: "subtitles" | "audio" };
@@ -312,8 +328,18 @@ function handleFallbackPort(port: chrome.runtime.Port) {
 
     void (async () => {
       try {
+        if (!VIDEO_ID.test(String(req.videoId))) throw new Error("Ungültige Video-ID");
         const { runFallback } = await import("@/lib/fallback");
         const settings = await getSettings();
+        const ueberOpenRouter = req.job !== "subtitles" && settings.sttRoute.startsWith("openrouter");
+        // Kein stiller Wechsel zum anderen Anbieter (CLAUDE.md §1): wer Mistral gewählt
+        // hat, schickt keinen Ton an OpenRouter. Lokale Routen gehen weiter.
+        if (ueberOpenRouter && settings.provider === "mistral") {
+          throw new Error(
+            "Die gewählte Spracherkennung läuft über OpenRouter, eingestellt ist Mistral AI. " +
+              "In den Einstellungen eine lokale Route wählen oder zu OpenRouter wechseln.",
+          );
+        }
         // Trennung während der beiden awaits: die bezahlte STT darf gar nicht erst starten.
         if (abgebrochen) return;
 
@@ -322,10 +348,7 @@ function handleFallbackPort(port: chrome.runtime.Port) {
             videoId: req.videoId,
             // Untertitel per yt-dlp brauchen weder Schluessel noch STT-Modell.
             route: req.job === "subtitles" ? "subtitles" : settings.sttRoute,
-            apiKey:
-              req.job !== "subtitles" && settings.sttRoute.startsWith("openrouter")
-                ? settings.apiKey
-                : undefined,
+            apiKey: ueberOpenRouter ? settings.apiKey : undefined,
             language: settings.captionLang === "auto" ? undefined : settings.captionLang,
           },
           (p) => port.postMessage({ type: "progress", ...p }),

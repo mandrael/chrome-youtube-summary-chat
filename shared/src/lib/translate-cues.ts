@@ -57,7 +57,7 @@ export async function translateCuesViaOpenRouter(
       if (m) {
         letzte = Number(m[1]);
         if (letzte >= von && letzte < bis) o.onCue(letzte, (m[2] ?? "").trim());
-      } else if (letzte >= 0 && z.trim()) {
+      } else if (letzte >= von && letzte < bis && z.trim()) {
         // Das Modell hat mitten in einer Zeile umgebrochen: an die letzte anhängen.
         o.onCue(letzte, z.trim());
       }

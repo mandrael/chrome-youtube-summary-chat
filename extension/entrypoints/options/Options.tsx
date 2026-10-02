@@ -226,7 +226,7 @@ export function Options() {
         </span>
       </h1>
       {__FALLBACK__ && (
-        <UpdateHinweis t={makeT(resolveUiLang(s.uiLang))} className="mb-4 rounded-md border border-border p-3" />
+        <UpdateHinweis t={makeT(resolveUiLang(s.uiLang))} jetzt className="mb-4 rounded-md border border-border p-3" />
       )}
       <p className="mb-6 text-sm text-muted-foreground">
         Modellaufrufe gehen direkt vom Browser an den gewählten Anbieter. Kein eigenes

@@ -69,7 +69,7 @@ export default defineConfig({
       "Chat mit dem Transkript eines YouTube-Videos: zusammenfassen, Kapitel, übersetzen.",
     // Schema major.function.fix (status.md, 03.09.2026). 0.3.0 wäre der Funktionssprung gewesen (Vergleich-Preset, adaptive
     // Tabellen, Videodownload, Installer), 0.3.1 der Fix des Ladefehlers, 0.3.2 Download-Knopf im Kopf, 0.4.0 Fortschritt und „Im Ordner zeigen", 0.4.1 gemeinsamer Fortschritt Ton+Bild, 0.5.0 Ordnerdialog und Zielordner-Anzeige, 0.6.0 Mistral AI als zweiter Anbieter.
-    version: "0.14.1",
+    version: "0.14.2",
     // Bewusst ohne `sidePanel`: Vivaldi trägt jede Extension, die diese Permission
     // deklariert, ungefragt in seine Panel-Leiste ein und öffnet dort beim Installieren
     // ein leeres Panel (Vivaldi-Bug VB-123452, Stand 8.1 offen). Verhindern lässt sich

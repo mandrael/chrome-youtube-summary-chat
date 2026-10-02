@@ -27,10 +27,20 @@ export async function getSettings(): Promise<Settings> {
   return mitVorgaben(await settingsItem.getValue());
 }
 
-export async function setSettings(patch: Partial<Settings>): Promise<Settings> {
-  const next = { ...(await getSettings()), ...patch };
-  await settingsItem.setValue(zumSpeichern(next));
-  return next;
+// Lesen und Schreiben sind zwei Schritte; zwei schnelle Änderungen (Tippen im
+// Schlüsselfeld, dazu ein Schalter) überschrieben sich sonst gegenseitig.
+// ponytail: serialisiert nur innerhalb einer Seite; Optionsseite und Sidebar zugleich
+// bleiben ein (seltenes) Rennen – dafür bräuchte es Schreiben nur über den Worker.
+let schreibkette: Promise<unknown> = Promise.resolve();
+
+export function setSettings(patch: Partial<Settings>): Promise<Settings> {
+  const lauf = schreibkette.then(async () => {
+    const next = { ...(await getSettings()), ...patch };
+    await settingsItem.setValue(zumSpeichern(next));
+    return next;
+  });
+  schreibkette = lauf.catch(() => {});
+  return lauf;
 }
 
 /**

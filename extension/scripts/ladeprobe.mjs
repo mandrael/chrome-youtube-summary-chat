@@ -80,22 +80,45 @@ await seite.waitForSelector("yt-summary-chat", { timeout: 15_000 }).catch(() => 
 await seite.waitForTimeout(3_000);
 
 const gemountet = await seite.locator("yt-summary-chat").count();
+// Das Host-Element allein beweist nichts: WXT legt es samt Shadow-Root an, bevor React
+// rendert. Im Shadow-Root liegen <style> und der Container (<div>); erst Kinder im
+// Container zeigen, dass die Sidebar tatsächlich gezeichnet wurde.
+const kinder = gemountet
+  ? await seite.locator("yt-summary-chat").evaluate(
+      // Gemessen 03.10.2026: shadow(style, div) – der div ist der React-Container.
+      // `:scope > div` greift an einem ShadowRoot nicht, daher über children.
+      (el) => [...(el.shadowRoot?.children ?? [])].find((c) => c.tagName === "DIV")?.childElementCount ?? 0,
+    )
+  : 0;
+if (gemountet && !kinder) {
+  // Zur Diagnose den Aufbau zeigen: Tags bis Tiefe 3, ohne Inhalte.
+  const aufbau = await seite.locator("yt-summary-chat").evaluate((el) => {
+    const baum = (n, t) =>
+      t > 3 ? "" : [...n.children].map((c) => `${c.tagName.toLowerCase()}(${baum(c, t + 1)})`).join(" ");
+    return el.shadowRoot ? `shadow(${baum(el.shadowRoot, 0)})` : `kein offener Shadow-Root; ${baum(el, 0)}`;
+  });
+  console.log(`Aufbau: ${aufbau}`);
+}
 // Gegenprobe: ohne geladenen Service Worker misst der Mount-Test nichts.
 const geladen = ctx.serviceWorkers().length > 0;
 await ctx.close();
 server.close();
 
-// Erwartete Laufzeitmeldungen des Stubs aussortieren: er ist nicht YouTube, der
-// Transkript-Abruf muss scheitern. Alles andere ist ein Befund.
-const erwartet = /ERR_NAME_NOT_RESOLVED|Failed to load resource|net::ERR_|Transkript|Untertitel|Watch-Seite|Player-API/i;
-const echte = fehler.filter((f) => !erwartet.test(f));
+// Erwartet ist nur, dass der Stub nicht YouTube ist: jeder Abruf an einen anderen Host
+// scheitert an `MAP * ~NOTFOUND`. Das gilt für Konsolenmeldungen. Ein `pageerror` ist
+// immer ein Befund und läuft nie durch diese Liste.
+// Netzfehler beim Laden fremder Ressourcen (die Testseite ist offline, je nach Umgebung
+// mit anderem Code: NAME_NOT_RESOLVED, SSL_PROTOCOL_ERROR …) – kein Fehler der Erweiterung.
+const erwartet = /^console\.error: Failed to load resource: net::ERR_[A-Z_]+/;
+const echte = fehler.filter((f) => f.startsWith("pageerror:") || !erwartet.test(f));
 
 console.log(`Extension geladen: ${geladen ? "ja" : "NEIN"}`);
 console.log(`Sidebar gemountet: ${gemountet === 1 ? "ja" : `NEIN (${gemountet})`}`);
+console.log(`Sidebar gezeichnet (Kinder im Shadow-Root): ${kinder > 0 ? `ja (${kinder})` : "NEIN"}`);
 console.log(`Meldungen gesamt: ${fehler.length}, davon unerwartet: ${echte.length}`);
 for (const f of echte) console.log("  " + f.slice(0, 300));
 
-if (!geladen || gemountet !== 1 || echte.length) {
+if (!geladen || gemountet !== 1 || kinder === 0 || echte.length) {
   console.log("ERGEBNIS: FEHLGESCHLAGEN");
   process.exit(1);
 }

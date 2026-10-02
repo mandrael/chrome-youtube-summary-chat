@@ -137,6 +137,13 @@ def sherpa_verfuegbar() -> bool:
 # Der gerade laufende Kindprozess (yt-dlp, ffmpeg), damit der Abbruch-Waechter ihn
 # beenden kann. Es laeuft immer hoechstens einer.
 _KIND: subprocess.Popen[str] | None = None
+# Das Arbeitsverzeichnis des laufenden Auftrags: os._exit() im Abbruch umgeht den
+# TemporaryDirectory-Aufraeumer, deshalb loescht kinder_beenden es selbst.
+_ARBEIT: Path | None = None
+
+# Fuer jeden yt-dlp-Aufruf: ohne Zeitgrenze haengt ein stummes Netz den Host, und unter
+# Windows liest Python die Ausgabe sonst in der Codepage statt in UTF-8 (CJK, Emoji im Titel).
+YTDLP_BASIS = ["--socket-timeout", "30", "--encoding", "utf-8"]
 
 
 def run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
@@ -147,7 +154,9 @@ def run(cmd: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
         kw.setdefault("creationflags", subprocess.CREATE_NEW_PROCESS_GROUP)
     else:
         kw.setdefault("start_new_session", True)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **kw)
+    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True, encoding="utf-8",
+                         errors="replace", **kw)
     _KIND = p
     try:
         out, err = p.communicate()
@@ -162,7 +171,8 @@ def kinder_beenden_leise(p: subprocess.Popen[str]) -> None:
             os.killpg(p.pid, signal.SIGTERM)
         elif os.name == "nt":
             # p.kill() trifft nur yt-dlp, nicht dessen ffmpeg; taskkill /T nimmt den Baum.
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True)
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)],
+                           stdin=subprocess.DEVNULL, capture_output=True)
         else:
             p.kill()
     except OSError:
@@ -173,6 +183,8 @@ def kinder_beenden(*_: Any) -> None:
     p = _KIND
     if p is not None and p.poll() is None:
         kinder_beenden_leise(p)
+    if _ARBEIT is not None:
+        shutil.rmtree(_ARBEIT, ignore_errors=True)
     os._exit(1)
 
 
@@ -235,7 +247,7 @@ def fetch_subtitles(video_id: str, language: str | None, workdir: Path) -> dict[
     langs = language if language and language != "auto" else "en.*,de.*"
 
     res = run([
-        ytdlp, "--write-subs", "--write-auto-subs",
+        ytdlp, *YTDLP_BASIS, "--write-subs", "--write-auto-subs",
         "--sub-langs", langs, "--sub-format", "json3",
         "--skip-download", "--no-playlist", "--no-warnings",
         "-o", str(workdir / "sub"),
@@ -306,7 +318,7 @@ def download_audio(video_id: str, workdir: Path) -> Path:
     #   2. sonst die beste Spur ab 44,1 kHz,
     #   3. sonst irgendeine - lieber schlechter Ton als gar keiner.
     fmt = "bestaudio[asr=48000][abr<=70]/bestaudio[asr>=44100]/bestaudio"
-    res = run([ytdlp, "-f", fmt, "--no-playlist", "--no-warnings",
+    res = run([ytdlp, *YTDLP_BASIS, "-f", fmt, "--no-playlist", "--no-warnings",
                "-o", str(out), f"https://www.youtube.com/watch?v={video_id}"])
     if res.returncode != 0:
         raise HostError(f"yt-dlp ist fehlgeschlagen:\n{(res.stderr or res.stdout)[-800:]}")
@@ -321,7 +333,7 @@ def to_opus(src: Path, dst: Path) -> None:
     """Mono, 16 kHz, 24 kbit/s Opus. Klein genug fuer die Cloud, gut genug fuer ASR."""
     ffmpeg = require("ffmpeg")
     progress("convert", "Audio wird gewandelt …")
-    res = run([ffmpeg, "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000",
+    res = run([ffmpeg, "-nostdin", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000",
                "-c:a", "libopus", "-b:a", "24k", str(dst)])
     if res.returncode != 0 or not dst.exists():
         raise HostError(f"ffmpeg ist fehlgeschlagen:\n{res.stderr[-800:]}")
@@ -331,7 +343,7 @@ def to_wav(src: Path, dst: Path) -> None:
     """16 kHz Mono PCM - das Format, das parakeet-mlx ohne Umwege verarbeitet."""
     ffmpeg = require("ffmpeg")
     progress("convert", "Audio wird gewandelt …")
-    res = run([ffmpeg, "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000",
+    res = run([ffmpeg, "-nostdin", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000",
                "-c:a", "pcm_s16le", str(dst)])
     if res.returncode != 0 or not dst.exists():
         raise HostError(f"ffmpeg ist fehlgeschlagen:\n{res.stderr[-800:]}")
@@ -361,13 +373,14 @@ def split(path: Path, seconds: int, workdir: Path) -> list[tuple[Path, float]]:
     while index * seconds < total:
         offset = index * seconds
         part = workdir / f"part{index:03d}{path.suffix}"
-        res = run([ffmpeg, "-y", "-ss", str(offset), "-t", str(seconds),
+        res = run([ffmpeg, "-nostdin", "-y", "-ss", str(offset), "-t", str(seconds),
                    "-i", str(path), "-c", "copy", str(part)])
         if res.returncode != 0 or not part.exists() or part.stat().st_size == 0:
-            break
+            # Kein stilles Kuerzen: ein Transkript, dem Teile fehlen, waere unvollstaendig.
+            raise HostError(f"ffmpeg konnte Teil {index + 1} nicht schneiden:\n{res.stderr[-800:]}")
         parts.append((part, float(offset)))
         index += 1
-    return parts or [(path, 0.0)]
+    return parts
 
 
 # --------------------------------------------------------------------------
@@ -587,7 +600,7 @@ def list_formats(video_id: str) -> dict[str, Any]:
     exe = require("yt-dlp")
     # Kein progress() hier: die Anfrage kommt per sendNativeMessage, und Chrome nimmt
     # dort genau eine Antwort - eine Fortschrittszeile davor waere die Antwort.
-    res = run([exe, "--dump-json", "--no-warnings", f"https://www.youtube.com/watch?v={video_id}"])
+    res = run([exe, *YTDLP_BASIS, "--dump-json", "--no-warnings", f"https://www.youtube.com/watch?v={video_id}"])
     if res.returncode != 0:
         raise HostError(f"yt-dlp konnte die Formate nicht lesen:\n{res.stderr[-500:]}")
     daten = json.loads(res.stdout)
@@ -654,7 +667,7 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
 
     # Erst die Spuren samt Groesse erfragen (ein Metadaten-Abruf, rund 1-2 s): nur so gibt
     # es einen gemeinsamen Fortschritt ueber Ton und Bild statt zweimal 0 bis 100.
-    res = run([exe, "-f", wahl, "--dump-single-json", "--no-playlist", "--no-warnings", url])
+    res = run([exe, *YTDLP_BASIS, "-f", wahl, "--dump-single-json", "--no-playlist", "--no-warnings", url])
     if res.returncode != 0:
         raise HostError(f"yt-dlp konnte das Video nicht lesen:\n{(res.stderr or res.stdout)[-800:]}")
     daten = json.loads(res.stdout)
@@ -667,7 +680,7 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     gesamt = sum(groesse.values())
 
     cmd = [
-        exe, "-f", wahl, *([] if nur_ton else ["--merge-output-format", "mp4"]),
+        exe, *YTDLP_BASIS, "-f", wahl, *([] if nur_ton else ["--merge-output-format", "mp4"]),
         "--no-playlist", "--no-warnings",
         # --newline: eine Zeile je Aktualisierung statt Wagenruecklauf. Die Vorlage nennt
         # Spur und geladene Bytes, daraus wird der gemeinsame Stand gerechnet.
@@ -676,8 +689,9 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
         "--progress-template", "download:FORT=%(info.format_id)s %(progress.downloaded_bytes)s",
         # Eindeutiger Praefix: so entscheidet kein Zeilenformat, welche Zeile der Pfad ist.
         "--print", "after_move:PFAD=%(filepath)s",
-        "-o", str(ordner / ("%(title).150B [%(id)s].%(ext)s" if nur_ton
-                            else "%(title).150B [%(id)s] %(height)sp.%(ext)s")),
+        # % im Ordnernamen maskieren: yt-dlp liest den ganzen -o-Wert als Vorlage.
+        "-o", str(Path(str(ordner).replace("%", "%%")) / ("%(title).150B [%(id)s].%(ext)s" if nur_ton
+                                                          else "%(title).150B [%(id)s] %(height)sp.%(ext)s")),
         url,
     ]
     global _KIND
@@ -688,7 +702,9 @@ def download_video(video_id: str, hoehe: int, ziel: str) -> dict[str, Any]:
     # stderr in denselben Strom: zwei getrennte Pipes, von denen nur eine gelesen wird,
     # blockieren, sobald die andere 64 KB voll hat - bei einem langen Download mit
     # Warnungen bliebe der Host dann stumm haengen.
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, **kw)
+    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                         errors="replace", **kw)
     _KIND = p
     pfad = ""
     schwanz: list[str] = []
@@ -771,8 +787,8 @@ def choose_folder() -> dict[str, Any]:
     else:
         cmd = ["zenity", "--file-selection", "--directory", "--title=Zielordner für Videodownloads"]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
-                             errors="replace", check=False)
+        res = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", check=False)
     except FileNotFoundError as e:
         raise HostError(f"Kein Ordnerdialog verfügbar ({e.filename} fehlt).") from e
     # Nur das Zeilenende weg; Leerzeichen sind in Ordnernamen erlaubt. Den Schraegstrich,
@@ -809,7 +825,9 @@ def reveal_file(pfad: str, ziel: str) -> dict[str, Any]:
     else:
         cmd = ["xdg-open", str(p.parent)]
     # Nicht warten: der Explorer liefert grundsaetzlich Exit 1, der Finder blockiert nicht.
-    subprocess.Popen(cmd)
+    # Alle drei Kanäle zu: stdout ist der Native-Messaging-Kanal und wird nie vererbt.
+    subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL)
     return {"type": "revealed"}
 
 
@@ -844,17 +862,29 @@ def parse_parakeet_segments(data: Any) -> Iterator[dict[str, Any]]:
 VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
 
+def ohne_doppelten_text(result: dict[str, Any]) -> dict[str, Any]:
+    """Die Extension (toTranscript) nimmt `text` nur, wenn kein Segment brauchbar ist.
+    Mit Segmenten waere er dieselbe Menge ein zweites Mal im 1-MB-Rahmen."""
+    if any(s["text"] for s in result["segments"]):
+        return {k: v for k, v in result.items() if k != "text"}
+    return result
+
+
 def handle_transcribe(msg: dict[str, Any]) -> None:
     video_id = str(msg.get("videoId", ""))
     # Die ID landet in einer URL und in einer Kommandozeile. Ein strenger Filter
     # ist hier billiger als jedes Escaping weiter unten.
     if not VIDEO_ID.match(video_id):
         raise HostError(f"Ungültige Video-ID: {video_id!r}")
+    # Unbekannte Art: nicht still Audio laden (Regel 4, nur auf ausdruecklichen Klick).
+    # "transcript" ist der Standard, den runFallback ohne kind schickt.
+    art = str(msg.get("kind", "transcript"))
+    if art not in ("transcript", "formats", "reveal", "download"):
+        raise HostError(f"Unbekannte Art: {art!r}")
     abbruch_waechter()
 
     # Videodownload: eigener Zweig, keine Transkription. Nur im GitHub-Build erreichbar,
     # die Store-Fassung enthaelt den aufrufenden Code gar nicht.
-    art = str(msg.get("kind", "transcript"))
     if art == "formats":
         send(list_formats(video_id))
         return
@@ -881,15 +911,17 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
     if route in STT_MODELS and not api_key:
         raise HostError("Für diese Route wird ein OpenRouter-Schlüssel gebraucht.")
 
+    global _ARBEIT
     with tempfile.TemporaryDirectory(prefix="yt-summary-") as tmp:
         workdir = Path(tmp)
+        _ARBEIT = workdir
         progress("start", "Vorbereitung …")
 
         # Untertitel zuerst: kostenlos, kein Audio-Download, Zeitstempel von YouTube.
         if route == "subtitles":
             result = fetch_subtitles(video_id, msg.get("language"), workdir)
             progress("done", "Fertig", 100)
-            send({"type": "result", **result})
+            send({"type": "result", **ohne_doppelten_text(result)})
             return
 
         source = download_audio(video_id, workdir)
@@ -908,7 +940,7 @@ def handle_transcribe(msg: dict[str, Any]) -> None:
         raise HostError("Die Transkription lieferte keinen Text.")
 
     progress("done", "Fertig", 100)
-    send({"type": "result", **result})
+    send({"type": "result", **ohne_doppelten_text(result)})
 
 
 # --------------------------------------------------------------------------

@@ -2,6 +2,32 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
+**0.14.2 (03.10.): Befunde aus dem Gesamtreview behoben** (zwei Sonnet-5.5-Prüfer und
+dsh, 30.09., Bericht dsh: `_system/reviews/laeufe-2026-09-30/dsh-gesamt.out`). Kein
+CRITICAL. Behoben: Spracherkennung und Audio-Fallback schicken bei Mistral keinen Ton
+mehr an OpenRouter (§1); `split()` wirft statt still ein Teiltranskript zu liefern (§3);
+unbekannte Helfer-Aufträge werfen statt Audio zu laden (§4); Dislikes bei 0 Likes nicht
+mehr jede Sekunde; Vorschau-Balken bleiben an unbekannten IDs nicht hängen;
+Einstellungen einer Seite werden nacheinander geschrieben; Service Worker bleibt bei
+Fallback und Download wach; Übersetzungszeilen ausserhalb des Blocks verworfen; leere
+Modellantwort wird gemeldet; letzte Stream-Zeile ohne Zeilenende geht nicht mehr
+verloren; Quellen- und Update-Links nur http(s) bzw. github.com; Abbrechen ist kein
+Fehler mehr; Wörterbuch an Umlauten; Kommentar-Schleife bei wiederholtem Token beendet;
+Helfer: kein `text` doppelt neben Segmenten (1-MB-Grenze), Temp-Ordner beim Abbruch
+gelöscht, Kindprozesse ohne geerbtes stdin/stdout, UTF-8 und `--socket-timeout 30` für
+yt-dlp, `%` im Zielordner maskiert, Windows-Installer mit UTF-8. Prüfskripte:
+`release.sh` ruft jetzt Helfer-Selbsttest und Ladeprobe beider Builds und vergleicht die
+Versionen; Ladeprobe filtert `pageerror` nie und verlangt eine gezeichnete Sidebar (im
+Shadow-Root `style` + Container-`div`, gemessen; `:scope > div` greift dort nicht);
+`verify-store-bundle.sh` Gegenproben je Einzelmuster, Test 2b scheitert ohne
+`content.js`. **Nicht behoben (MINOR, offen):** Teilübersetzung geht bei Videowechsel
+verloren; `chrome.storage.local`-Limit ohne Meldung; Transkript-Panel ohne Zeitgrenze;
+Einstellungs-Rennen zwischen Optionsseite und Sidebar; WAV wird bei sehr langen
+Videos ganz in den Speicher gelesen; Update-Signatur (Summe stammt von GitHub selbst).
+**Abgelehnt:** veralteter Videotitel nach SPA-Wechsel (nur vermutet, nicht belegt).
+`release.sh` braucht seit 0.14.2 den installierten Helfer (selfcheck.py prüft venv) –
+in einem frischen Checkout ohne Installer bricht es ab.
+
 **0.13.0 (30.09.), Michael entschied:** Standard ist OpenRouters mitlaufender Name
 `~openai/gpt-luna-latest` (heute gpt-6-luna, 0,10/0,50 $/M), dahinter
 `google/gemini-3.5-flash-lite` fest (kein Alias vorhanden) und `~google/gemini-flash-latest`.

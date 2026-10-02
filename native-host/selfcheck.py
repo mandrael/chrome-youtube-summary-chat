@@ -97,6 +97,53 @@ def _video_id():
 
 check("Video-ID-Filter", _video_id)
 
+def _unbekannte_kind():
+    import yt_summary_host as h
+    # Muss vor jedem Download und vor dem Abbruch-Waechter scheitern (der liest stdin).
+    for kind in ("quatsch", "", "Transcript"):
+        try:
+            h.handle_transcribe({"videoId": "jNQXAC9IVRw", "kind": kind})
+            raise AssertionError(f"kind {kind!r} nicht abgelehnt")
+        except h.HostError:
+            pass
+
+
+check("unbekannte kind wirft HostError statt Audio zu laden", _unbekannte_kind)
+
+
+def _split_fehler():
+    import tempfile
+    import yt_summary_host as h
+    if not h.which("ffmpeg"):
+        print("  uebersprungen: split ohne ffmpeg nicht pruefbar")
+        return
+    with tempfile.TemporaryDirectory() as t:
+        t = Path(t)
+        kaputt = t / "kaputt.opus"
+        kaputt.write_bytes(b"kein Audio")
+        alt = h.duration_seconds
+        h.duration_seconds = lambda p: 25.0  # erzwingt mehrere Teile
+        try:
+            h.split(kaputt, 10, t)
+            raise AssertionError("ffmpeg-Fehler nicht gemeldet")
+        except h.HostError:
+            pass
+        finally:
+            h.duration_seconds = alt
+
+
+check("split: scheiternder ffmpeg-Teil wirft HostError", _split_fehler)
+
+def _kein_doppelter_text():
+    from yt_summary_host import ohne_doppelten_text as f
+    assert "text" not in f({"segments": [{"text": "a"}], "text": "a"})
+    # Ohne brauchbares Segment braucht die Extension den Text.
+    assert f({"segments": [], "text": "a"})["text"] == "a"
+    assert f({"segments": [{"text": ""}], "text": "a"})["text"] == "a"
+
+
+check("Ergebnis mit Segmenten traegt keinen doppelten Text", _kein_doppelter_text)
+
 print("Routen")
 
 
@@ -211,7 +258,14 @@ def _update():
         rel["digest"] = "sha256:" + hashlib.sha256(zip_pfad.read_bytes()).hexdigest()
         alt = (h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release, h.pruefe_quelle)
         h.HIER, h.PAKET, h.ERWEITERUNG = paket / "native-host", paket, paket / "erweiterung"
-        h.pruefe_quelle = lambda url: None  # file:// statt GitHub
+        geprueft = []
+
+        def stub(url):  # file:// statt GitHub; jede Adresse wird festgehalten
+            geprueft.append(url)
+            if not url.startswith("file://"):
+                raise h.HostError(f"Fremdadresse im Test: {url}")
+
+        h.pruefe_quelle = stub
         h.neuestes_release = lambda: rel
         try:
             falsch = dict(rel, digest="sha256:" + "0" * 64)
@@ -241,6 +295,9 @@ def _update():
             assert (paket / "native-host" / "install-macos.sh").read_text() == "neu"
             assert (paket / "LIESMICH.txt").read_text() == "neu"
             assert not list(paket.glob(".erweiterung-*")), "Reste des Tauschs"
+            # Der Stub ersetzt die Pruefung; ohne diesen Beleg koennte update_installieren
+            # sie auslassen, und der Test bliebe gruen.
+            assert geprueft and all(u.startswith("file://") for u in geprueft), geprueft
         finally:
             h.HIER, h.PAKET, h.ERWEITERUNG, h.neuestes_release, h.pruefe_quelle = alt
         for boese in ("https://evil.example/p-full.zip", "file:///tmp/p-full.zip",

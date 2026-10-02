@@ -32,6 +32,14 @@ pnpm -r run compile
 pnpm --filter @ytsc/app run build
 pnpm -r run check
 (cd extension && pnpm run build && pnpm run build:store && ./scripts/verify-store-bundle.sh)
+# Beide Builds müssen die Version tragen, die im Dateinamen des Pakets steht.
+for b in build-full build-store; do
+  v=$(node -p "require('./$b/manifest.json').version")
+  [ "$v" = "$version" ] || { echo "$b/manifest.json trägt Version $v, extension/package.json $version – abgebrochen."; exit 1; }
+done
+# Die übrigen Prüfungen aus CLAUDE.md: Helfer-Selbsttest und Ladeprobe beider Builds.
+(cd native-host && python3 selfcheck.py)
+(cd extension && node scripts/ladeprobe.mjs ../build-full && node scripts/ladeprobe.mjs ../build-store)
 
 echo "== App $app_version bauen =="
 pnpm --filter @ytsc/app run build

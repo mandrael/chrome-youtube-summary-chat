@@ -11,7 +11,24 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 OUT="../build-store"
+FULL="../build-full"
 FAIL=0
+
+# Gegenprobe für Verbotslisten: jedes Einzelmuster einer Alternation muss im full-Build
+# vorkommen. Sonst bliebe nach dem Umbenennen eines Namens ein Muster stumm, und der
+# Store-Test bestünde, ohne dafür noch etwas zu messen.
+gegenprobe() {  # $1 = Test, $2 = Alternation
+  local p fehlt=""
+  while IFS= read -r p; do
+    grep -rqE --include='*.js' -- "$p" "$FULL" || fehlt="$fehlt [$p]"
+  done < <(printf '%s\n' "$2" | tr '|' '\n')
+  if [ -n "$fehlt" ]; then
+    echo "  FEHLGESCHLAGEN – Gegenprobe $1: im full-Build fehlt$fehlt (umbenannt?)"
+    FAIL=1
+  else
+    echo "  ok – Gegenprobe: jedes Einzelmuster steht im full-Build"
+  fi
+}
 
 if [ ! -d "$OUT" ]; then
   echo "FEHLER: $OUT fehlt. Zuerst 'pnpm run build:store' ausführen." >&2
@@ -77,7 +94,10 @@ echo
 echo "== 2b. Reste: Huellen duerfen bleiben, aber nur leer =="
 # Rolldown leert die Funktionskoerper, behaelt aber gelegentlich Namen und
 # UI-Texte. Ein Name ohne Koerper ist kein Code – ein Koerper waere einer.
-if grep -qE 'function runFallbackJob\([^)]*\) *\{ *\}' "$OUT/content-scripts/content.js"; then
+if [ ! -f "$OUT/content-scripts/content.js" ]; then
+  echo "  FEHLGESCHLAGEN – $OUT/content-scripts/content.js fehlt, der Test misst nichts"
+  FAIL=1
+elif grep -qE 'function runFallbackJob\([^)]*\) *\{ *\}' "$OUT/content-scripts/content.js"; then
   echo "  ok – runFallbackJob ist eine leere Huelle"
 elif grep -qE 'runFallbackJob' "$OUT/content-scripts/content.js"; then
   echo "  FEHLGESCHLAGEN – runFallbackJob hat einen Koerper:"
@@ -127,6 +147,7 @@ if [ -n "$DHITS" ]; then
 else
   echo "  ok – keiner von: $DOWNLOAD"
 fi
+gegenprobe 2d "$DOWNLOAD"
 
 echo
 echo "== 2e. Kommentar-Download: nicht im Store-Bundle =="
@@ -141,6 +162,7 @@ if [ -n "$KHITS" ]; then
 else
   echo "  ok – keiner von: $KOMM"
 fi
+gegenprobe 2e "$KOMM"
 
 echo
 echo "== 2f. Dislikes: Return YouTube Dislike nicht im Store-Bundle, die Schätzung schon =="
@@ -163,6 +185,7 @@ if [ -n "$RHITS" ]; then
 else
   echo "  ok – keiner von: $RYD"
 fi
+gegenprobe 2f "$RYD"
 
 echo
 echo "== 2g. Update über den Helfer: nicht im Store-Bundle, im full-Build schon =="
@@ -177,12 +200,10 @@ if [ -n "$UHITS" ]; then
   echo "  FEHLGESCHLAGEN – Update-Weg im Store-Bundle:"
   echo "$UHITS" | cut -c1-160
   FAIL=1
-elif ! grep -rqE "updateInstallieren" ../build-full --include='*.js'; then
-  echo "  FEHLGESCHLAGEN – Gegenprobe: auch im full-Build kein updateInstallieren"
-  FAIL=1
 else
-  echo "  ok – keiner von: $UPD (im full-Build vorhanden)"
+  echo "  ok – keiner von: $UPD"
 fi
+gegenprobe 2g "$UPD"
 
 echo
 echo "== 2c. Der erlaubte Weg MUSS drin sein =="
@@ -199,7 +220,6 @@ fi
 
 echo
 echo "== 3. Gegenprobe: im full-Build muss der Code vorhanden sein =="
-FULL="../build-full"
 if [ -d "$FULL" ]; then
   if grep -rqE "connectNative" "$FULL"; then
     echo "  ok – full-Build enthält connectNative (der Test greift also überhaupt)"

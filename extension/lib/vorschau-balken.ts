@@ -45,7 +45,8 @@ export function starteVorschauBalken(ctx: ContentScriptContext) {
   function videoId(link: HTMLAnchorElement): string | null {
     try {
       const u = new URL(link.href, location.origin);
-      return u.pathname === "/watch" ? u.searchParams.get("v") : null;
+      const v = u.pathname === "/watch" ? u.searchParams.get("v") : null;
+      return v && /^[\w-]{11}$/.test(v) ? v : null;
     } catch {
       return null;
     }
@@ -103,10 +104,17 @@ export function starteVorschauBalken(ctx: ContentScriptContext) {
     try {
       const r = await ask<{ likes: number; dislikes: number }>("dislikes", { videoId: id });
       werte.set(id, anteilPositiv(r.likes, r.dislikes));
-    } catch {
-      // Zurück in die Schlange, eine Minute Ruhe (auch bei 429).
-      warteschlange.unshift(id);
-      gesperrtBis = Date.now() + PAUSE_MS;
+    } catch (e) {
+      // Kennt der Dienst das Video nicht (4xx ausser 429), gibt es keinen Balken – sonst
+      // stünde dieselbe ID für immer vorn in der Schlange. Bei 429, 5xx und Netzfehler
+      // zurück in die Schlange, eine Minute Ruhe.
+      const status = Number(String((e as Error)?.message).match(/HTTP (\d{3})/)?.[1] ?? 0);
+      if (status >= 400 && status < 500 && status !== 429) {
+        werte.set(id, null);
+      } else {
+        warteschlange.unshift(id);
+        gesperrtBis = Date.now() + PAUSE_MS;
+      }
     }
   }
 

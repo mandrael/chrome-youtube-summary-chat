@@ -567,6 +567,12 @@ check("Wörterbuch ersetzt und setzt Schreibweisen durch", () => {
   // Stufe 1: echtes Ersetzungspaar, Gross- und Kleinschreibung egal.
   assert.equal(korrigiere("Mit cloud code getestet.", wb), "Mit Claude Code getestet.");
 
+  // Wortgrenzen auch an Umlauten; „$&" im Ersatz bleibt wörtlich; kein Treffer mitten im Wort.
+  const umlaut = [{ begriff: "Übung", ersatz: "Training" }, { begriff: "café", ersatz: "Kaffee $&" }];
+  assert.equal(korrigiere("Die Übung beginnt.", umlaut), "Die Training beginnt.");
+  assert.equal(korrigiere("Im Café.", umlaut), "Im Kaffee $&.");
+  assert.equal(korrigiere("Vorübung bleibt.", umlaut), "Vorübung bleibt.");
+
   // Stufe 2: eigene Schreibweise, auch über Leerzeichen und Bindestrich hinweg.
   assert.equal(korrigiere("Ich nutze diktago täglich.", wb), "Ich nutze DiktaGo täglich.");
   assert.equal(korrigiere("Ich nutze Dikta Go täglich.", wb), "Ich nutze DiktaGo täglich.");

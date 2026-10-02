@@ -121,6 +121,9 @@ const de = {
   liveRunning: "Erkennt",
   liveWaitingAd: "Wartet, bis die Werbung vorbei ist – ihr Ton gehört nicht ins Transkript.",
   liveCancel: "Abbrechen",
+  liveOnlyOpenRouter:
+    "Die Spracherkennung läuft über OpenRouter. Eingestellt ist Mistral AI – dafür in den Einstellungen zu OpenRouter wechseln.",
+  emptyAnswer: "Das Modell hat keine Antwort geliefert. Bitte erneut senden oder ein anderes Modell wählen.",
   noKey:
     "Es ist kein OpenRouter-API-Key hinterlegt. Bitte in den Einstellungen eintragen.",
   noKeyMistral:
@@ -291,6 +294,9 @@ const en: Record<Keys, string> = {
   liveRunning: "Recognising",
   liveWaitingAd: "Waiting for the ad to finish – its audio does not belong in the transcript.",
   liveCancel: "Cancel",
+  liveOnlyOpenRouter:
+    "Speech recognition runs via OpenRouter. Mistral AI is selected – switch to OpenRouter in the settings to use it.",
+  emptyAnswer: "The model returned no answer. Please send again or choose another model.",
   noKey: "No OpenRouter API key configured. Please add one in the settings.",
   noKeyMistral:
     "Mistral AI is the selected provider, but no Mistral API key is configured. Please add one in the settings.",

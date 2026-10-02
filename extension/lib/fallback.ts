@@ -193,8 +193,9 @@ export function videoLaden(
       }
     });
     port.onDisconnect.addListener(() => {
-      const f = chrome.runtime.lastError?.message;
-      if (f) ab(new Error(f));
+      // Auch ohne Fehlertext: endet der Helfer ohne Ergebnis, hinge „läuft" sonst ewig.
+      // Nach Erfolg ist das Promise schon erfüllt, dann wirkt der Aufruf nicht.
+      ab(new Error(hostFehler(chrome.runtime.lastError?.message)));
     });
     port.postMessage({ type: "transcribe", videoId, kind: "download", height, target });
   });

@@ -60,7 +60,7 @@ export function starteDislikes(ctx: ContentScriptContext) {
     if (__FALLBACK__) void holeRyd(v);
     const s = speicher.get(v);
     const seite = seitenzahlen();
-    const anzeige: Anzeige | null = s
+    const anzeige: Anzeige | null = s && s.likes > 0
       ? {
           // RYDs eigene Formel (FAQ): Verhältnis aus ihren Daten mal öffentliche Likes –
           // hier mit dem aktuellen Stand der Seite statt ihrem bis zu drei Tage alten.
@@ -83,7 +83,9 @@ export function starteDislikes(ctx: ContentScriptContext) {
     laeuft = true;
     try {
       const r = await ask<{ likes: number; dislikes: number }>("dislikes", { videoId: v });
-      if (r.likes > 0) speicher.set(v, { ...r, zeit: Date.now() });
+      // Auch ohne Likes merken (versteckt oder neues Video): sonst fragte der Takt jede
+      // Sekunde neu. Angezeigt wird dann die Schätzung bzw. nichts.
+      speicher.set(v, { ...r, zeit: Date.now() });
     } catch (e) {
       // Kein Ersatzwert aus der Luft: bis zur nächsten Minute rechnet die Schätzung.
       gesperrtBis = Date.now() + PAUSE_MS;

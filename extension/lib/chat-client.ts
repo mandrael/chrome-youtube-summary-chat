@@ -141,8 +141,10 @@ export function startDownload(
     return { promise: Promise.reject(e instanceof Error ? e : new Error(String(e))), cancel: () => {} };
   }
   let settled = false;
+  let abbrechen: (e: Error) => void = () => {};
 
   const promise = new Promise<DownloadErgebnis>((resolve, reject) => {
+    abbrechen = reject;
     port.onMessage.addListener((msg: any) => {
       if (msg?.type === "progress") {
         onProgress({ stage: msg.stage, message: msg.message, percent: msg.percent });
@@ -160,7 +162,16 @@ export function startDownload(
   });
 
   port.postMessage({ type: "start", videoId, height, target });
-  return { promise, cancel: () => port.disconnect() };
+  return {
+    promise,
+    cancel: () => {
+      if (!settled) {
+        settled = true;
+        abbrechen(new Error("Abgebrochen."));
+      }
+      port.disconnect();
+    },
+  };
 }
 
 export function ask<T>(type: string, extra: Record<string, unknown> = {}): Promise<T> {

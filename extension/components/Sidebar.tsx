@@ -457,6 +457,13 @@ export function Sidebar({
       });
       stopRef.current = handle.stop;
       await handle.done;
+      setMessages((m) => {
+        const last = m.at(-1);
+        if (last?.role !== "assistant" || last.content) return m;
+        const copy = [...m];
+        copy[copy.length - 1] = { ...last, content: t("emptyAnswer"), error: true };
+        return copy;
+      });
     } catch (e) {
       const msg = String((e as Error)?.message ?? e);
       setMessages((m) => {
@@ -715,7 +722,7 @@ export function Sidebar({
 
   function runLive() {
     const schluessel = settings?.apiKey;
-    if (!schluessel) return;
+    if (!schluessel || mistralAktiv) return;
     setFallbackState(`${t("liveRunning")} …`);
     const job = starteLiveTranskription({
       apiKey: schluessel,
@@ -736,9 +743,10 @@ export function Sidebar({
         setFallbackState(null);
       })
       .catch((e) => {
+        setFallbackState(null);
+        if (String((e as Error)?.message) === "Abgebrochen.") return;
         setLoadError(String((e as Error)?.message ?? e));
         setLoadState("error");
-        setFallbackState(null);
       })
       .finally(() => {
         liveRef.current = null;
@@ -774,9 +782,10 @@ export function Sidebar({
         setFallbackState(null);
       })
       .catch((e) => {
+        setFallbackState(null);
+        if (String(e?.message) === "Abgebrochen.") return;
         setLoadError(String(e?.message ?? e));
         setLoadState("error");
-        setFallbackState(null);
       })
       .finally(() => {
         if (fallbackRef.current === job) fallbackRef.current = null;
@@ -952,7 +961,7 @@ export function Sidebar({
     a.href = url;
     a.download = name;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   /* ---- Transkript und Kommentare als Datei ---- */
@@ -1258,7 +1267,7 @@ export function Sidebar({
                   liveRef.current?.cancel();
                   fallbackRef.current?.cancel();
                 }}
-                keyFehlt={!settings?.apiKey}
+                liveGesperrt={mistralAktiv ? t("liveOnlyOpenRouter") : !settings?.apiKey ? t("noKey") : null}
                 spurenVorhanden={tracks.length > 0}
               />
             )}
@@ -1287,7 +1296,7 @@ export function Sidebar({
                   liveRef.current?.cancel();
                   fallbackRef.current?.cancel();
                 }}
-                keyFehlt={!settings?.apiKey}
+                liveGesperrt={mistralAktiv ? t("liveOnlyOpenRouter") : !settings?.apiKey ? t("noKey") : null}
                 spurenVorhanden={tracks.length > 0}
               />
               </div>
@@ -1598,7 +1607,7 @@ function NoCaptions({
   onStart,
   onLive,
   onCancel,
-  keyFehlt,
+  liveGesperrt,
   spurenVorhanden,
 }: {
   t: T;
@@ -1607,8 +1616,12 @@ function NoCaptions({
   /** Spracherkennung aus dem laufenden Ton – in beiden Builds erlaubt. */
   onLive: () => void;
   onCancel: () => void;
-  /** Ohne hinterlegten OpenRouter-Zugang geht die Spracherkennung nicht. */
-  keyFehlt: boolean;
+  /**
+   * Grund, warum die Spracherkennung nicht geht, sonst null: ohne OpenRouter-Schlüssel
+   * nicht, und bei Mistral als Anbieter auch nicht mit einem – der Ton ginge sonst still
+   * an den anderen Anbieter (CLAUDE.md §1).
+   */
+  liveGesperrt: string | null;
   /**
    * Ob YouTube überhaupt eine Untertitelspur meldet. Zwei verschiedene Lagen, die
    * bisher gleich aussahen: gibt es gar keine Spur, kann auch yt-dlp keine holen –
@@ -1676,13 +1689,13 @@ function NoCaptions({
         size="sm"
         variant={__FALLBACK__ ? "outline" : "default"}
         className="mb-1"
-        disabled={keyFehlt}
+        disabled={!!liveGesperrt}
         onClick={onLive}
       >
         {t("liveStart")}
       </Button>
       <p className="text-xs text-muted-foreground">
-        {keyFehlt ? t("noKey") : t("liveHint")}
+        {liveGesperrt ?? t("liveHint")}
       </p>
     </div>
   );
@@ -1925,7 +1938,7 @@ function MessageBubble({
         <div className="mt-1 border-l-2 border-border pl-2">
           <p className="mb-0.5 text-xs text-muted-foreground">{t("sources")}</p>
           <ul className="space-y-0.5">
-            {message.sources.map((q) => (
+            {message.sources.filter((q) => /^https?:\/\//i.test(q.url)).map((q) => (
               <li key={q.url} className="truncate text-xs">
                 <a
                   href={q.url}

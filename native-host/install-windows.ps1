@@ -50,6 +50,9 @@ if (-not $Python) {
 }
 
 # Ordner und Repo kommen aus dem Host, damit Installer und Laufzeit nie auseinanderlaufen.
+# UTF-8 erzwingen: sonst kommt ein Umlaut im Benutzernamen in der Codepage statt als UTF-8 an.
+$env:PYTHONUTF8 = "1"
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new()
 $ModellInfo = & $Python -c "import sys; sys.path.insert(0, sys.argv[1]); from yt_summary_host import MODELL_PRIMELINE, primeline_ordner; print(MODELL_PRIMELINE); print(primeline_ordner())" $Here
 $ModellRepo = $ModellInfo[0]
 $ModellDir  = $ModellInfo[1]

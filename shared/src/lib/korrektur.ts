@@ -61,7 +61,9 @@ export function korrigiere(text: string, eintraege: Woerterbucheintrag[]): strin
     const ersatz = e.ersatz?.trim();
     const begriff = e.begriff.trim();
     if (!ersatz || !begriff) continue;
-    out = out.replace(new RegExp(`\\b${escape(begriff)}\\b`, "gi"), ersatz);
+    // \b kennt nur ASCII: „Übung" oder „Café" fände es nie. Ersatz als Funktion, damit
+    // „$&" im Ersatzwort wörtlich bleibt.
+    out = out.replace(new RegExp(`(?<![\\p{L}\\p{N}_])${escape(begriff)}(?![\\p{L}\\p{N}_])`, "giu"), () => ersatz);
   }
 
   // Stufe 2: kanonische Schreibweise der Einträge ohne Ersatzwort.

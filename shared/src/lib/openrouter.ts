@@ -385,10 +385,12 @@ export async function streamChat(o: ChatOptions): Promise<void> {
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
+  for (let fertig = false; !fertig; ) {
     const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    // Am Ende den Decoder leeren und eine letzte Zeile ohne "\n" (oft der usage-Chunk)
+    // noch verarbeiten.
+    fertig = done;
+    buffer += done ? decoder.decode() + "\n" : decoder.decode(value, { stream: true });
 
     // Ereignisse sind durch Leerzeilen getrennt; der Rest bleibt im Puffer.
     let nl: number;

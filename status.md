@@ -4,6 +4,15 @@
 
 ## Offene To-Dos (oberstes zuerst)
 
+**Update-Weg am echten Browser bestätigt (05.10., Brave):** entpacktes Paket 0.14.1 in
+`~/ytsc-test`, Installer daraus gelaufen; Sidebar zeigte „Neue Version 0.14.2 ·
+Aktualisieren“, Klick tauschte Dateien (Manifest 0.14.2, neuer Helfer, keine Reste).
+Ein F5 direkt danach zeigte keine Sidebar, erst Cmd+Shift+R – vermutlich zu früh, die
+Erweiterung war noch nicht neu geladen. **0.14.4:** die neue Fassung lädt den Tab, aus dem
+geklickt wurde, selbst neu (`nachUpdateNeuLaden`, nur full, Test 2g). Brave und die
+anderen Chromium-Browser nutzen derzeit den Helfer aus `~/ytsc-test`; zurück mit
+`native-host/install-macos.sh` im Repo.
+
 **0.14.3 (05.10.):** Der Update-Hinweis erscheint auch im Entwicklerstand (Helfer aus dem
 Repository, kein `erweiterung/` daneben) – mit „Dieser Stand … wird über git aktualisiert“
 statt Knopf. Anlass: Michaels Brave lädt `build-full/` aus dem Repo und nutzt den

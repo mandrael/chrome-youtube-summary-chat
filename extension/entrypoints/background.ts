@@ -27,6 +27,17 @@ interface ChatPortRequest {
 }
 
 export default defineBackground(() => {
+  // Nach einem Update über den Helfer: den Tab, aus dem geklickt wurde, neu laden, sobald
+  // die neue Fassung läuft. Ein F5 direkt nach der Meldung kam bei Michael (Brave,
+  // 05.10.2026) zu früh – die Erweiterung war noch nicht zurück, die Sidebar fehlte.
+  if (__FALLBACK__) {
+    void chrome.storage.local.get("nachUpdateNeuLaden").then(async ({ nachUpdateNeuLaden: tab }) => {
+      if (typeof tab !== "number") return;
+      await chrome.storage.local.remove("nachUpdateNeuLaden");
+      await chrome.tabs.reload(tab).catch(() => {});
+    });
+  }
+
   // Ohne diesen Listener und ohne `default_popup` täte ein Klick aufs Symbol schlicht
   // nichts. Auf einer Videoseite klappt er die Sidebar auf oder zu, sonst öffnet er die
   // Einstellungen – ein Content-Script darf `openOptionsPage` nicht selbst aufrufen.
@@ -53,7 +64,7 @@ export default defineBackground(() => {
   });
 
   // Einmalige Anfragen aus der Options-Page und der Sidebar.
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     void (async () => {
       try {
         switch (msg?.type) {
@@ -176,9 +187,11 @@ export default defineBackground(() => {
             } finally {
               updateLaeuft = false;
             }
+            if (sender.tab?.id != null) await chrome.storage.local.set({ nachUpdateNeuLaden: sender.tab.id });
             sendResponse({ ok: true, data: version });
             // Neu laden liest die getauschten Dateien von der Platte; erst nach der
-            // Antwort, sonst erfährt die Seite nichts vom Erfolg.
+            // Antwort, sonst erfährt die Seite nichts vom Erfolg. Den Tab lädt danach die
+            // neue Fassung selbst neu (oben).
             setTimeout(() => chrome.runtime.reload(), 500);
             break;
           }

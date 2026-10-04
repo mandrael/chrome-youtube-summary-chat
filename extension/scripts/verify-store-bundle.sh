@@ -197,7 +197,7 @@ echo "== 2g. Update über den Helfer: nicht im Store-Bundle, im full-Build schon
 # Weg gar nicht gäbe. Die Nachrichtennamen „updateCheck“ und „updateInstall“ bleiben
 # als leere case-Hülle und als UI-Text stehen (wie „hostStatus“) – geprüft werden
 # deshalb die Namen, die nur im Code selbst vorkommen.
-UPD='updatePruefen|updateInstallieren|updateStand|function UpdateHinweis'
+UPD='updatePruefen|updateInstallieren|updateStand|function UpdateHinweis|nachUpdateNeuLaden'
 UHITS=$(grep -rInoE "$UPD" "$OUT" --include='*.js' 2>/dev/null || true)
 if [ -n "$UHITS" ]; then
   echo "  FEHLGESCHLAGEN – Update-Weg im Store-Bundle:"

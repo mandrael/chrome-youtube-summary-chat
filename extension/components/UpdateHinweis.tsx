@@ -6,8 +6,9 @@ import type { UpdateInfo } from "@/lib/fallback";
 import type { T } from "@shared/lib/i18n";
 
 /**
- * Zeile „Neue Version X · Aktualisieren“, nur im Build "full" und nur mit Helfer aus
- * einem Release-Paket. Geprüft wird höchstens einmal am Tag (lib/fallback.ts),
+ * Zeile „Neue Version X · Aktualisieren“, nur im Build "full". Ohne Release-Paket neben
+ * dem Helfer (Entwicklerstand) steht statt des Knopfs ein Satz, wie dieser Stand
+ * aktualisiert wird – bis 0.14.2 blieb die Zeile dort still weg (Michael, 05.10.2026). Geprüft wird höchstens einmal am Tag (lib/fallback.ts),
  * geladen erst auf Klick. Ohne Helfer oder ohne Netz bleibt die Zeile weg – die
  * Prüfung hat niemand verlangt, also meldet sie auch keinen Fehler.
  */
@@ -20,7 +21,7 @@ export function UpdateHinweis({ t, className }: { t: T; className?: string }) {
     ask<UpdateInfo>("updateCheck").then(setInfo).catch(() => {});
   }, []);
 
-  if (!info?.neuer || !info.installierbar || lage === "spaeter") return null;
+  if (!info?.neuer || lage === "spaeter") return null;
 
   return (
     <div className={className}>
@@ -42,7 +43,15 @@ export function UpdateHinweis({ t, className }: { t: T; className?: string }) {
             </>
           )}
         </span>
-        {lage !== "fertig" && (
+        {!info.installierbar && (
+          <>
+            <span className="text-muted-foreground">{t("updateDev")}</span>
+            <Button size="sm" variant="ghost" onClick={() => setLage("spaeter")}>
+              {t("updateLater")}
+            </Button>
+          </>
+        )}
+        {lage !== "fertig" && info.installierbar && (
           <>
             <Button
               size="sm"

@@ -33,3 +33,6 @@ _system/reviews/laeufe-*/commit-msg.txt
 # Tester-Pakete aus scripts/release.sh, nur lokal.
 releases/
 _system/reviews/laeufe-*/*.lauf
+
+# Rückmeldungen aus nk-verwaltung: enthalten interne Adressen, das Repository ist öffentlich.
+docs/rueckmeldung-*.md

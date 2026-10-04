@@ -181,6 +181,7 @@ const de = {
   updateDone: "Aktualisiert. Seite neu laden (F5).",
   updateLater: "Später",
   updateNotes: "Was ist neu",
+  updateDev: "Dieser Stand ist kein Release-Paket und wird über git aktualisiert.",
   close: "Schliessen",
 } as const;
 
@@ -353,6 +354,7 @@ const en: Record<Keys, string> = {
   updateDone: "Updated. Reload the page (F5).",
   updateLater: "Later",
   updateNotes: "What's new",
+  updateDev: "This copy is not a release package and is updated via git.",
   close: "Close",
 };
 

@@ -1,6 +1,23 @@
 # Status – chrome-youtube-summary-chat
 
+> **Aus nk-verwaltung (03.10.2026):** 4 offene Entscheidungen liegen auf Michaels Entscheidungsseite; Adresse, Antworten holen und Ablauf: `docs/rueckmeldung-nk-verwaltung-2026-10-03.md` – **nur lokal** (in `.gitignore`, das Repository ist öffentlich).
+
 ## Offene To-Dos (oberstes zuerst)
+
+**0.14.3 (05.10.):** Der Update-Hinweis erscheint auch im Entwicklerstand (Helfer aus dem
+Repository, kein `erweiterung/` daneben) – mit „Dieser Stand … wird über git aktualisiert“
+statt Knopf. Anlass: Michaels Brave lädt `build-full/` aus dem Repo und nutzt den
+Repo-Helfer; der Helfer fand 0.14.2, die Zeile blieb aber still weg. Dass Brave danach
+0.14.2 zeigte, kam vom Neubau in `build-full/` durch `release.sh`, nicht vom Update-Weg.
+Für den echten Test muss Brave ein entpacktes Release-Paket laden und dessen Installer
+laufen (registriert den Helfer für alle Chromium-Browser um; zurück mit
+`native-host/install-macos.sh` im Repo).
+
+**Release v0.14.2 veröffentlicht (05.10.)**, gepusht, `releases/latest` zeigt 0.14.2 mit
+SHA-256 für alle drei Dateien. **Nächster Schritt (Michael):** in einer installierten
+0.14.1 (entpacktes Release-Paket mit eingerichtetem Helfer) auf „Aktualisieren“ klicken –
+erster echter Test des Update-Wegs samt Neuladen in Chrome. Ein Test mit dem von GitHub
+geladenen Helfer-Skript durch Claude wurde am 30.09. abgelehnt.
 
 **0.14.2 (03.10.): Befunde aus dem Gesamtreview behoben** (zwei Sonnet-5.5-Prüfer und
 dsh, 30.09., Bericht dsh: `_system/reviews/laeufe-2026-09-30/dsh-gesamt.out`). Kein

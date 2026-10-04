@@ -32,3 +32,4 @@ _system/reviews/laeufe-*/commit-msg.txt
 
 # Tester-Pakete aus scripts/release.sh, nur lokal.
 releases/
+_system/reviews/laeufe-*/*.lauf

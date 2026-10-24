@@ -105,8 +105,8 @@ store) und die Debug-APK nach `releases/` (nur lokal, in `.gitignore`).
    Tages – nach dem Bauen die Erweiterung neu laden. Seit 0.12.1 steht die
    Bauzeit neben der Version auf der Optionsseite („0.12.1 full · gebaut 29.09.26, 23:47“,
    headless geprüft). Die 13 node-Prozesse der Bestandsaufnahme gehörten nicht zu diesem
-   Projekt (keiner mit Projektpfad). **Offen:** Pull Request des Zweigs
-   nach `main` – angeboten, unbeantwortet.
+   Projekt (keiner mit Projektpfad). **Erledigt:** Pull Request #1 des Zweigs ist am
+   29.09.2026 nach `main` gemergt (Merge-Commit `2c29733`); der Zweig ist auf GitHub gelöscht.
 4f. **YouTube sperrte am 29.09. abends die IP** („ungewöhnlicher Datenverkehr“, Google-
    `sorry`-Seite) nach vielen Playwright-Läufen an einem Tag. Weitere Browser-Tests gegen
    youtube.com sparsam bündeln; ob und wann die Sperre endet, ungemessen.
